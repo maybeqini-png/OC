@@ -110,9 +110,10 @@ VTubers in image prompts; face-only variants via masked edits (or transplant the
   Wan 3.0, MiniMax H3, Kling O3/3.0 Pro, Vidu Q3 Pro; 2 shots × 2 takes × ~3 s ≈ $5-10. Score by measurement:
   on-model colours, line/flat-shading retention, flicker, end-frame match, clean background for cutout.
 - Always quote cost and get the owner's OK before any paid run.
-- Secrets (environment "Network secrets"): `FAL_KEY`, `OPENAI_API_KEY`, `NOVELAI_API_TOKEN`.
-  Allowed domains: `fal.run`, `queue.fal.run`, `fal.media`, `api.openai.com`, `image.novelai.net`,
-  `api.novelai.net` (confirm on first call).
+- Keys are **network secrets injected by the environment's proxy** as request headers (no env vars; the
+  assistant never sees them): NovelAI `Authorization: Bearer` for `*.novelai.net`; OpenAI `Authorization: Bearer`
+  for `api.openai.com`; fal `Authorization: Key` for `*.fal.run`. Scripts must NOT add auth headers themselves.
+  `fal.media` / `*.fal.media` (result downloads) are plain allowed domains.
 
 ## 7. Files
 - `audio/` final master + Shorts (MP3). Large WAVs/stems not committed; rebuild with `tools/`.
@@ -129,6 +130,6 @@ VTubers in image prompts; face-only variants via masked edits (or transplant the
 live-test a repo skill at `.claude/skills/oc-gen/` (SKILL.md + scripts) for NovelAI V5 / OpenAI image generation
 and masked edits (always attach the reference sheet), fal start/end-frame video jobs (submit, poll, download),
 a cost quote + explicit owner OK before every paid call, and a manifest log of prompt/model/seed per output.
-Keys only from env vars; never write keys into the repo. 4. Assistant: image-model test (NAI V5 vs OpenAI),
+Never send or write keys: the proxy injects auth headers for the allowed hosts. 4. Assistant: image-model test (NAI V5 vs OpenAI),
 then generate the asset list. 5. Assistant: fal video bake-off. 6. Assistant: cue sheet (frame-exact captions +
 shot list), 2.5D compositing, final edit of PV + 3 Shorts.
