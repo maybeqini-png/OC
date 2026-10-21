@@ -60,6 +60,27 @@ def params(a, extra=None):
         "v4_negative_prompt": {"caption": {"base_caption": a.negative, "char_captions": []}, "legacy_uc": False},
         "negative_prompt": a.negative, "deliberate_euler_ancestral_bug": False, "prefer_brownian": True,
     }
+    if getattr(a, "charref", None):
+        # NovelAI "Precise Reference" (V4.5 only): image must be 1024x1536, 1536x1024 or 1472x1472 (black padding)
+        from PIL import Image
+        im = Image.open(a.charref).convert("RGB")
+        W, H = min(((1024, 1536), (1536, 1024), (1472, 1472)), key=lambda s: abs(s[0] / s[1] - im.width / im.height))
+        sc = min(W / im.width, H / im.height)
+        im = im.resize((round(im.width * sc), round(im.height * sc)), Image.LANCZOS)
+        canvas = Image.new("RGB", (W, H), "black")
+        canvas.paste(im, ((W - im.width) // 2, (H - im.height) // 2))
+        buf = io.BytesIO()
+        canvas.save(buf, "PNG")
+        p.update({
+            "director_reference_images": [base64.b64encode(buf.getvalue()).decode()],
+            "director_reference_descriptions": [{"caption": {"base_caption": a.charref_mode, "char_captions": []},
+                                                 "legacy_uc": False}],
+            "director_reference_information_extracted": [1],
+            "director_reference_strength_values": [a.charref_strength],
+            "director_reference_secondary_strength_values": [a.charref_fidelity],
+        })
+        for k in ("normalize_reference_strength_multiple",):
+            p.pop(k, None)
     p.update(extra or {})
     return p
 
@@ -91,6 +112,10 @@ def main():
     ap.add_argument("--mask")
     ap.add_argument("--strength", type=float, default=1.0)
     ap.add_argument("--out")
+    ap.add_argument("--charref", help="Precise Reference image (V4.5 models only)")
+    ap.add_argument("--charref-mode", default="character", choices=["character", "character&style"])
+    ap.add_argument("--charref-strength", type=float, default=1.0)
+    ap.add_argument("--charref-fidelity", type=float, default=1.0)
     a = ap.parse_args()
     if a.cmd == "balance":
         print("Anlas:", anlas())
@@ -111,7 +136,7 @@ def main():
     after = anlas()
     rec = {"time": time.strftime("%Y-%m-%dT%H:%M:%S"), "cmd": a.cmd, "model": a.model, "prompt": a.prompt,
            "negative": a.negative, "seed": a.seed, "steps": a.steps, "scale": a.scale, "size": [a.w, a.h],
-           "source_image": a.image, "mask": a.mask, "out": a.out, "anlas_before": before, "anlas_after": after}
+           "source_image": a.image, "mask": a.mask, "charref": a.charref, "out": a.out, "anlas_before": before, "anlas_after": after}
     with open(Path(a.out).parent / "manifest.jsonl", "a") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     print(f"saved {a.out} | Anlas {before} -> {after} (cost {before - after})")

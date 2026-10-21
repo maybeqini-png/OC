@@ -124,6 +124,13 @@ VTubers in image prompts; face-only variants via masked edits (or transplant the
   scratchpad; adjust before reuse.
 - `data/` measurements and ASR results for all five Gemini versions (t1-t5).
 
+## 7b. Production status (2026-10-21)
+- All assets generated with NovelAI via `.claude/skills/oc-gen` (60 Anlas spent by the assistant; normal-size V5 = 0).
+- `pv/preprocess.py` (cutouts, plates, beats, lip-sync envelope) and `pv/render.py` (all 38 shots, code-rendered:
+  2.5D camera, expression swaps, blink + lip-sync, stamps, chat, ノーカン counter, captions, grain) produce draft 1.
+- Render: `render.py segment i 4` x4 in parallel, concat, mux `audio/t2_optimized_full.mp3`. Video files are not
+  committed (size); rebuild from the repo. No video model used; key-pose cuts replace motion shots.
+
 ## 8. Open items
 1. Owner: confirm SFX levels by ear (phone + headphones). 2. Owner: choose the OC's name.
 3. Owner: add API keys/domains, start a new session. 3b. Assistant, first task of the new session: write and
