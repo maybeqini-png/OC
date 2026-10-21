@@ -125,6 +125,10 @@ VTubers in image prompts; face-only variants via masked edits (or transplant the
 
 ## 8. Open items
 1. Owner: confirm SFX levels by ear (phone + headphones). 2. Owner: choose the OC's name.
-3. Owner: add API keys/domains, start a new session. 4. Assistant: image-model test (NAI V5 vs OpenAI),
+3. Owner: add API keys/domains, start a new session. 3b. Assistant, first task of the new session: write and
+live-test a repo skill at `.claude/skills/oc-gen/` (SKILL.md + scripts) for NovelAI V5 / OpenAI image generation
+and masked edits (always attach the reference sheet), fal start/end-frame video jobs (submit, poll, download),
+a cost quote + explicit owner OK before every paid call, and a manifest log of prompt/model/seed per output.
+Keys only from env vars; never write keys into the repo. 4. Assistant: image-model test (NAI V5 vs OpenAI),
 then generate the asset list. 5. Assistant: fal video bake-off. 6. Assistant: cue sheet (frame-exact captions +
 shot list), 2.5D compositing, final edit of PV + 3 Shorts.
