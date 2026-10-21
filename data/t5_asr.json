@@ -1,0 +1,267 @@
+{
+ "track": "t5",
+ "chunks": [
+  {
+   "start": 0.19,
+   "end": 24.18,
+   "whisper_small": "♪~",
+   "reazonspeech": "ウ今日の私は大天才準備もばっちり完璧じゃんほらスマートに決めちゃうよえあ痛"
+  },
+  {
+   "start": 24.64,
+   "end": 32.14,
+   "whisper_small": "ちょっと待って!今のはカウントに入りません!あんもに開けないでよ!",
+   "reazonspeech": "今のはカウントに入りません主に開けないでよ"
+  },
+  {
+   "start": 32.68,
+   "end": 52.84,
+   "whisper_small": "おほっがあついけど深呼吸せによだもんほらだもんふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふっふ",
+   "reazonspeech": "ほっぺが熱いけど深呼吸だもんほら余裕だもん笑ったでしょ見しないで見ててよね強がりたっても"
+  },
+  {
+   "start": 53.49,
+   "end": 67.2,
+   "whisper_small": "♪この声で決めちゃうよ♪♪すくしょうは止忘れてよ♪♪ねえ名前聞なんて言わせないもん♪(ふいってそっと)♪見てみても~♪",
+   "reazonspeech": "これで決めちゃうよスクショは禁止忘れて呼んで生意気なふいて見てもう"
+  },
+  {
+   "start": 67.56,
+   "end": 116.06,
+   "whisper_small": "君と願えばき出しちゃうなぁしいままで終わりたくないいい子じゃんなんてすまんないでしょえるつま先でステップんで笑うなこっからが本番だもんだもんもっとだもんんだアゴミセバジャン笑ったってしょねもう1回よ",
+   "reazonspeech": "君と願えば噴き出しちゃ悔しいままで終わりだつまんないでしょこっからが本番だもん余裕だもんもっと余裕だもん転んだ後にもう一回様見知らな見ててよね笑って君も巻き込んで最後まで深いやっぱり余裕でしょえ"
+  }
+ ],
+ "lyric_lines": [
+  {
+   "i": 1,
+   "text": "ねえねえ ちゃんと見ててよね",
+   "len": 13,
+   "whisper_small_cer": 0.77,
+   "reazonspeech_cer": 1.0
+  },
+  {
+   "i": 2,
+   "text": "ふふん 覚悟は いいかな",
+   "len": 11,
+   "whisper_small_cer": 0.82,
+   "reazonspeech_cer": 1.0
+  },
+  {
+   "i": 3,
+   "text": "今日の私は だいてんさい",
+   "len": 14,
+   "whisper_small_cer": 0.93,
+   "reazonspeech_cer": 0.0
+  },
+  {
+   "i": 4,
+   "text": "準備もバッチリ 完璧じゃん",
+   "len": 16,
+   "whisper_small_cer": 0.88,
+   "reazonspeech_cer": 0.06
+  },
+  {
+   "i": 5,
+   "text": "ざんねんでした 余裕だもん",
+   "len": 13,
+   "whisper_small_cer": 0.69,
+   "reazonspeech_cer": 0.92
+  },
+  {
+   "i": 6,
+   "text": "ほら スマートに きめちゃうよ",
+   "len": 12,
+   "whisper_small_cer": 0.83,
+   "reazonspeech_cer": 0.0
+  },
+  {
+   "i": 7,
+   "text": "えっ あいたたた ちょっと待った",
+   "len": 14,
+   "whisper_small_cer": 0.79,
+   "reazonspeech_cer": 0.86
+  },
+  {
+   "i": 8,
+   "text": "いまのは カウントに はいりません",
+   "len": 15,
+   "whisper_small_cer": 1.0,
+   "reazonspeech_cer": 0.07
+  },
+  {
+   "i": 9,
+   "text": "あーもう にやけないでよ",
+   "len": 10,
+   "whisper_small_cer": 1.0,
+   "reazonspeech_cer": 0.4
+  },
+  {
+   "i": 10,
+   "text": "ほほっぺが熱いけど 深呼吸 せーの",
+   "len": 18,
+   "whisper_small_cer": 0.94,
+   "reazonspeech_cer": 0.22
+  },
+  {
+   "i": 11,
+   "text": "余裕だもん ほら 余裕だもん",
+   "len": 14,
+   "whisper_small_cer": 1.0,
+   "reazonspeech_cer": 0.21
+  },
+  {
+   "i": 12,
+   "text": "ふふん いまのは ノーカンじゃん",
+   "len": 13,
+   "whisper_small_cer": 0.92,
+   "reazonspeech_cer": 0.92
+  },
+  {
+   "i": 13,
+   "text": "笑ったでしょ めっ もういっかい",
+   "len": 15,
+   "whisper_small_cer": 0.8,
+   "reazonspeech_cer": 0.53
+  },
+  {
+   "i": 14,
+   "text": "よそ見しないで 見ててよね",
+   "len": 12,
+   "whisper_small_cer": 1.0,
+   "reazonspeech_cer": 0.17
+  },
+  {
+   "i": 15,
+   "text": "強がりだって 本気だもん",
+   "len": 13,
+   "whisper_small_cer": 0.92,
+   "reazonspeech_cer": 0.46
+  },
+  {
+   "i": 16,
+   "text": "この声で きめちゃうよ",
+   "len": 11,
+   "whisper_small_cer": 0.0,
+   "reazonspeech_cer": 0.27
+  },
+  {
+   "i": 17,
+   "text": "スクショは きんし 忘れてよね",
+   "len": 14,
+   "whisper_small_cer": 0.29,
+   "reazonspeech_cer": 0.14
+  },
+  {
+   "i": 18,
+   "text": "なまいきなんて 言わせないもん",
+   "len": 14,
+   "whisper_small_cer": 0.21,
+   "reazonspeech_cer": 0.64
+  },
+  {
+   "i": 19,
+   "text": "ぷいって そっぽ 向いてみても",
+   "len": 13,
+   "whisper_small_cer": 0.31,
+   "reazonspeech_cer": 0.69
+  },
+  {
+   "i": 20,
+   "text": "きみと目があえば 吹き出しちゃうな",
+   "len": 16,
+   "whisper_small_cer": 0.31,
+   "reazonspeech_cer": 0.38
+  },
+  {
+   "i": 21,
+   "text": "悔しいままで 終わりたくない",
+   "len": 14,
+   "whisper_small_cer": 0.14,
+   "reazonspeech_cer": 0.29
+  },
+  {
+   "i": 22,
+   "text": "いいこちゃんなんて つまんないでしょ",
+   "len": 17,
+   "whisper_small_cer": 0.12,
+   "reazonspeech_cer": 0.53
+  },
+  {
+   "i": 23,
+   "text": "震えるつま先で ステップ踏んで",
+   "len": 16,
+   "whisper_small_cer": 0.19,
+   "reazonspeech_cer": 1.0
+  },
+  {
+   "i": 24,
+   "text": "わらうな こっからが ほんばんだもん",
+   "len": 16,
+   "whisper_small_cer": 0.0,
+   "reazonspeech_cer": 0.25
+  },
+  {
+   "i": 25,
+   "text": "余裕だもん もっと 余裕だもん",
+   "len": 15,
+   "whisper_small_cer": 0.4,
+   "reazonspeech_cer": 0.0
+  },
+  {
+   "i": 26,
+   "text": "転んだあとが 見せ場じゃん",
+   "len": 13,
+   "whisper_small_cer": 0.31,
+   "reazonspeech_cer": 0.69
+  },
+  {
+   "i": 27,
+   "text": "笑ったでしょ めっ もういっかい",
+   "len": 15,
+   "whisper_small_cer": 0.67,
+   "reazonspeech_cer": 0.6
+  },
+  {
+   "i": 28,
+   "text": "よそ見しないで 見ててよね",
+   "len": 12,
+   "whisper_small_cer": 0.83,
+   "reazonspeech_cer": 0.42
+  },
+  {
+   "i": 29,
+   "text": "笑ったきみも 巻き込んで",
+   "len": 12,
+   "whisper_small_cer": 0.92,
+   "reazonspeech_cer": 0.25
+  },
+  {
+   "i": 30,
+   "text": "最後まで 歌いきるよ",
+   "len": 11,
+   "whisper_small_cer": 1.0,
+   "reazonspeech_cer": 0.45
+  },
+  {
+   "i": 31,
+   "text": "ほらね やっぱり 余裕でしょ",
+   "len": 13,
+   "whisper_small_cer": 0.92,
+   "reazonspeech_cer": 0.23
+  },
+  {
+   "i": 32,
+   "text": "ふふん たぶんね また来てよね",
+   "len": 13,
+   "whisper_small_cer": 0.92,
+   "reazonspeech_cer": 1.0
+  }
+ ],
+ "whisper_small_overall_cer": 0.637,
+ "reazonspeech_overall_cer": 0.452,
+ "opening_6s": {
+  "whisper_small": "(歌)",
+  "reazonspeech": "♪フ"
+ }
+}

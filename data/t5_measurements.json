@@ -1,0 +1,434 @@
+{
+ "track": "t5",
+ "technical": {
+  "duration_s": 120.05,
+  "integrated_lufs": -11.3,
+  "short_term_lufs_p10_p95": [
+   -16.8,
+   -8.2
+  ],
+  "loudness_range_lu": 8.7,
+  "sample_peak_dbfs": 0.0,
+  "true_peak_dbtp_approx": 0.33,
+  "clipped_samples": 6,
+  "dc_offset": [
+   0.00346,
+   0.00298
+  ],
+  "crest_factor_db": 14.5,
+  "stereo_correlation": 0.797,
+  "bandwidth_hz_at_-70db": 18712.0,
+  "leading_silence_s": 0.19,
+  "trailing_silence_s": 2.72,
+  "last_audible_s": 117.33,
+  "final_3s_level_drop_db": 30.9
+ },
+ "music": {
+  "tempo_bpm": 147.7,
+  "beat_interval_std_ms": 18.5,
+  "key_estimate": "A# major",
+  "key_confidence": 0.856,
+  "sections": [
+   {
+    "start": 0.0,
+    "end": 5.72,
+    "mean_db": -27.7,
+    "repeat_score": 0.894
+   },
+   {
+    "start": 5.72,
+    "end": 19.77,
+    "mean_db": -19.4,
+    "repeat_score": 0.897
+   },
+   {
+    "start": 19.77,
+    "end": 25.16,
+    "mean_db": -19.7,
+    "repeat_score": 0.824
+   },
+   {
+    "start": 25.16,
+    "end": 26.42,
+    "mean_db": -21.6,
+    "repeat_score": 0.637
+   },
+   {
+    "start": 26.42,
+    "end": 53.57,
+    "mean_db": -15.4,
+    "repeat_score": 0.895
+   },
+   {
+    "start": 53.57,
+    "end": 67.85,
+    "mean_db": -17.9,
+    "repeat_score": 0.808
+   },
+   {
+    "start": 67.85,
+    "end": 72.39,
+    "mean_db": -20.5,
+    "repeat_score": 0.769
+   },
+   {
+    "start": 72.39,
+    "end": 73.21,
+    "mean_db": -34.6,
+    "repeat_score": 0.53
+   },
+   {
+    "start": 73.21,
+    "end": 113.15,
+    "mean_db": -13.8,
+    "repeat_score": 0.896
+   },
+   {
+    "start": 113.15,
+    "end": 120.05,
+    "mean_db": -59.8,
+    "repeat_score": 0.789
+   }
+  ],
+  "onsets_per_sec": 3.74,
+  "energy_db_per_second": [
+   -36.0,
+   -26.0,
+   -25.1,
+   -26.1,
+   -24.9,
+   -25.9,
+   -18.2,
+   -21.3,
+   -21.2,
+   -19.6,
+   -17.2,
+   -20.7,
+   -18.9,
+   -18.6,
+   -20.0,
+   -20.1,
+   -18.2,
+   -21.7,
+   -18.3,
+   -17.3,
+   -20.5,
+   -18.2,
+   -19.4,
+   -20.1,
+   -20.3,
+   -23.1,
+   -16.6,
+   -15.4,
+   -14.5,
+   -15.4,
+   -14.6,
+   -14.8,
+   -16.7,
+   -17.7,
+   -17.0,
+   -17.0,
+   -15.1,
+   -14.8,
+   -17.8,
+   -14.0,
+   -13.4,
+   -14.5,
+   -13.2,
+   -13.2,
+   -12.2,
+   -13.3,
+   -13.3,
+   -13.4,
+   -14.2,
+   -12.5,
+   -12.9,
+   -12.9,
+   -21.5,
+   -35.0,
+   -18.1,
+   -19.1,
+   -18.0,
+   -16.4,
+   -18.0,
+   -16.4,
+   -17.4,
+   -17.0,
+   -17.6,
+   -16.0,
+   -18.6,
+   -18.1,
+   -15.3,
+   -22.0,
+   -18.8,
+   -21.2,
+   -19.7,
+   -19.4,
+   -32.9,
+   -19.7,
+   -14.9,
+   -14.9,
+   -15.0,
+   -15.2,
+   -15.1,
+   -15.5,
+   -16.1,
+   -16.0,
+   -17.8,
+   -15.2,
+   -15.4,
+   -16.8,
+   -14.3,
+   -13.2,
+   -12.5,
+   -13.5,
+   -12.9,
+   -13.0,
+   -12.7,
+   -12.5,
+   -13.6,
+   -13.4,
+   -12.9,
+   -12.4,
+   -13.2,
+   -13.0,
+   -16.2,
+   -12.6,
+   -11.9,
+   -11.6,
+   -12.1,
+   -12.5,
+   -11.3,
+   -11.2,
+   -12.2,
+   -12.3,
+   -12.4,
+   -12.6,
+   -12.4,
+   -19.7,
+   -19.6,
+   -19.8,
+   -26.7,
+   -58.0,
+   -91.4,
+   -172.3
+  ]
+ },
+ "vocal": {
+  "first_vocal_s": 0.19,
+  "vocal_active_s": 112.0,
+  "voiced_s": 100.4,
+  "tuning_offset_semitones": -0.04,
+  "median_pitch": "F4",
+  "median_pitch_hz": 350.6,
+  "range_p5_p95_notes": [
+   "A♯3",
+   "D♯5"
+  ],
+  "range_p5_p95_semitones": 17.2,
+  "phrases": 5,
+  "phrase_loudness_std_db": 1.81,
+  "phrase_loudness_range_db": 4.7,
+  "breaths_detected": 0,
+  "inter_phrase_gaps": 4,
+  "breath_rate_per_gap": 0.0,
+  "glide_frame_frac_(>20st/s)": 0.114,
+  "big_glides_(t,semitones)": [
+   [
+    2.3,
+    14.6
+   ],
+   [
+    3.66,
+    12.0
+   ],
+   [
+    5.56,
+    12.1
+   ],
+   [
+    7.47,
+    10.6
+   ],
+   [
+    8.71,
+    7.4
+   ],
+   [
+    11.42,
+    9.4
+   ],
+   [
+    18.38,
+    9.0
+   ],
+   [
+    20.43,
+    8.9
+   ],
+   [
+    21.71,
+    13.0
+   ],
+   [
+    25.82,
+    9.6
+   ],
+   [
+    39.36,
+    11.6
+   ],
+   [
+    41.16,
+    16.9
+   ],
+   [
+    42.82,
+    11.0
+   ],
+   [
+    47.53,
+    11.0
+   ],
+   [
+    51.05,
+    8.8
+   ],
+   [
+    54.5,
+    7.2
+   ],
+   [
+    58.69,
+    11.0
+   ],
+   [
+    65.52,
+    11.3
+   ],
+   [
+    67.59,
+    9.5
+   ],
+   [
+    70.48,
+    8.1
+   ],
+   [
+    71.46,
+    10.6
+   ],
+   [
+    84.07,
+    10.6
+   ],
+   [
+    86.37,
+    11.3
+   ],
+   [
+    88.39,
+    9.5
+   ],
+   [
+    94.83,
+    14.6
+   ],
+   [
+    98.19,
+    8.8
+   ],
+   [
+    104.43,
+    11.6
+   ],
+   [
+    110.4,
+    7.7
+   ],
+   [
+    111.44,
+    10.1
+   ]
+  ],
+  "octave_like_jumps": 0,
+  "centroid_hz_voiced_median": 3038.0,
+  "hf_ratio_5k_plus_voiced_median": 0.179,
+  "timing_dev_ms_median_abs": 23.2,
+  "timing_dev_ms_iqr": 42.1,
+  "whole_track": {
+   "notes": 289,
+   "intonation_mean_abs_cents_dev_from_semitone": 10.0,
+   "within_note_pitch_std_cents": 14.8,
+   "frac_frames_within_5c_of_note_center": 0.365,
+   "micro_jitter_cents": 8.2,
+   "onset_deviation_cents_median": 2.0,
+   "long_notes": 44,
+   "long_notes_with_vibrato_frac": 0.82,
+   "vibrato_rate_hz_mean": 4.62,
+   "vibrato_extent_cents_pp_mean": 43.2
+  },
+  "opening_12s": {
+   "notes": 29,
+   "intonation_mean_abs_cents_dev_from_semitone": 11.8,
+   "within_note_pitch_std_cents": 16.9,
+   "frac_frames_within_5c_of_note_center": 0.312,
+   "micro_jitter_cents": 9.9,
+   "onset_deviation_cents_median": -0.0,
+   "long_notes": 5,
+   "long_notes_with_vibrato_frac": 1.0,
+   "vibrato_rate_hz_mean": 5.25,
+   "vibrato_extent_cents_pp_mean": 68.7,
+   "glide_frame_frac": 0.131,
+   "big_glides_(t,semitones)": [
+    [
+     2.3,
+     14.6
+    ],
+    [
+     3.66,
+     12.0
+    ],
+    [
+     5.56,
+     12.1
+    ],
+    [
+     7.47,
+     10.6
+    ],
+    [
+     8.71,
+     7.4
+    ],
+    [
+     11.42,
+     9.4
+    ]
+   ],
+   "pitch_range_semitones": 18.6
+  },
+  "phrase_times": [
+   [
+    0.19,
+    24.18
+   ],
+   [
+    24.64,
+    32.14
+   ],
+   [
+    32.68,
+    52.84
+   ],
+   [
+    53.49,
+    67.2
+   ],
+   [
+    67.56,
+    116.06
+   ]
+  ]
+ }
+}
