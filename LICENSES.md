@@ -8,10 +8,15 @@
 | Expressions, poses, chibi, backgrounds (`art/generated/`) | NovelAI V5 / V4.5 Precise Reference, owner's Opus plan | NovelAI terms (commercial use reported; verify) | Prompts, seeds, Anlas in `manifest.jsonl` |
 | SFX (thud, boop, shutter) | Synthesized in `tools/optimize.py` | No third-party audio | |
 | Font: M PLUS Rounded 1c | Google Fonts (github.com/google/fonts, ofl/mplusrounded1c) | SIL Open Font License 1.1 (per METADATA.pb) | Designer: Coji Morishita, M+ Fonts Project |
+| v2 character stickers (`art/generated/pv3/`, `pv3/stickers/`) | NovelAI V4.5 Precise Reference (owner's sheet / `art/reference/refboard_A.png`) + V5 img2img 0.2 | NovelAI terms (verify) | Colour-locked to the sheet; per-image deltaE in `pv3/stickers/qa.json` |
+| 4x master of the sheet, rig layers (`pv2/rig/`) | Real-ESRGAN x4plus-anime via the `ncnn` PyPI wheel; LaMa ONNX (github.com/CloudyTabzy/LaMa-OxiONNX) | Real-ESRGAN BSD-3-Clause; LaMa Apache-2.0 (verify the ONNX export) | Puppet rig experiment, not used in v2 |
+| Reference MV storyboards (analysis only) | YouTube storyboard thumbnails via yt-dlp | Owners' copyright; not stored in the repo, not used in the video | See `docs/reference_breakdown.md` |
 | Analysis models (not shipped in the video) | UVR MDX-Net Voc_FT, rembg isnet-anime, Whisper-small and ReazonSpeech via sherpa-onnx | Various open licenses (verify before redistribution) | Used for analysis and cutouts only |
 
 ## Known deviations from the OC design (to review)
 - 「めっ」 wink close-up (`e5`): the source shows a light-blue bow instead of the navy tie; the PV crops it out of frame.
 - `p3_puitt`, `p7_pawboop`: tie shows chevrons instead of the small black cat emblem.
 - `p6_fallen`: boots missing — not used in the PV.
+- v2: the eight "chibi" gag drawings (`c01`-`c08`) came out with normal proportions, not deformed chibi.
+- v2: `n01_peek` and `n12_aitata` were redrawn after QA (long tie; an odd orange "bump" ball).
 - Name card / end card use the placeholder 「（なまえ）」 until the owner chooses a name.
