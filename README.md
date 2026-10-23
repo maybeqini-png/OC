@@ -144,6 +144,12 @@ and **strictly the reference sheet**; "loli, tease" = her acting, with the sheet
 - Plates: `art/generated/pv4/plates/` (NovelAI V5, 0 Anlas, manifest). Known defects: `pv3/lyrics_timed.json` per-character
   times are wrong (re-time before v4); the pv2 rig shows a reddish seam at the left jaw in close-ups.
 
+## 7d. v4 production (2026-10-23)
+Owner allowed autonomous generation tests and fal video (MiniMax H3 first); outfits/expressions may change per scene
+except core character shots. First production block 64.4-84.6 s: `pv4/block_64.py` (render needs the caches in
+`pv4/.cache/`: mattes from `pv4/qa_frames.py`, vocal stem from `tools/separate.py`). QA record: `docs/qa_h3_block64.md`.
+Composition / benchmark measurements: `docs/research_pv_language.md` §4-6. Status and next steps: `docs/redesign_v4.md` §5.
+
 ## 8. Open items
 1. Owner: confirm SFX levels by ear (phone + headphones). 2. Owner: choose the OC's name.
 3. Owner: add API keys/domains, start a new session. 3b. Assistant, first task of the new session: write and

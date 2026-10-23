@@ -131,3 +131,18 @@ Coral only for honest/feeling words, lemon only for gags.
 4. Full PV + the three Shorts.
 Decisions for the owner: approve the three worlds and the shot plan; approve step 3's Anlas; whether T3 (a human
 rigger/animator) should be considered for the hero motions; the OC's name (title card still 「（なまえ）」).
+
+## 5. Production status (2026-10-23, after the owner allowed autonomous tests and fal video)
+- Owner decisions: MiniMax H3 through fal first; outfits and expressions may change per scene except in core
+  character shots; no AI look; strictly the reference art; frame-by-frame QA of hands, tail, jaw and face.
+- Pipeline for a shot: on-model first frame from the sheet (`pv4/style_frames.py`; full-body frames **without the
+  tail**) -> MiniMax H3 (close-ups, 768P) or H3 Max (full body, native 1080P), start = end frame, prompt with the action
+  and its return -> frame QA (`pv4/qa_frames.py`, `pv4/qa_face.py`, contact sheets) -> choose QA-passed frame ranges
+  -> composite (`pv4/block_64.py`): sheet tail back on (`pv4/tail.py`), lip-sync by frame selection
+  (`pv4/mouth.py` on the separated vocal), drawings on 2s, one lyric layer, motivated transitions.
+- Block 64.4-84.6 s rendered from 5 QA-passed clips (`docs/qa_h3_block64.md`). fal spend so far: 18 jobs, est.
+  $6.69 (manifest `pv4/h3/clips/manifest.jsonl`). NovelAI: 0 Anlas.
+- Re-timed lyrics: `pv4/lyrics_v4.json` (`pv4/retime.py`: vocal note onsets + ASR anchors + 16th grid). Lines with
+  confidence < 0.3 (ノーカンじゃん, ぷいって, 悔しいままで, 震えるつま先で, 転んだあとが, 笑ったきみも, ふふん たぶんね) still
+  need a manual check against the vocal plot before they drive cuts.
+- Next: the same method for the rest of the song, block by block, each block reviewed before the next.

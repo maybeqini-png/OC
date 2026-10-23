@@ -133,3 +133,121 @@ geometry seen from extreme angles.
 | Morphing / floaty motion (video models) | Generated video | No generated video by default; rig motion with follow-through, held key poses with anime timing |
 | Jarring cuts (84 shots, median 1.8 s, 69 layout switches) | New layout family on almost every phrase | One world per section, cuts on bars, transitions motivated by objects |
 | Two text tracks + chat | Bottom karaoke line + duplicate accent word + chat panel | One lyric layer, set once in the composition |
+
+## 4. Measured benchmarks (added 2026-10-23, second pass)
+Method: 360p analysis copies from Bilibili (scratchpad only, never committed or used), every frame analysed
+(scratchpad `analyze_pv.py`): shot boundaries from alignment-compensated frame change (catches cuts and
+dissolves), boundary type (hard cut vs gradual: dissolve / wipe / whip), camera move per shot from optical flow,
+plus 1 fps page sheets for visual study. Evidence: **measured** (numbers below; detector errors of a few shots are
+possible, burned-in subtitles in some mirrors), **observed** (page sheets).
+
+| Work | Shots | Median shot | Hard cuts / gradual | Moving camera (share of time) | Flash frames |
+|---|---|---|---|---|---|
+| 天使うと 「UTOPIA」 (BV17L411j7yK) | 58 | 2.32 s | 5 / 52 | 15 % | 5 |
+| Gawr Gura 「REFLECT」 (BV1Hi4y1k7Ph) | 144 | 1.02 s | 95 / 48 | 45 % | 30 |
+| Gawr Gura 「Ash Again」 (BV1frLVzdERM) | 136 | 1.35 s | 81 / 54 | 18 % | 17 |
+| Gawr Gura 「Full Color」 (BV1RN411e7Jm, 3D live) | 100 | 1.69 s | 52 / 47 | 71 % | 20 |
+| DECO*27 「モニタリング」 (BV1qDUPYKEzf) | 66 | 1.23 s | 34 / 31 | 23 % | 14 |
+| our v3 | 84 | 1.81 s | (all hard cuts) | every shot zooms | — |
+
+What the numbers say:
+- **Speed was not v3's problem.** REFLECT cuts faster (median 1.0 s) and still feels polished. v3 felt jarring because
+  almost every cut also changed layout, colour world, scale and pose at once (69 of 83), with no motivating object.
+- **Smoothness = gradual transitions.** UTOPIA joins 52 of 57 shots with dissolves, white-outs, ring and wave wipes;
+  even the fast Gura MVs make a third of their joins gradual.
+- **Camera**: the 2D illustration MVs (UTOPIA, Ash Again) mostly hold the frame and move layers inside it; REFLECT
+  moves the camera on 45 % of its running time (slow pushes/pulls/tilts over stills with debris layers).
+
+### UTOPIA (天使うと) — observed on all 231 s
+- **Colour script**: morning pastel white/sky (0-80 s) → night navy with moon and falling feathers (100-170 s) →
+  morning again (170-230 s). Everything is recoloured into her palette (white hair, sky blue).
+- **Few hero illustrations, held long**: about 6-8 full illustrations, each 10-25 s (58-70 s one close-up; 200-213 s a
+  slow pan across one large illustration from legs to face), plus a chibi version for light passages.
+- **The scene acts with her**: feathers fall, the moon and clouds drift, concentric rings expand behind her face on
+  emotional lines (136-140 s), bubbles rise — the illustration is still, the world around it is not.
+- **Frame device**: a dashed stationery border with mascot icons at the corners for the room passages.
+- **Typography**: one line at a time inside a designed container — rounded labels with a thin outline, text along a
+  circle path, inside a wave band, inside a cloud bubble; small, pastel, never a bottom karaoke bar.
+- **Transitions**: white-outs, soft dissolves, ring and wave wipes; dark fades into the night section.
+
+### REFLECT (Gawr Gura) — observed shot by shot
+- About 15 illustrations of Gura (and the red alter ego), used as large crops: profile, eyes, reaching hand, hair.
+  Character acting is minimal; life comes from the camera and from **debris layers at several depths** (bubbles,
+  glass shards, rocks) crossing the frame.
+- Two colour worlds (blue underwater / red glitch) switched on hard cuts; the shards and white flashes hide the
+  switches. Giant kanji (恐, 海の底, 過去, 今, 私) and stylised Latin (Begin again, RETURN, without) as graphics;
+  the lyric line itself small and thin.
+
+### Ash Again (Gawr Gura × Casey Edwards) — observed
+- Fully hand-animated 2D, grey + red with yellow/pink/blue silhouette pops. **Spatial typography**: lyric words set
+  on the walls and floor of a perspective room ("DON'T TELL ME / EVERYONE IS WAITING"), so type is architecture.
+
+### Full Color (Gawr Gura, 3D concert) — observed
+- 3D model on a stage set; the camera circles and pans on 71 % of the running time; close-ups intercut with wides
+  and audience shots. Camera grammar only (we are 2D).
+
+## 5. What changes in our plan because of this
+1. Keep the v4 cut budget (~45-55) but allow REFLECT-speed bursts at climaxes **only when the world, palette and
+   motif stay constant** across the burst.
+2. Default join = gradual (dissolve, white-out through the world's light colour, ring wipe from her voice, water
+   ripple wipe); hard cuts only on drum hits with a flash or a shard pass.
+3. Every shot has **scene acting** tied to the lyric's mood: wind, light swelling, ripples, feathers/petals,
+   debris layers — never a static plate (owner requirement, 2026-10-23).
+4. Type: one line, inside a container or on a surface of the scene (spatial type on water, stage floor, monitor),
+   giant words only at true hits.
+5. Character: a few strong illustrations held long with camera and layers (UTOPIA/REFLECT method) + selected acting
+   clips (MiniMax H3 from on-model first frames) where the lyric needs a gesture.
+
+## 6. Composition and character-scene integration (added 2026-10-23, third pass)
+Works: 『りゅうおうのおしごと!』 NCOP 「コレカラ」 and NCED 「守りたいもののために」 (BV1as411w71U p1/p2),
+『ノーゲーム・ノーライフ』 NCOP 「This game」, NCED 「オラシオン」, ED2 「THERE IS A REASON」 (BV1ag411e7D4 p1-p3),
+YOASOBI 「アイドル」 official MV (BV1Ws4y1A7fS), plus UTOPIA / REFLECT from §4. Method: every shot measured
+(scratchpad `analyze_pv.py`), one mid-frame per shot inspected with a thirds grid and a character matte
+(scratchpad `compose_study.py`). The matte (isnet-anime) misses heavily stylised characters (NGNL OP), so
+composition numbers below are only shot counts and timings; layout findings are **observed** on the frames.
+
+| Work | Shots | Median shot | Hard / gradual joins | Moving camera |
+|---|---|---|---|---|
+| Ryuuou NCOP | 61 | 1.17 s | 47 / 13 | 53 % |
+| Ryuuou NCED | 14 | 2.42 s (mean 6.5 s; holds of 9-28 s) | 5 / 8 | 29 % |
+| NGNL NCOP | 44 | 1.08 s | 13 / 30 | 67 % |
+| NGNL NCED | 29 | 2.00 s | 11 / 17 | 33 % |
+| NGNL ED2 | 21 | 4.6 s | — | — |
+
+### Observed layout rules
+1. **The place is shown on its own first.** Ryuuou NCOP: 21 of 47 measured shots have no character
+   (Dotonbori, the Ferris wheel, Osaka castle through cherry blossoms, the shogi hall, its signboard). When the
+   characters appear in those places they are small (about a fifth of the frame height), on the lower third, in deep
+   one-point perspective, lit by the same daylight and grounded by their shadows. Integration comes from the place
+   being established and from matching perspective and light, not from putting a big figure in front of a plate.
+2. **Inserts carry the story.** Hands on the shogi pieces (top-down board with a hand entering from the top,
+   oblique table-level hand, a hand pressing a glowing board), feet walking, a hair ribbon in extreme close-up, eyes
+   in a horizontal strip. In the ED a figure is shown with **her head out of frame** (hand on the umbrella handle,
+   arm brushing a shoji): body language instead of a face.
+3. **Shadows and light tie her to the set.** Ryuuou NCED: the umbrella seen from above with its cast shadow on
+   textured ground; her shadow on the shoji while she walks past; a profile at the left third, backlit by a warm
+   window, looking into the open right two thirds. NGNL NCED: tiny figure on a white paper void with one long
+   diagonal cast shadow.
+4. **One light colour per shot, character included.** NGNL NCOP grades every shot into a single hue (white, violet,
+   cyan, crimson); the characters take that hue. Ryuuou NCED does the same with sunset orange and window gold.
+5. **Symmetry for relationships, diagonals for motion.** NGNL: two faces meeting on the centre line (foreheads and
+   hands together); two figures falling upside down on a diagonal across a white void while the camera tilts with
+   them; one tiny figure at the vanishing point of symmetric architecture.
+6. **Scale contrast.** Tiny figure against a vast sky/void (NGNL ED: two children on a cloud field; a lone figure at
+   the right edge of a black frame) followed by an extreme close-up; never several medium shots in a row.
+7. **Inversion and mirroring as statements** (「アイドル」): three upside-down heads in a row; tiny figures standing on a
+   glossy white floor with their reflections and a rainbow vignette; split screens; eyes as a full-width strip.
+8. **Long holds for quiet songs.** Ryuuou NCED holds single shots for 9, 14.6, 17 and 27.9 s with a slow pan or
+   push; NGNL ED2 median 4.6 s. Our verse 2 and the bridge should use this, not chorus cutting.
+
+### Applied to block 64.4-84.6 s
+- 笑ったでしょ: tease close-up on the right two thirds, the hook word set into the left third and **behind** her
+  (matte), single stage-light colour.
+- よそ見しないで: waist shot on the right third, the moon in the left third as the light source; her rim light
+  comes from it (generated in-scene by H3 from our relit first frame).
+- 強がりだって / 本気だもん: small full figure on the right third, horizon on the lower third, moon filling the
+  left, reflection = her cast "shadow" on the water (rule 3); the moonlight swells on 本気 (rule 4).
+- この声で: centred symmetric figure in front of the moon (rule 5), shown **inverted** after the whip-tilt
+  (rule 7), ripple rings timed to her voice.
+- Not yet applied (needs new art): an establishing shot of the MIRROR SEA without her before よそ見 (rule 1), and
+  a body-language insert (boots stepping on the water / hand on her chest, rule 2).

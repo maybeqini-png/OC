@@ -1,3 +1,11 @@
 __pycache__/
 *.pyc
 pv4/.cache/
+# generated video takes: only the QA-passed clips used in an edit are committed (see docs/qa_h3_block64.md)
+pv4/h3/clips/*.mp4
+!pv4/h3/clips/h3_d01_close_tease.mp4
+!pv4/h3/clips/h3_p02b_me_poke.mp4
+!pv4/h3/clips/h3_p04_yosomi.mp4
+!pv4/h3/clips/h3max_p05d_tsuyogari_nt_1080.mp4
+!pv4/h3/clips/h3max_p07e_konokoe_nt_1080.mp4
+pv4/h3/clips_*.log

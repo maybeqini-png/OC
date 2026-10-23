@@ -43,7 +43,7 @@ def motes(f, seed, n, box, size=(1.5, 4.0), k=0.5, color=L.MOON):
 
 
 # ---------------- A: mirror (強がりだって / 本気だもん, 72.7 s) ----------------
-def frame_mirror():
+def frame_mirror(clean=False):
     f = L.grade(L.plate(P / "p1_mirror_moon.png", zoom=1.12, cx=0.62, cy=0.42), k=0.45)
     f = L.bloom(f, thresh=0.7, k=0.35)
     horizon = int(H * 0.585)
@@ -58,6 +58,8 @@ def frame_mirror():
     L.over(f, refl, x, feet - 6)
     L.contact_glow(f, cx, feet + 4, 150, 14, color=L.MOON, k=0.28)
     L.over(f, fig, x, feet - fig.shape[0])
+    if clean:  # first frame for a video model: no type, no bars (type is composited afterwards)
+        return L.finish(motes(f, 3, 40, (0, 0, W, horizon), k=0.35), 1, chroma_px=0, grain_k=0.0, vig=0.38)
     # lyric: the bluff above the horizon (white Mincho), the truth in the water (coral, rippled)
     # set in ink on the moon: the brightest thing in the frame carries the darkest letters
     up = L.type_rgba("強がりだって", "mincho", 58, fill=L.INK, tracking=0.28, vertical=True)
@@ -186,12 +188,13 @@ def frame_screens():
 
 
 # ---------------- D: tease close-up, word behind her (笑ったでしょ, 64.5 s) ----------------
-def frame_tease():
+def frame_tease(clean=False):
     f = L.grade(L.plate(P / "p3_theatre.png", blur=7, zoom=1.25, cx=0.45, cy=0.3), k=0.4) * 0.85
     f = L.bloom(f, thresh=0.55, k=0.35)
     # big word behind her head
     word = L.type_rgba("笑ったでしょ", "heavy", 205, fill=L.CORAL, stroke=L.CORAL, stroke_w=5, outline_only=True)
-    L.put(f, word, W * 0.34, H * 0.34, angle=-6, alpha=0.95)
+    if not clean:
+        L.put(f, word, W * 0.34, H * 0.34, angle=-6, alpha=0.95)
     head = L.figure(1500, (0.1, 0.0, 0.9, 0.34))
     head = L.relight(head, ambient=L.NAVY, amb_k=0.3, key=0.9, rim_dir=(0.6, -1.0), rim_color=(0.75, 0.85, 1.0),
                      rim_k=0.55, rim_px=4)
@@ -201,15 +204,90 @@ def frame_tease():
     beam = np.clip(1 - np.abs(xx - (W * 0.6 + (yy - H) * 0.12)) / (260 + yy * 0.25), 0, 1) ** 2 * (1 - yy / H * 0.6)
     f += np.array((0.85, 0.9, 1.0), np.float32) * beam[..., None] * 0.18
     f = motes(f, 9, 60, (W * 0.4, 0, W * 0.85, H), size=(1.5, 3.5), k=0.45, color=(0.9, 0.95, 1.0))
+    if clean:
+        return L.finish(f, 4, chroma_px=0, grain_k=0.0, vig=0.4)
     f = caption(f, "CHORUS I  —  64.46", 64, H - 62)
     return L.finish(f, 4, bloom_k=0.4, chroma_px=1.6, vig=0.4)
+
+
+def frame_mirror_waist():
+    """MIRROR SEA, waist-up on the right third, horizon behind her chest, moon rim from the left (よそ見しないで)."""
+    f = L.grade(L.plate(P / "p1_mirror_moon.png", zoom=1.35, cx=0.40, cy=0.40), k=0.45)
+    f = L.bloom(f, thresh=0.7, k=0.35)
+    fig = L.figure(int(H * 1.0 / 0.52), (0.0, 0.0, 1.0, 1.0))[: int(H * 0.95)]
+    fig = L.relight(fig, ambient=L.NAVY, amb_k=0.4, key=0.82, rim_dir=(-1.0, -0.2), rim_color=L.MOON, rim_k=0.9, rim_px=6)
+    L.over(f, fig, int(W * 0.66 - fig.shape[1] / 2), H - fig.shape[0])
+    f = motes(f, 5, 30, (0, 0, W, H * 0.6), k=0.3)
+    return L.finish(f, 6, chroma_px=0, grain_k=0.0, vig=0.36)
+
+
+def frame_mirror_medium():
+    """MIRROR SEA, knee-up centred, for the singing shot that is later turned over into the inverted world."""
+    f = L.grade(L.plate(P / "p1_mirror_moon.png", zoom=1.2, cx=0.55, cy=0.45), k=0.45)
+    f = L.bloom(f, thresh=0.7, k=0.35)
+    fig = L.figure(int(H * 0.92 / 0.78), (0.0, 0.0, 1.0, 1.0))[: int(H * 0.92)]
+    fig = L.relight(fig, ambient=L.NAVY, amb_k=0.38, key=0.85, rim_dir=(-0.8, -0.6), rim_color=L.MOON, rim_k=0.9, rim_px=5)
+    L.over(f, fig, int(W * 0.56 - fig.shape[1] / 2), H - fig.shape[0])
+    f = motes(f, 8, 30, (0, 0, W, H * 0.6), k=0.3)
+    return L.finish(f, 7, chroma_px=0, grain_k=0.0, vig=0.36)
+
+
+def frame_mirror_full_center():
+    """MIRROR SEA, full figure centred with her boots on the water (ripples need a surface to spread on)."""
+    f = L.grade(L.plate(P / "p1_mirror_moon.png", zoom=1.12, cx=0.5, cy=0.42), k=0.45)
+    f = L.bloom(f, thresh=0.7, k=0.35)
+    fig = L.figure(760)
+    fig = L.relight(fig, ambient=L.NAVY, amb_k=0.4, key=0.82, rim_dir=(-0.6, -0.8), rim_color=L.MOON, rim_k=0.9, rim_px=4)
+    cx, feet = int(W * 0.5), int(H * 0.86)
+    x = cx - fig.shape[1] // 2
+    L.over(f, L.reflection(fig, fade=(0.5, 0.0), blur=2.2, ripple=(4.0, 0.06), tint=(0.55, 0.7, 1.0)), x, feet - 6)
+    L.contact_glow(f, cx, feet + 4, 160, 14, color=L.MOON, k=0.28)
+    L.over(f, fig, x, feet - fig.shape[0])
+    f = motes(f, 9, 30, (0, 0, W, H * 0.58), k=0.3)
+    return L.finish(f, 8, chroma_px=0, grain_k=0.0, vig=0.36)
+
+
+def mirror_full_nt(cx_frac=0.5, fig_h=760, plate_cx=0.5, seed=8):
+    """MIRROR SEA full figure WITHOUT the tail (for video generation; the sheet's own tail is composited back by
+    pv4/tail.py, because the video model cannot keep a tail attached). Returns frame + placement for the tail."""
+    f = L.grade(L.plate(P / "p1_mirror_moon.png", zoom=1.12, cx=plate_cx, cy=0.42), k=0.45)
+    f = L.bloom(f, thresh=0.7, k=0.35)
+    body, tail, root = L.figure_parts(fig_h)
+    rl = dict(ambient=L.NAVY, amb_k=0.4, key=0.82, rim_dir=(-0.6, -0.8), rim_color=L.MOON, rim_k=0.9, rim_px=4)
+    body = L.relight(body, **rl)
+    cx, feet = int(W * cx_frac), int(H * 0.86)
+    x = cx - body.shape[1] // 2
+    L.over(f, L.reflection(body, fade=(0.5, 0.0), blur=2.2, ripple=(4.0, 0.06), tint=(0.55, 0.7, 1.0)), x, feet - 6)
+    L.contact_glow(f, cx, feet + 4, 160, 14, color=L.MOON, k=0.28)
+    L.over(f, body, x, feet - body.shape[0])
+    f = motes(f, seed, 30, (0, 0, W, H * 0.58), k=0.3)
+    place = dict(x=x, y=feet - body.shape[0], fig_h=fig_h, root=[root[0] + x, root[1] + feet - body.shape[0]], feet=feet,
+                 relight=rl)
+    return L.finish(f, seed, chroma_px=0, grain_k=0.0, vig=0.36), place
+
+
+def frame_sheet_waist():
+    """Core shot: the sheet itself, waist up, on the sheet's white - the identity test for video models."""
+    f = np.ones((H, W, 3), np.float32)
+    fig = L.figure(int(H * 0.98 / 0.5), (0.0, 0.0, 1.0, 1.0))[: int(H * 0.98)]
+    L.over(f, fig, (W - fig.shape[1]) // 2, int(H * 0.02))
+    return f
 
 
 if __name__ == "__main__":
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
-    frames = {"A_mirror": frame_mirror, "B_inverted": frame_inverted, "C_screens": frame_screens, "D_tease": frame_tease}
+    frames = {"A_mirror": frame_mirror, "B_inverted": frame_inverted, "C_screens": frame_screens, "D_tease": frame_tease,
+              "A_mirror_clean": lambda: frame_mirror(clean=True), "D_tease_clean": lambda: frame_tease(clean=True),
+              "S_sheet_waist": frame_sheet_waist, "M_mirror_waist": frame_mirror_waist,
+              "M_mirror_medium": frame_mirror_medium, "M_mirror_full_center": frame_mirror_full_center,
+              "N_mirror_center_nt": lambda: mirror_full_nt()[0],
+              "N_mirror_right_nt": lambda: mirror_full_nt(cx_frac=0.63, fig_h=640, plate_cx=0.62, seed=1)[0]}
     only = sys.argv[2:] or list(frames)
     for k in only:
         L.save(frames[k](), out / f"{k}.jpg")
         print("saved", k)
+    import json
+    json.dump({"N_mirror_center_nt": mirror_full_nt()[1],
+               "N_mirror_right_nt": mirror_full_nt(cx_frac=0.63, fig_h=640, plate_cx=0.62, seed=1)[1]},
+              open(out / "placements.json", "w"), indent=1, default=float)

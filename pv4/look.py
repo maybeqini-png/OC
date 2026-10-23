@@ -67,7 +67,18 @@ def sheet_master():
     ys, xs = np.where(rgba[..., 3] > 0.02)
     rgba = rgba[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
     np.save(p, rgba)
+    np.save(CACHE / "sheet_x4_offset.npy", np.array([xs.min(), ys.min()]))
     return rgba
+
+
+def sheet_offset():
+    """(x, y) of the cut-out figure box inside the 4x master (= rig layer coordinates)."""
+    p = CACHE / "sheet_x4_offset.npy"
+    if not p.exists():
+        (CACHE / "sheet_x4_rgba.npy").unlink(missing_ok=True)
+        sheet_master.cache_clear()
+        sheet_master()
+    return tuple(int(v) for v in np.load(p))
 
 
 def figure(height, crop=None):
@@ -83,6 +94,64 @@ def figure(height, crop=None):
 
 # head-and-shoulders box on the figure (fractions of the cut-out figure box)
 HEAD = (0.18, 0.0, 0.82, 0.30)
+
+
+# ---------------- the same figure split into body and tail (pv2 rig layers, built from the sheet) ----------------
+@lru_cache(maxsize=1)
+def rig_parts_master():
+    """(figure_without_tail, tail, tail_root_xy) at the 4x master scale, in the sheet_master() box.
+    The body is the sheet cut-out itself with only the tail's pixels over the background removed (where the tail
+    passes behind a leg, the sheet already shows the leg); the tail is the pv2 rig's tail layer, cut from the same
+    master. Every pixel still comes from the owner's sheet."""
+    CACHE.mkdir(exist_ok=True)
+    p = CACHE / "parts_x4.npz"
+    if p.exists():
+        d = np.load(p)
+        return d["body"], d["tail"], tuple(d["root"])
+    import json
+    rig = ROOT / "pv2/rig"
+    cfg = json.load(open(rig / "rig.json"))
+    m = sheet_master()
+    ox, oy = sheet_offset()
+    h, w = m.shape[:2]
+
+    def layer(n):
+        a = np.asarray(Image.open(rig / f"{n}.png").convert("RGBA")).astype(np.float32)[oy:oy + h, ox:ox + w] / 255
+        a[..., :3] *= a[..., 3:]
+        return a
+    tail, body_l = layer("tail"), layer("body")
+    # the tail's own outline lies just outside the rig layer's alpha: grow the removal by ~10 px (4x scale)
+    grown = cv2.dilate((tail[..., 3] > 0.05).astype(np.float32), np.ones((21, 21), np.uint8))
+    keep = 1 - grown * (1 - (body_l[..., 3] > 0.5).astype(np.float32))
+    keep = cv2.GaussianBlur(keep, (0, 0), 1.5)
+    body = m * keep[..., None]
+    K = cfg["K"]
+    root = (cfg["tail_root"][0] * K - ox, cfg["tail_root"][1] * K - oy)
+    np.savez_compressed(p, body=body, tail=tail, root=np.array(root, np.float32))
+    return body, tail, root
+
+
+def figure_parts(height):
+    """Body (no tail) and tail at `height` px, plus the tail root in that scale."""
+    body, tail, root = rig_parts_master()
+    s = height / body.shape[0]
+    size = (max(int(body.shape[1] * s), 1), height)
+    return (cv2.resize(body, size, interpolation=cv2.INTER_AREA), cv2.resize(tail, size, interpolation=cv2.INTER_AREA),
+            (root[0] * s, root[1] * s))
+
+
+def swing_tail(tail, root, angle_deg, bend=1.0):
+    """Rotate the tail about its root, more toward the tip (as pv2/rig.py does), premultiplied RGBA in/out."""
+    h, w = tail.shape[:2]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    ox, oy = xx - root[0], yy - root[1]
+    r = np.hypot(ox, oy)
+    reach = max(r[tail[..., 3] > 0.05].max() if (tail[..., 3] > 0.05).any() else 1.0, 1.0)
+    a = -np.deg2rad(angle_deg) * np.clip(r / reach, 0, 1) ** bend
+    # backward map: destination pixel -> source pixel rotated by -a
+    sx = root[0] + ox * np.cos(a) - oy * np.sin(a)
+    sy = root[1] + ox * np.sin(a) + oy * np.cos(a)
+    return cv2.remap(tail, sx.astype(np.float32), sy.astype(np.float32), cv2.INTER_LINEAR, borderValue=(0, 0, 0, 0))
 
 
 # ---------------- integration by light ----------------
