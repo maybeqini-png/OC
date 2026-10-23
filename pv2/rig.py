@@ -38,8 +38,11 @@ class Rig:
         d = Path(rig_dir)
         self.cfg = json.load(open(d / "rig.json"))
         self.K = self.cfg["K"]
-        self.layers = {n: np.asarray(Image.open(d / f"{n}.png").convert("RGBA"))
-                       for n in ("tail", "body", "upper", "upper_lid")}
+        # body_fixed.png: the area the head uncovers when it tilts is painted flat neck-shadow skin / hair
+        # (the LaMa fill under the jaw left a reddish smear and holes - the "jaw seam")
+        files = {"tail": "tail", "body": "body_fixed" if (d / "body_fixed.png").exists() else "body", "upper": "upper",
+                 "upper_lid": "upper_lid"}
+        self.layers = {n: np.asarray(Image.open(d / f"{f}.png").convert("RGBA")) for n, f in files.items()}
         self.eyes = np.asarray(Image.open(d / "eyes.png").convert("RGB"))
 
     @lru_cache(maxsize=24)

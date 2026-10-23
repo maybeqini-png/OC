@@ -211,7 +211,7 @@ def reflection(rgba, fade=(0.55, 0.0), blur=2.5, ripple=(5.0, 0.045), t=0.0, tin
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
     amp = ripple[0] * (0.3 + yy / h)
     mapx = xx + amp * np.sin(yy * ripple[1] * 6.283 / 6 + t * 3.0)
-    r = cv2.remap(r, mapx, yy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    r = cv2.remap(r, mapx.astype(np.float32), yy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     r = cv2.GaussianBlur(r, (0, 0), blur)
     f = np.linspace(fade[0], fade[1], h, dtype=np.float32)[:, None, None]
     r = r * f

@@ -54,3 +54,14 @@ crops and are expression changes, not distortions.
 - Lip-sync: mouth openness measured per source frame (checked on crops: closed = 0, open = 1) and matched to the
   separated vocal; in この声で 80 different drawings are used over 8.3 s, the mouth closes in the gaps of the line.
 - Not fixed in this block: the 768P close-ups (笑ったでしょ, めっ) are slightly softer than the 1080P shots.
+
+## v4.1 (code-rendered from the sheet, no generated pixels) - frame review
+- Contact sheets every 4th frame of the whole block and full-res crops of faces (S1 tilts/squint, punch-ins, waist
+  wink, inverted reflection face, held-note eyes) and full figures (S4, S6, S8): on-model in every checked frame (the
+  drawing is the sheet); no jaw seam (the puppet is one deformation field, no layers); hands are the sheet's hands;
+  the tail is the sheet's tail, attached and swaying.
+- Fixed in review: water rings were drawn over her boots (now behind them, on the water surface above the reflection);
+  a gap between the soles and their mirror image (now placed on the lowest opaque row, soles meet the reflection);
+  lyric columns over the moon in white (moved to dark sky).
+- Cuts vs morae: all 11 cuts are on mora onsets (by construction); offset to the nearest beat -4.9..+4.4 frames
+  (the voice is not always on the beat; the picture follows the voice).

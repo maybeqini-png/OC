@@ -146,3 +146,28 @@ rigger/animator) should be considered for the hero motions; the OC's name (title
   confidence < 0.3 (ノーカンじゃん, ぷいって, 悔しいままで, 震えるつま先で, 転んだあとが, 笑ったきみも, ふふん たぶんね) still
   need a manual check against the vocal plot before they drive cuts.
 - Next: the same method for the rest of the song, block by block, each block reviewed before the next.
+
+## 6. v4.1 (2026-10-23, after the owner rejected the H3 block; no fal credits used)
+Owner: "both the scenes and the character still carry an obvious AI look; the timing does not align smoothly with the
+lyrics; editing/story weak." Changes (`pv4/block_64b.py`):
+- **No generated pixels on screen.** Character = the owner's sheet animated by one smooth deformation field
+  (`pv4/sheet_puppet.py`: head tilt/nod/turn about the neck, hair follow-through, breathing, ear twitches, sheet tail
+  swing, rig face drawing for blinks / ^^ eyes / wink / 3-shape mouth / blush). The pv2 layer rig's jaw seam was
+  repaired (`pv2/rig/body_fixed.png`), but the puppet does not use layers at all. Backgrounds are designed shapes
+  (`pv4/bg_design.py`: gradient sky, cel-painted cumulus, crisp moon, drawn water strokes and rings on 2s/3s).
+  Measured (docs/research_pv_language.md §7): character soft 0.034 / micro 2.22 (refs 0.055-0.094 / 1.3-2.2; v4.0
+  0.16 / 2.98); background flat 0.89, soft 0.036, micro 0.92 (refs 0.6-0.82 / 0.05-0.14 / 0.5-1.4; v4.0 0.48 / 0.26 /
+  2.49) - both regions now in the hand-drawn range (backgrounds slightly flatter than painted references).
+- **Timing:** mora onsets from the vocal (`pv4/syllables.py` -> `pv4/lyrics_block64.json`); every glyph appears on its
+  mora, every cut is on a mora onset, every pose change lands on a mora (2-frame anticipation, move, overshoot, settle,
+  drawings on 2s), the mouth opens/closes with the vocal loudness.
+- **Story / editing:** tease close-up with the hook word slamming in mora by mora (stage colours) -> めっ eye strip with
+  the wink on っ -> もういっかい as three punch-ins with colour flips -> white -> the night sea established empty, the
+  camera tilts down to her (lands on み) -> 見ててよね waist shot, wink on ね -> 強がりだって: smug her above the water, the
+  camera tilts down to the reflection -> 本気だもん: the reflection's face, upside down, blushing (the real her) -> the
+  frame turns over into the reflection world (light palette) -> この声で full figure, rings from her voice ->
+  キメちゃうよ bust, eyes close on the held よ, open before the end -> white.
+
+Known limits of v4.1 (honest): the sheet has one pose (arms down), so acting is head/face/hair/ears/tail only - no
+hand gestures; the designed backgrounds are clean but simpler than painted anime BG art; the face drawings for open
+mouth / ^^ eyes / blush come from the pv2 rig (code-drawn on the sheet face), not from an artist.

@@ -251,3 +251,32 @@ composition numbers below are only shot counts and timings; layout findings are 
   (rule 7), ripple rings timed to her voice.
 - Not yet applied (needs new art): an establishing shot of the MIRROR SEA without her before よそ見 (rule 1), and
   a body-language insert (boots stepping on the water / hand on her chest, rule 2).
+
+## 7. What reads as "AI" vs hand-drawn, measured (2026-10-23, after the owner rejected block 64 v4.0)
+Owner verdict: the scenes and the character still look AI-generated; timing does not align with the lyrics; the
+editing/story is weak. To find out *what* in the pixels makes the difference, every reference MV and our block
+were measured per region (character matte vs background), one frame per 1-4 s at 640x360
+(scratchpad `measure_look.py`):
+- **flat** = share of pixels in flat paint (3x3 colour spread < 1.2 Lab), **soft** = airbrushed gradients away
+  from lines, **micro** = high-frequency texture inside flat-ish areas, **palette90** = colours covering 90 %.
+
+| Region | Source | flat | soft | micro | palette90 |
+|---|---|---|---|---|---|
+| background | UTOPIA / Ash Again / Idol | 0.74 / 0.77 / 0.82 | 0.09 / 0.05 / 0.08 | 0.76 / 0.74 / 0.53 | 18 / 17 / 27 |
+| background | Ryuuou OP / NGNL ED / REFLECT | 0.60 / 0.69 / 0.69 | 0.14 / 0.13 / 0.12 | 1.38 / 0.91 / 0.80 | 72 / 29 / 53 |
+| background | **our v4.0 block** (generated plates + H3) | **0.48** | **0.26** | **2.49** | 30 |
+| character | Ash Again / Ryuuou OP / UTOPIA | 0.52 / 0.63 / 0.41 | 0.06 / 0.09 / 0.09 | 1.94 / 1.31 / 2.19 | 27 / 69 / 47 |
+| character | **owner's sheet** (full / bust) | 0.45 / 0.65 | **0.05 / 0.01** | 2.80 / 1.24 | 24 / 37 |
+| character | **our v4.0 block** (H3 footage) | **0.33** | **0.16** | **2.98** | 45 |
+| character | raw H3 Max 1080P clip | 0.26 | 0.20 | 2.75 | 34 |
+
+Reading: the generated pixels carry 2-3x the soft airbrush gradients and 3x the micro texture of hand-painted
+anime in both regions - that is the "AI look" in numbers (glossy, mushy, noisy flat areas). Post-processing does not
+fix it: a cel pass (palette snap + flattening, `pv4/cel.py`) made the H3 frames posterised and blotchy (tested on
+`h3max_p07e`, rejected by eye). Conclusion for v4.1: **no generated pixels on screen**. The character is the
+sheet itself (soft 0.01-0.05), animated by deformation; backgrounds are designed shapes.
+
+Timing: the per-character lyric times in `pv4/lyrics_v4.json` were wrong by up to 1.8 s (interpolation between a few
+ASR hits). v4.1 uses mora onsets placed on the separated vocal (`pv4/syllables.py`), checked by eye on the
+spectrogram / pitch / loudness and against ReazonSpeech token times; lines where the automatic placement was
+implausible are fixed by hand in `OVERRIDES` (each value commented).
