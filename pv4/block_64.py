@@ -9,8 +9,8 @@ reference measurements (docs/research_pv_language.md §4-5), after frame-by-fram
   the separated vocal is loud and closed in the gaps; time stays monotonic, 0.6-1.6x speed;
 - character footage on 2s; camera, light and type on 1s;
 - one lyric layer (Mincho; one hook word behind her using the per-frame matte);
-- joins: hit cut with a flash on めっ, rewind on もういっかい, white dissolve into the MIRROR SEA, dissolve inside the
-  world, whip-tilt through the water into the inverted world, bloom-out at the end of the verse;
+- joins: hit cut with a flash on めっ, rewind on もういっかい, white dissolve into the MIRROR SEA (established empty
+  first), straight cut inside the world, whip-tilt through the water into the inverted world, bloom-out at the end of the verse;
 - scene acting: ripples from her boots (in the clips), the moonlight swells on 本気だもん, motes rise.
 
 usage: block_64.py preview <t...> --out sheet.jpg | render <out.mp4> [workers]
@@ -317,10 +317,8 @@ def frame(fi):
     else:
         k = shot_at(t)
         f = shot_frame(k, t)
-        # dissolve inside the MIRROR SEA (よそ見 → 強がり), 6 frames
-        if k == 3 and t < SHOTS[3][0] + 0.25:
-            v = (t - SHOTS[3][0]) / 0.25
-            f = f * ease(v) + shot_frame(2, SHOTS[2][1] - 1 / FPS) * (1 - ease(v))
+        # よそ見 -> 強がり is a straight cut on the phrase onset: a dissolve here showed two moons at once (the moon
+        # sits at a different place in the two framings), which breaks the logic of the world
     if BLOOM_OUT[0] <= t:
         v = ease((t - BLOOM_OUT[0]) / (BLOOM_OUT[1] - BLOOM_OUT[0]))
         f = L.bloom(f, thresh=0.6 - 0.4 * v, k=0.6 * v)

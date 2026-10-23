@@ -44,3 +44,13 @@ lower edge of the largest face blob, and its change is measured against the prev
 shift and tilt. Results on the drawings used in the block: d01 max 3.3 % (mouth opening), p02b 1.6 %, p04 0.8 %,
 p05c 1.8 %, p07d 1.4 % of face height; no left/right asymmetry above 3.5 %. All flagged drawings were opened on
 crops and are expression changes, not distortions.
+
+## Final-output review (rendered block, every 6th frame + full-res crops)
+- Hook word 笑ったでしょ: first version re-flowed per character and was half hidden by her head; now set once with
+  real kerning, wiped in per syllable, in the left third, only the last kana tucked behind her ear (intended depth).
+- よそ見 -> 強がり: the 6-frame dissolve showed two moons at once (different framings) -> replaced by a straight cut.
+- Composited tail checked at 72.8-75.8 s and 77-83 s on full-res crops: attached behind the left leg in every frame,
+  sways on 2s, correct upside down in the inverted world; no doubled tail (the tail-free clips contain none).
+- Lip-sync: mouth openness measured per source frame (checked on crops: closed = 0, open = 1) and matched to the
+  separated vocal; in この声で 80 different drawings are used over 8.3 s, the mouth closes in the gaps of the line.
+- Not fixed in this block: the 768P close-ups (笑ったでしょ, めっ) are slightly softer than the 1080P shots.
