@@ -266,14 +266,27 @@ def L_stage(t, u, d, a):
     return accent(f, t, a.get("accent"), "r"), a.get("zoom", (1.0, 1.06))
 
 
+def close_height(aid):
+    """Rig height that makes the face about a third of the frame (falls back to a bust framing)."""
+    from autorig import FACES
+    src_h = Image.open(R.ST / f"{aid}.png").height
+    box = FACES.get(aid)
+    if box is None or box[3] < 0.08 * src_h:
+        return 1500, None
+    return int(np.clip(src_h * (0.34 * H) / box[3], 1150, 2300)), box
+
+
 def L_close(t, u, d, a):
     f = soft_bg(a["theme"]).copy()
     f = R.pattern_dots(f, t, (1, 1, 1), k=0.25) if a["theme"] not in ("cool", "pop") else f
-    r = rig(a["st"], 1900)
-    fx, fy, fw, fh = r.face
-    x = int(W / 2 - (fx + fw / 2))
-    y = int(H * 0.46 - (fy + fh / 2))
+    hgt, box = close_height(a["st"])
+    r = rig(a["st"], hgt)
     rgba = r.render(t, energy=0.8, beat_phase=t - R.last_beat(t), settle=0)
+    if box is None:  # no reliable face: bust framing from the top of the drawing
+        x, y = int(W / 2 - rgba.shape[1] / 2), int(-0.04 * H)
+    else:
+        fx, fy, fw, fh = r.face
+        x, y = int(W / 2 - (fx + fw / 2)), int(H * 0.44 - (fy + fh / 2))
     f = C.over(f, R.shadowed(rgba, off=(14, 18)), x, y)
     return accent(f, t, a.get("accent"), "r"), a.get("zoom", (1.0, 1.1))
 
