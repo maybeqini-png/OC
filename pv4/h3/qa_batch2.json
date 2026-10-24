@@ -1,0 +1,57 @@
+[
+ {
+  "clip": "pv4/h3/clips/h3_p02_me_boop.mp4",
+  "frames": 124,
+  "hair_drift_max": 16.05,
+  "hair_drift_end": 0.24,
+  "eye_drift_max": 10.18,
+  "boil_median": 0.349,
+  "boil_p95": 30.656,
+  "jump_max": 85.44,
+  "bg_shift_max": null
+ },
+ {
+  "clip": "pv4/h3/clips/h3_p04_yosomi.mp4",
+  "frames": 124,
+  "hair_drift_max": 1.38,
+  "hair_drift_end": 1.08,
+  "eye_drift_max": 3.72,
+  "boil_median": 0.267,
+  "boil_p95": 5.379,
+  "jump_max": 8.23,
+  "bg_shift_max": null
+ },
+ {
+  "clip": "pv4/h3/clips/h3_p05_tsuyogari.mp4",
+  "frames": 124,
+  "hair_drift_max": 5.51,
+  "hair_drift_end": 5.23,
+  "eye_drift_max": 20.81,
+  "boil_median": 0.851,
+  "boil_p95": 2.663,
+  "jump_max": 3.23,
+  "bg_shift_max": null
+ },
+ {
+  "clip": "pv4/h3/clips/h3_p07_konokoe.mp4",
+  "frames": 124,
+  "hair_drift_max": 2.76,
+  "hair_drift_end": 2.3,
+  "eye_drift_max": 3.5,
+  "boil_median": 5.921,
+  "boil_p95": 6.975,
+  "jump_max": 11.16,
+  "bg_shift_max": null
+ },
+ {
+  "clip": "pv4/h3/clips/h3_p29_fukidasu.mp4",
+  "frames": 124,
+  "hair_drift_max": 2.23,
+  "hair_drift_end": 0.9,
+  "eye_drift_max": 2.69,
+  "boil_median": 1.478,
+  "boil_p95": 5.152,
+  "jump_max": 6.13,
+  "bg_shift_max": 0.035
+ }
+]

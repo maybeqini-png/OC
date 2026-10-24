@@ -7,10 +7,12 @@
 | Base face frames (`art/chatgpt_frames/`) | OpenAI ChatGPT image model, by the owner | OpenAI terms (verify) | Mouth frame repaired by transplant |
 | Expressions, poses, chibi, backgrounds (`art/generated/`) | NovelAI V5 / V4.5 Precise Reference, owner's Opus plan | NovelAI terms (commercial use reported; verify) | Prompts, seeds, Anlas in `manifest.jsonl` |
 | SFX (thud, boop, shutter) | Synthesized in `tools/optimize.py` | No third-party audio | |
+| Fonts (v4): Zen Old Mincho, Zen Kaku Gothic New (Yoshimichi Ohira), Dela Gothic One (artakana), Cormorant Garamond (Christian Thalmann) | Google Fonts (github.com/google/fonts, ofl/*) | SIL Open Font License 1.1 (METADATA.pb; texts in `pv4/fonts/OFL_*.txt`) | |
+| v4 plates (`art/generated/pv4/plates/`) | NovelAI V5 (no characters), owner's plan, 0 Anlas | NovelAI terms (verify) | Prompts and seeds in `manifest.jsonl` |
 | Font: M PLUS Rounded 1c | Google Fonts (github.com/google/fonts, ofl/mplusrounded1c) | SIL Open Font License 1.1 (per METADATA.pb) | Designer: Coji Morishita, M+ Fonts Project |
 | v2 character stickers (`art/generated/pv3/`, `pv3/stickers/`) | NovelAI V4.5 Precise Reference (owner's sheet / `art/reference/refboard_A.png`) + V5 img2img 0.2 | NovelAI terms (verify) | Colour-locked to the sheet; per-image deltaE in `pv3/stickers/qa.json` |
 | 4x master of the sheet, rig layers (`pv2/rig/`) | Real-ESRGAN x4plus-anime via the `ncnn` PyPI wheel; LaMa ONNX (github.com/CloudyTabzy/LaMa-OxiONNX) | Real-ESRGAN BSD-3-Clause; LaMa Apache-2.0 (verify the ONNX export) | Puppet rig experiment, not used in v2 |
-| Reference MV storyboards (analysis only) | YouTube storyboard thumbnails via yt-dlp | Owners' copyright; not stored in the repo, not used in the video | See `docs/reference_breakdown.md` |
+| Reference MV storyboards (analysis only) | YouTube storyboard thumbnails via yt-dlp; v4: Bilibili player preview sprites | Owners' copyright; not stored in the repo, not used in the video | See `docs/reference_breakdown.md` |
 | Analysis models (not shipped in the video) | UVR MDX-Net Voc_FT, rembg isnet-anime, Whisper-small and ReazonSpeech via sherpa-onnx | Various open licenses (verify before redistribution) | Used for analysis and cutouts only |
 
 ## Known deviations from the OC design (to review)

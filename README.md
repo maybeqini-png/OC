@@ -133,6 +133,25 @@ VTubers in image prompts; face-only variants via masked edits (or transplant the
 - Render: `render.py segment i 4` x4 in parallel, concat, mux `audio/t2_optimized_full.mp3`. Video files are not
   committed (size); rebuild from the repo. No video model used; key-pose cuts replace motion shots.
 
+## 7c. v4 redesign (2026-10-23, awaiting the owner's approval)
+Owner review of v3: AI-generated look, character off the reference sheet, plain visuals, two text tracks, cuts too
+fast, visuals not on the lyrics. New top rules: **no AI look** (logical coherence, visual stability, natural motion)
+and **strictly the reference sheet**; "loli, tease" = her acting, with the sheet's design and proportions unchanged.
+- Research (12 reference MVs, frame previews from Bilibili): `docs/research_pv_language.md`.
+- Spec (worlds ROOM / STAGE / MIRROR SEA, one lyric layer, edit rhythm, 43-shot plan, character tiers, acceptance
+  tests, Anlas quote): `docs/redesign_v4.md`.
+- `pv4/look.py`: the sheet figure cut out pixel-exact from the 4x master, relit into scenes (ambient, rim, reflection),
+  palette gradient-map for plates, v4 type system (fonts in `pv4/fonts/`, OFL). `pv4/style_frames.py` -> four frames in
+  `pv4/style_frames/`. `pv4/motion_test.py` renders 72.2-78.5 s with the pv2 rig (`render <out.mp4>`; not committed).
+- Plates: `art/generated/pv4/plates/` (NovelAI V5, 0 Anlas, manifest). Known defects: `pv3/lyrics_timed.json` per-character
+  times are wrong (re-time before v4); the pv2 rig shows a reddish seam at the left jaw in close-ups.
+
+## 7d. v4 production (2026-10-23)
+Owner allowed autonomous generation tests and fal video (MiniMax H3 first); outfits/expressions may change per scene
+except core character shots. First production block 64.4-84.6 s: `pv4/block_64.py` (render needs the caches in
+`pv4/.cache/`: mattes from `pv4/qa_frames.py`, vocal stem from `tools/separate.py`). QA record: `docs/qa_h3_block64.md`.
+Composition / benchmark measurements: `docs/research_pv_language.md` §4-6. Status and next steps: `docs/redesign_v4.md` §5.
+
 ## 8. Open items
 1. Owner: confirm SFX levels by ear (phone + headphones). 2. Owner: choose the OC's name.
 3. Owner: add API keys/domains, start a new session. 3b. Assistant, first task of the new session: write and

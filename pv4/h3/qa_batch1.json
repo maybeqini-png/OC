@@ -1,0 +1,46 @@
+[
+ {
+  "clip": "pv4/h3/clips/h3_s01_tease_sleeve.mp4",
+  "frames": 124,
+  "hair_drift_max": 1.4,
+  "hair_drift_end": 0.46,
+  "eye_drift_max": 2.33,
+  "boil_median": 0.164,
+  "boil_p95": 4.242,
+  "jump_max": 5.62,
+  "bg_shift_max": 0.015
+ },
+ {
+  "clip": "pv4/h3/clips/h3_s02_fingerwag_loop.mp4",
+  "frames": 124,
+  "hair_drift_max": 2.94,
+  "hair_drift_end": 0.5,
+  "eye_drift_max": 5.5,
+  "boil_median": 0.321,
+  "boil_p95": 8.681,
+  "jump_max": 13.37,
+  "bg_shift_max": 0.052
+ },
+ {
+  "clip": "pv4/h3/clips/h3_a01_mirror_breath.mp4",
+  "frames": 124,
+  "hair_drift_max": 2.0,
+  "hair_drift_end": 1.79,
+  "eye_drift_max": 0.92,
+  "boil_median": 0.617,
+  "boil_p95": 0.947,
+  "jump_max": 1.04,
+  "bg_shift_max": null
+ },
+ {
+  "clip": "pv4/h3/clips/h3_d01_close_tease.mp4",
+  "frames": 124,
+  "hair_drift_max": 0.95,
+  "hair_drift_end": 0.81,
+  "eye_drift_max": 1.55,
+  "boil_median": 1.132,
+  "boil_p95": 3.92,
+  "jump_max": 4.39,
+  "bg_shift_max": null
+ }
+]
