@@ -1,0 +1,31 @@
+{
+ "_note": "Mouth centre (x, y) and face width (px) on frame 0 of each clip, marked by hand on a coordinate grid (2026-10-24). pv4/mouth_layer.py tracks the mouth from here. _closed_only: clips whose mouth never opens (checked on every-2nd-frame crop strips); their per-clip open/closed scale is not computed.",
+ "h3_d01_close_tease": [
+  906,
+  580,
+  275
+ ],
+ "h3_p02b_me_poke": [
+  906,
+  580,
+  275
+ ],
+ "h3_p04_yosomi": [
+  893,
+  327,
+  133
+ ],
+ "h3max_p05d_tsuyogari_nt_1080": [
+  1213,
+  416,
+  58
+ ],
+ "h3max_p07e_konokoe_nt_1080": [
+  962,
+  313,
+  67
+ ],
+ "_closed_only": [
+  "h3max_p05d_tsuyogari_nt_1080"
+ ]
+}

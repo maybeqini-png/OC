@@ -151,6 +151,18 @@ Owner allowed autonomous generation tests and fal video (MiniMax H3 first); outf
 except core character shots. First production block 64.4-84.6 s: `pv4/block_64.py` (render needs the caches in
 `pv4/.cache/`: mattes from `pv4/qa_frames.py`, vocal stem from `tools/separate.py`). QA record: `docs/qa_h3_block64.md`.
 Composition / benchmark measurements: `docs/research_pv_language.md` §4-6. Status and next steps: `docs/redesign_v4.md` §5.
+v4.1 (`pv4/block_64b.py`, sheet puppet, no generated pixels) was rejected by the owner on 2026-10-24: stiff motion,
+blinks break the illusion, far behind video generation + editing.
+
+## 7e. v4.2 (2026-10-24): the fal clips repaired, mouth timed to the morae
+`pv4/block_64c.py` renders block 64.4-84.6 s: the H3 clips' own motion (on 2s, no re-timing, no code blinks) cut out
+and placed in designed backgrounds laid out like each clip's scene, with v4.1's mora-exact type, cuts and story.
+Mouth layer `pv4/mouth_layer.py` (hand-marked mouth points in `pv4/h3/mouth_marks.json`): a mouth chart from the
+morae (vowel shapes, consonant onsets, lips on m/b/p, rests, nasal ん) and mouth swaps from the same clip; the model's
+mouth dissolve frames are replaced. QA tool `pv4/qa_mouth.py`; record and numbers: `docs/qa_block64_v42.md`.
+Caches (not committed, rebuild): `pv4/.cache/vocals.wav` (tools/separate.py, UVR-MDX-NET-Voc_FT, compensate 1.021),
+`pv4/.cache/mattes/` (pv4/matte.py with isnet-anime.onnx), `pv4/.cache/mouth/` (built on first use).
+Needs OpenCV 4.x (OpenCV 5 dropped CascadeClassifier, which pv4/mouth.py still uses). No paid calls in v4.2.
 
 ## 8. Open items
 1. Owner: confirm SFX levels by ear (phone + headphones). 2. Owner: choose the OC's name.
