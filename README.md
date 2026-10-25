@@ -50,6 +50,8 @@ chat-as-crowd, prop gag, copyable dance) and 「ひっひっふー」, Gawr Gura
 32ki 「メズマライザー」 (copyable pose, hidden details), Frieren character PVs (name card).
 Design-language research (2026-10-24, after the owner found the code-rendered motion stiff and the blinks broken):
 `docs/vtuber_pv_design_language.md` (anime timing, blink rules, production tiers, proposal for the PV).
+Cheeky-small-girl references for the OC (XIYIN, 2026-10-25; non-sexualised boundary, beat-by-beat shortlist):
+`docs/reference_cheeky_girl.md`.
 
 ## 4. Storyboard (times on `t2_optimized_full`)
 Asset tags: S still+motion, E expression swap, C chibi, A needs generated motion, T text/graphics (done in code).
