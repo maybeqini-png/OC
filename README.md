@@ -158,6 +158,11 @@ the generated mouths to the sheet's proportions inside `pv4/block_64.py` (no new
 mouths, proposed beat mapping): `docs/research_xiyin_refs.md`. References of this type are kept (owner: skipping them
 makes the result diverge from XIYIN's design); her proportions always come from the sheet.
 
+Follow-up the same day: the neck bump at 67.6 s was the mouth fix misfiring on a jaw/hair gap (now rejected by
+position); the singing shots use lip flaps (`pv4/lipflap.py`: even body pace, mouth shape per sung mora) instead of
+frame selection, which froze and jumped; every lyric glyph appears at its sung mora. Details and the verdicts on
+an external review in `docs/qa_h3_block64.md`.
+
 ## 8. Open items
 1. Owner: confirm SFX levels by ear (phone + headphones). 2. Owner: choose the OC's name.
 3. Owner: add API keys/domains, start a new session. 3b. Assistant, first task of the new session: write and

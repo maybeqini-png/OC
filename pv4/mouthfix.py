@@ -80,26 +80,49 @@ class MouthFix:
     def __init__(self, frames, boxes):
         """frames: list of BGR source frames; boxes: per-frame face boxes (x, y, w, h)."""
         self.frames, self.boxes = frames, boxes
-        raw = []
         self.seg = []
         for f, b in zip(frames, boxes):
             x, y, w, h = [int(round(v)) for v in b]
             face = f[max(y, 0):y + h, max(x, 0):x + w]
             m, bb = segment(face)
             self.seg.append((m, bb, (max(x, 0), max(y, 0))))
-            raw.append(scale_for(w, bb) if bb is not None else 1.0)
-        raw = np.array(raw)
+        # a found "mouth" away from where this clip's mouth sits in the neighbouring frames (relative to the face box)
+        # is something else - e.g. the gap between jaw and hair above the neck (h3_p02b f100, owner review
+        # 2026-10-25: "the neck is wrong"): it is dropped, so nothing there is touched
+        n = len(frames)
+        pos = np.full((n, 2), np.nan, np.float32)
+        for i, (m, bb, (ox, oy)) in enumerate(self.seg):
+            if m is not None:
+                bx, by, bw, _ = boxes[i]
+                pos[i] = ((ox + bb[0] + bb[2] / 2 - bx) / bw, (oy + bb[1] - by) / bw)
+        self.ok = np.zeros(n, bool)
+        for i in range(n):
+            if not np.isnan(pos[i, 0]):
+                ref = np.nanmedian(pos[max(i - 8, 0):i + 9], 0)
+                self.ok[i] = np.abs(pos[i] - ref).max() < 0.05
+            if not self.ok[i]:
+                self.seg[i] = (None, None, self.seg[i][2])
+        raw = np.array([scale_for(boxes[i][2], self.seg[i][1]) if self.seg[i][1] is not None else 1.0 for i in range(n)])
         # temporal smoothing: median over +-2 frames, so a single mis-segmented frame cannot pop
         pad = np.pad(raw, 2, mode="edge")
         self.k = np.array([np.median(pad[i:i + 5]) for i in range(len(raw))])
         self.raw = raw
 
     def frame(self, i):
-        f = self.frames[i].copy()
+        lay = self.layers(i)
+        if lay is None or self.k[i] > 0.97:
+            return self.frames[i].copy()
+        return paste(removed(self.frames[i], lay), lay)
+
+    def layers(self, i, k=None):
+        """The mouth of source frame i as layers: the roi with the mouth removed (clean), the mouth scaled by k
+        (default: this frame's proportion fix) as colour + alpha in a roi, and its anchor (the scaling centre, just
+        below the top of the mouth) in frame pixels. None where no mouth was found (closed lines are often missed)."""
+        f = self.frames[i]
         m, bb, (ox, oy) = self.seg[i]
-        k = self.k[i]
-        if m is None or k > 0.97:
-            return f
+        if m is None:
+            return None
+        k = self.k[i] if k is None else k
         bx, by, bw, bh = bb
         pad = int(max(bw, bh) * 0.9) + 8
         X0, Y0 = max(ox + bx - pad, 0), max(oy + by - pad, 0)
@@ -111,10 +134,6 @@ class MouthFix:
            (ox + max(X0 - ox, 0)) - X0:(ox + max(X0 - ox, 0)) - X0 + sub.shape[1]] = sub
         lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB).astype(np.float32)
         L, A = lab[..., 0], lab[..., 1]
-
-        def disk(r):
-            return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
-
         near = cv2.dilate(mm, disk(int(0.5 * bh) + 3))
         far = cv2.dilate(mm, disk(int(1.1 * bh) + 8))
         out_near = (far > 0) & (near == 0)
@@ -126,21 +145,11 @@ class MouthFix:
         n, lab_c = cv2.connectedComponents(shade, connectivity=8)
         keep = np.unique(lab_c[mm > 0])
         grown = np.isin(lab_c, keep[keep > 0]).astype(np.uint8)
-        grown = cv2.dilate(grown, disk(2))
-        ring = (cv2.dilate(grown, disk(6)) > 0) & (grown == 0) & (np.abs(L - L0) < 10) & (np.abs(A - A0) < 5)
-        yy, xx = np.mgrid[0:roi.shape[0], 0:roi.shape[1]].astype(np.float32)
-        clean = roi.astype(np.float32).copy()
-        if ring.sum() >= 12:
-            P = np.stack([np.ones(ring.sum()), xx[ring], yy[ring]], 1)
-            coef, *_ = np.linalg.lstsq(P, roi[ring].astype(np.float32), rcond=None)
-            fill = np.stack([np.ones_like(xx), xx, yy], -1) @ coef
-        else:
-            fill = np.broadcast_to(np.median(roi[bright], 0), roi.shape).astype(np.float32)
-        ga = cv2.GaussianBlur(grown.astype(np.float32), (0, 0), 1.0)[..., None]
-        clean = clean * (1 - ga) + fill * ga
+        grown = cv2.dilate(grown, disk(3))  # the outline of an open mouth is part of it
+        clean = plane_fill(roi, grown, L, A, L0, A0, bright)
         # 2. keep the ink weight: thicken the mouth's line art by the amount the shrink will thin it
         src = roi.copy()
-        paste = mm.copy()
+        keep_a = mm.copy()
         # ink = very dark, or a thin dark stroke (black-hat) - the faint centre of a thin grin line counts too
         hat = cv2.morphologyEx(L, cv2.MORPH_BLACKHAT, disk(2))
         line = ((mm > 0) & ((L < L0 - 60) | (hat > 18))).astype(np.uint8)
@@ -150,20 +159,60 @@ class MouthFix:
             er = cv2.erode(roi, disk(grow))
             add = (thick > 0) & (line == 0)
             src[add] = er[add]
-            paste = np.maximum(paste, thick)
+            keep_a = np.maximum(keep_a, thick)
         # 3. the mouth, scaled about its top-centre (it stays under the nose)
         ys, xs = np.where(mm > 0)
         ax, ay = (xs.min() + xs.max()) / 2, ys.min() + 0.25 * (ys.max() - ys.min())
         small = cv2.resize(src, None, fx=k, fy=k, interpolation=cv2.INTER_AREA)
-        small_a = cv2.resize(paste.astype(np.float32), None, fx=k, fy=k, interpolation=cv2.INTER_AREA)
+        small_a = cv2.resize(keep_a.astype(np.float32), None, fx=k, fy=k, interpolation=cv2.INTER_AREA)
         T = np.float32([[1, 0, ax * (1 - k)], [0, 1, ay * (1 - k)]])
         size = (roi.shape[1], roi.shape[0])
         sm = cv2.warpAffine(small, T, size, flags=cv2.INTER_LINEAR).astype(np.float32)
         sa = cv2.warpAffine(small_a, T, size, flags=cv2.INTER_LINEAR)
-        sa = np.clip(cv2.GaussianBlur(sa, (0, 0), 0.5), 0, 1)[..., None]
-        out = clean * (1 - sa) + sm * sa
-        f[Y0:Y1, X0:X1] = np.clip(out, 0, 255).astype(np.uint8)
-        return f
+        sa = np.clip(cv2.GaussianBlur(sa, (0, 0), 0.5), 0, 1)
+        return dict(clean=np.clip(clean, 0, 255).astype(np.uint8), roi=(X0, Y0, X1, Y1), mouth=sm, alpha=sa,
+                    anchor=(X0 + ax, Y0 + ay), face_w=float(self.boxes[i][2]))
+
+
+def disk(r):
+    return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
+
+
+def plane_fill(roi, region, L, A, L0, A0, fallback):
+    """Fill region (uint8 mask) of a BGR roi with a plane fitted to the skin ring around it, feathered."""
+    ring = (cv2.dilate(region, disk(6)) > 0) & (region == 0) & (np.abs(L - L0) < 10) & (np.abs(A - A0) < 5)
+    yy, xx = np.mgrid[0:roi.shape[0], 0:roi.shape[1]].astype(np.float32)
+    if ring.sum() >= 12:
+        P = np.stack([np.ones(ring.sum()), xx[ring], yy[ring]], 1)
+        coef, *_ = np.linalg.lstsq(P, roi[ring].astype(np.float32), rcond=None)
+        fill = np.stack([np.ones_like(xx), xx, yy], -1) @ coef
+    else:
+        fill = np.broadcast_to(np.median(roi[fallback], 0), roi.shape).astype(np.float32)
+    ga = cv2.GaussianBlur(region.astype(np.float32), (0, 0), 1.0)[..., None]
+    return roi.astype(np.float32) * (1 - ga) + fill * ga
+
+
+def removed(frame, lay):
+    """frame (BGR uint8) with the layer's mouth removed (its plane-filled roi put back)."""
+    X0, Y0, X1, Y1 = lay["roi"]
+    out = frame.copy()
+    out[Y0:Y1, X0:X1] = lay["clean"]
+    return out
+
+
+def paste(frame, lay, at=None, scale=(1.0, 1.0)):
+    """Put a mouth layer (from MouthFix.layers) onto frame (BGR uint8), its anchor moved to at, scaled (sx, sy)."""
+    X0, Y0, X1, Y1 = lay["roi"]
+    ax, ay = lay["anchor"]
+    tx, ty = (ax, ay) if at is None else at
+    sx, sy = scale
+    # roi pixel (u, v) -> frame (tx + sx * (X0 + u - ax), ty + sy * (Y0 + v - ay))
+    M = np.float32([[sx, 0, tx + sx * (X0 - ax)], [0, sy, ty + sy * (Y0 - ay)]])
+    size = (frame.shape[1], frame.shape[0])
+    col = cv2.warpAffine(lay["mouth"], M, size, flags=cv2.INTER_LINEAR)
+    a = cv2.warpAffine(lay["alpha"], M, size, flags=cv2.INTER_LINEAR)[..., None]
+    out = frame.astype(np.float32) * (1 - a) + col * a
+    return np.clip(out, 0, 255).astype(np.uint8)
 
 
 def build_boxes(name, cascade_xml, save=True):

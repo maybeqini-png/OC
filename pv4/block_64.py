@@ -5,8 +5,9 @@ reference measurements (docs/research_pv_language.md §4-5), after frame-by-fram
 - only QA-passed source frame ranges are used (USE below); clips with tail / hand defects were replaced;
 - the tail is not generated: full-body shots use tail-free first frames and the sheet's own tail is composited
   back (pv4/tail.py), hip-tracked, swaying on 2s, behind her legs, mirrored in the water;
-- lip-sync by frame selection (pv4/mouth.py): on singing shots each drawing is chosen so her mouth is open when
-  the separated vocal is loud and closed in the gaps; time stays monotonic, 0.6-1.6x speed;
+- lip flaps (pv4/lipflap.py): on singing shots the body plays at an even pace and the mouth shape (closed / half /
+  open) is swapped per sung mora, from drawings of the same clip (frame selection, used before, made the body
+  freeze and jump);
 - mouths shrunk to the sheet's proportions (pv4/mouthfix.py; owner review 2026-10-25: the generated mouths were
   out of proportion);
 - character footage on 2s; camera, light and type on 1s;
@@ -32,7 +33,8 @@ from PIL import Image
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import look as L  # noqa: E402
-from mouth import sync_path, vocal_env  # noqa: E402
+from mouth import vocal_env  # noqa: E402
+from lipflap import LipFlap, even_plan, wanted  # noqa: E402
 from mouthfix import MouthFix  # noqa: E402
 from tail import TailComp  # noqa: E402
 
@@ -50,13 +52,14 @@ PH = {"waratta": 64.40, "me": 66.82, "mouikkai": 67.50, "yosomi": 68.50, "mitete
       "honki": 75.64, "konokoe": 76.55, "kime": 79.40, "voice_end": 83.30, "next": 84.60}
 
 # shots: (start, end, clip, camera (z0, z1, x0, x1), world, mode, source range [a, b], tail placement)
-# mode: "sync" = lip-sync frame selection inside the range, "play" = real time from a, on 2s
+# mode: "flap" = the body at an even pace through the range, mouth shapes swapped per sung mora (pv4/lipflap.py),
+# "play" = real time from a, on 2s
 SHOTS = [
-    (64.40, 66.82, "h3_d01_close_tease", (1.00, 1.05, 0.50, 0.48), "stage", "sync", (4, 110), None),
+    (64.40, 66.82, "h3_d01_close_tease", (1.00, 1.05, 0.50, 0.48), "stage", "flap", (4, 110), None),
     (66.82, 67.50, "h3_p02b_me_poke", (1.06, 1.06, 0.50, 0.50), "stage", "play", (96, 112), None),
-    (69.358, 72.60, "h3_p04_yosomi", (1.00, 1.04, 0.52, 0.50), "sea", "sync", (26, 88), None),
+    (69.358, 72.60, "h3_p04_yosomi", (1.00, 1.04, 0.52, 0.50), "sea", "flap", (26, 88), None),
     (72.60, 76.30, "h3max_p05d_tsuyogari_nt_1080", (1.00, 1.05, 0.55, 0.55), "sea", "play", (0, 123), "N_mirror_right_nt"),
-    (76.30, 84.60, "h3max_p07e_konokoe_nt_1080", (1.04, 1.00, 0.50, 0.50), "sea_inv", "sync", (0, 191), "N_mirror_center_nt"),
+    (76.30, 84.60, "h3max_p07e_konokoe_nt_1080", (1.04, 1.00, 0.50, 0.50), "sea_inv", "flap", (0, 191), "N_mirror_center_nt"),
 ]
 REWIND = (67.50, 68.38)
 WHITE_IN = (68.38, 68.80)
@@ -129,11 +132,35 @@ def plan(k):
     n_out = int(round((s1 - s0) * FPS))
     if mode == "play":
         return [min(a + 2 * (i // 2), b) for i in range(n_out)]
-    op = np.load(HERE / f".cache/mouth_{name}.npy")[a:b + 1]
+    # "flap": the body never freezes or jumps (frame selection for lip-sync froze one drawing for up to 1.1 s and then
+    # skipped 3 source frames per drawing - owner review 2026-10-25: "it stutters frame by frame")
+    return even_plan(n_out, a, b)
+
+
+@lru_cache(maxsize=1)
+def morae():
+    return [m for line in json.load(open(HERE / "lyrics_block64.json")) for p in line["phrases"] for m in p["morae"]]
+
+
+@lru_cache(maxsize=8)
+def shapes(k):
+    """Mouth shape per output frame of a flap shot: per drawing (on 2s) from the mora sung at that drawing."""
+    s0, s1, name, *_ = SHOTS[k]
+    n_out = len(plan(k))
     y, sr = vocal()
     env = vocal_env(y, sr, s0, s1, FPS)
     env = np.pad(env, (0, max(0, n_out - len(env))), mode="edge")
-    return [a + i for i in sync_path(op, env, start=0)]
+    out = []
+    for j in range(n_out):
+        jd = j - j % 2
+        out.append(wanted(s0 + jd / FPS, morae(), float(env[jd])))
+    return out
+
+
+@lru_cache(maxsize=4)
+def lipflap(k):
+    s0, s1, name, _, _, _, (a, b), _ = SHOTS[k]
+    return LipFlap(mouthfix(name), np.load(HERE / f".cache/mouth_{name}.npy"), (a, b))
 
 
 @lru_cache(maxsize=4)
@@ -163,16 +190,29 @@ def ease(u):
     return u * u * (3 - 2 * u)
 
 
+# per-character onsets of every lyric phrase (mora onsets on the separated vocal, pv4/syllables.py): each glyph appears
+# when it is sung (owner review 2026-10-25: the lyrics were out of sync - whole lines were revealed in 0.5 s)
+CHARS = {p["text"]: p["chars"] for line in json.load(open(HERE / "lyrics_block64.json")) for p in line["phrases"]}
+TYPE_LEAD = 0.04  # a glyph starts fading in just before its mora
+
+
+def onsets(text, t_on, step, not_before=None):
+    ts = [c - TYPE_LEAD for c in CHARS[text]] if text in CHARS else [t_on + k * step for k in range(len(text))]
+    return [max(x, not_before) for x in ts] if not_before is not None else ts
+
+
 @lru_cache(maxsize=32)
 def glyph(ch, face, size, color):
     return L.bbox_trim(L.type_rgba(ch, face, size, fill=color), pad=2)
 
 
-def reveal(f, text, t, t_on, x, y, size, color, face="mincho", vertical=True, step=0.07, out_t=None, ripple=False):
-    """Glyphs fade in 0.22 s each, rise 14 px and sharpen, staggered from the phrase onset."""
+def reveal(f, text, t, t_on, x, y, size, color, face="mincho", vertical=True, step=0.07, out_t=None, ripple=False,
+           not_before=None):
+    """Glyphs fade in 0.22 s each, rise 14 px and sharpen, each at its sung mora."""
     adv = size * 1.28
+    ons = onsets(text, t_on, step, not_before)
     for k, ch in enumerate(text):
-        u = (t - (t_on + k * step)) / 0.22
+        u = (t - ons[k]) / 0.22
         if u <= 0:
             continue
         a = min(u, 1.0) * (np.clip((out_t - t) / 0.25, 0, 1) if out_t else 1.0)
@@ -204,13 +244,14 @@ def word_img(text, face, size, color):
 
 
 def reveal_word(f, text, t, t_on, x, y, size, color, face="heavy", step=0.06, angle=0.0):
-    """Horizontal hook word: each character wipes in (soft edge, 0.12 s) at its time; the word never re-flows."""
+    """Horizontal hook word: each character wipes in (soft edge, 0.12 s) when it is sung; the word never re-flows."""
     img, edges = word_img(text, face, size, color)
     hh, ww = img.shape[:2]
     xs = np.arange(ww, dtype=np.float32)
     a = np.zeros(ww, np.float32)
+    ons = onsets(text, t_on, step)
     for k in range(len(text)):
-        u = np.clip((t - (t_on + k * step)) / 0.12, 0, 1)
+        u = np.clip((t - ons[k]) / 0.12, 0, 1)
         if u <= 0:
             continue
         x0, x1 = edges[k], edges[k + 1]
@@ -234,12 +275,13 @@ def shot_frame(k, t, with_type=True):
     u = (t - s0) / (s1 - s0)
     j = min(max(int(round((t - s0) * FPS)), 0), len(plan(k)) - 1)
     i = plan(k)[j]
+    body = lipflap(k).frame(i, shapes(k)[j]) if mode == "flap" else source(name, i)
     tc = tailcomp(k)
     if tc is not None:
         t_draw = s0 + (j // 2) * 2 / FPS  # tail sway on 2s, like the drawing
-        src = tc.frame(i, source(name, i), t_draw)
+        src = tc.frame(i, body, t_draw)
     else:
-        src = cv2.cvtColor(source(name, i), cv2.COLOR_BGR2RGB).astype(np.float32) / 255
+        src = cv2.cvtColor(body, cv2.COLOR_BGR2RGB).astype(np.float32) / 255
     f = to_frame(src)
     if world == "sea_inv":
         f = np.ascontiguousarray(f[::-1])
@@ -309,7 +351,9 @@ def frame(fi):
             f = f * (1 - 0.5 * u) + g * 0.5 * u
             f = f * (1 - 0.8 * ease(u)) + 0.8 * ease(u)
             if t >= PH["mouikkai"]:
-                reveal(f, "もういっかい", t, PH["mouikkai"], W * 0.38, H * 0.46, 64, L.NAVY, vertical=False, step=0.05)
+                # もう is sung before the rewind starts (67.05-67.5 s, over the めっ shot): those two appear with it
+                reveal(f, "もういっかい", t, PH["mouikkai"], W * 0.38, H * 0.46, 64, L.NAVY, vertical=False, step=0.05,
+                       not_before=PH["mouikkai"] - TYPE_LEAD)
         else:
             v = (t - WHITE_IN[0]) / (WHITE_IN[1] - WHITE_IN[0])
             f = establish(t) * ease(v) + (1 - ease(v)) * 1.0

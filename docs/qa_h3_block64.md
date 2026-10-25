@@ -99,3 +99,65 @@ The owner prefers the fal (H3) version of the block; the generated mouths were t
   softer than the 1080P shots.
 - Face boxes: `python mouthfix.py <lbpcascade_animeface.xml> <clip>...` (needs OpenCV 4) rebuilds
   `pv4/.cache/faceboxes_<clip>.npy`.
+
+## Owner review of the mouth-fixed block (2026-10-25): neck, stutter, lyric sync
+1. **Neck defect at 67.6 s (video 3.2 s, first frames of the もういっかい rewind), also in the めっ shot.**
+   - Cause: my mouth fix. In `h3_p02b` f100 the detector took the gap between jaw and hair above the neck for a
+     mouth (found 0.78 down the face box, the real mouth sits at 0.61) and plane-filled it with skin, which drew a
+     bump on the neck. Confirmed by template-matching the owner's two screenshots against the render: both are
+     frame 77 (3.21 s).
+   - Fix (`pv4/mouthfix.py`): a found mouth more than 0.05 face widths away from the clip's mouth position in the
+     neighbouring ±8 frames is dropped; nothing there is touched.
+   - Checked over every used frame: f100 is now unchanged, and the dropped detections were all outside the mouth
+     (d01 f4 and f18, p02b f100 and f106).
+2. **"The third segment stutters frame by frame" (よそ見しないで, 69.4-72.6 s).**
+   - Cause, measured: lip-sync by frame selection (`pv4/mouth.sync_path`) froze one drawing for 13 drawings (1.1 s)
+     to hold an open mouth on そ-, then advanced 3 source frames per drawing to catch up. The same happened in
+     笑ったでしょ (freezes of 5 drawings) and この声で (freezes of 7).
+   - Fix (`pv4/lipflap.py`), as TV anime does it:
+     - the body plays on 2s at an even pace, at most real time;
+     - the mouth is swapped per sung mora: vowel a / o → open, i / e / u → half, っ / ん / gaps → closed, gated by
+       the separated vocal;
+     - the shapes come from drawings of the same clip, placed on the body's upper lip;
+     - half = the nearest open shape at 60 % height;
+     - closed = the clip's own closed line;
+     - the replaced mouth is plane-filled skin.
+   - Checked on crops of every drawing of the three shots (scratchpad `qa/flap/seq_*.jpg`).
+   - Defects found and fixed during this check:
+     - line fragments left beside a pasted mouth (the closed line was found only in part);
+     - a wide, slightly open grin taken as a closed line;
+     - the jaw outline caught in the search window.
+   - Where a body frame's own mouth cannot be isolated it is kept as is (この声で f6, inside the whip), never drawn
+     twice.
+3. **Lyrics out of sync.**
+   - Cause: every line was revealed glyph by glyph at a fixed 0.07 s step from the line onset, so each line was
+     complete in about 0.5 s while it is sung over 2-3 s (笑ったでしょ was complete before ら).
+   - Fix: each glyph now appears at its own sung mora (`lyrics_block64.json` chars, 0.04 s lead), in all lines
+     and in the hook word.
+   - Exception: もう of もういっかい is sung over the めっ shot (67.05-67.5 s), so those two kana appear with the
+     rewind at 67.5 s.
+
+## External review ("grokbot", relayed by the owner 2026-10-25): verdicts
+The review describes a different character, QINAI (silver-white hair, light-blue sweater, Mary Janes, no tail).
+QINAI is a separate project. This block is XIYIN, whose sheet has navy hair, a navy sweater with a sailor collar,
+navy socks, black boots and a navy cat tail, so the "off-model" part does not apply and nothing was redesigned.
+Verdict per point, checked on the render:
+1. Hands:
+   - the poke finger (2.5-3.1 s) is a simple tube without a knuckle line at 768P: **partly valid**, minor;
+   - the finger at her eye (5-7 s) is the intended gesture and drawn clearly;
+   - the clasped hands (9.5-10.5 s) show finger lines at full resolution: not a blob.
+2. Blur transition 3-4 s: made in the edit, not by a video model (a rewind of the clean clips with a horizontal
+   blur). The "face warps" it saw was the neck bump of point 1 above, now fixed.
+3. Background flicker 15-18 s: the source sky boil is tiny (0.13-0.17 grey levels per frame in the 1080P clips),
+   and what crawls is the film grain added on purpose (`finish`, grain 0.016); the water motion is animation.
+   Not changed; the grain can be lowered if the owner wants.
+4. Missing reflection 7-11 s: the reflection is there (legs and boots mirrored, faint by design of the clip);
+   **partly valid**: it is weak.
+5. Flip shot: it is the reflection world. In a mirror image the hair and skirt hang toward the feet, so the
+   physics is consistent with the design. Not changed; the alternative (redrawn reversed gravity) would need new
+   generation.
+6. Entrance 4-5 s: she is not pushed up as a still. A straight cut lands on her moving; her head height is measured
+   steady (rows 26 → 23) while the arm rises. Invalid.
+7. Edge quality 0-2 s: the 768P close-up is softer than the 1080P shots (already noted above): **valid**, not fixable
+   without regeneration.
+8. Moon reflection static: minor; not changed.
