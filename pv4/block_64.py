@@ -7,6 +7,8 @@ reference measurements (docs/research_pv_language.md §4-5), after frame-by-fram
   back (pv4/tail.py), hip-tracked, swaying on 2s, behind her legs, mirrored in the water;
 - lip-sync by frame selection (pv4/mouth.py): on singing shots each drawing is chosen so her mouth is open when
   the separated vocal is loud and closed in the gaps; time stays monotonic, 0.6-1.6x speed;
+- mouths shrunk to the sheet's proportions (pv4/mouthfix.py; owner review 2026-10-25: the generated mouths were
+  out of proportion);
 - character footage on 2s; camera, light and type on 1s;
 - one lyric layer (Mincho; one hook word behind her using the per-frame matte);
 - joins: hit cut with a flash on めっ, rewind on もういっかい, white dissolve into the MIRROR SEA (established empty
@@ -31,6 +33,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import look as L  # noqa: E402
 from mouth import sync_path, vocal_env  # noqa: E402
+from mouthfix import MouthFix  # noqa: E402
 from tail import TailComp  # noqa: E402
 
 W, H, FPS = L.W, L.H, 24
@@ -74,6 +77,18 @@ def clip(name):
         fr.append(f)
     cap.release()
     return fr
+
+
+@lru_cache(maxsize=8)
+def mouthfix(name):
+    """Generated mouths shrunk to the sheet's proportions (pv4/mouthfix.py); face boxes cached per clip."""
+    p = HERE / f".cache/faceboxes_{name}.npy"
+    return MouthFix(clip(name), np.load(p)) if p.exists() else None
+
+
+def source(name, i):
+    mf = mouthfix(name)
+    return mf.frame(i) if mf is not None else clip(name)[i]
 
 
 @lru_cache(maxsize=8)
@@ -222,9 +237,9 @@ def shot_frame(k, t, with_type=True):
     tc = tailcomp(k)
     if tc is not None:
         t_draw = s0 + (j // 2) * 2 / FPS  # tail sway on 2s, like the drawing
-        src = tc.frame(i, clip(name)[i], t_draw)
+        src = tc.frame(i, source(name, i), t_draw)
     else:
-        src = cv2.cvtColor(clip(name)[i], cv2.COLOR_BGR2RGB).astype(np.float32) / 255
+        src = cv2.cvtColor(source(name, i), cv2.COLOR_BGR2RGB).astype(np.float32) / 255
     f = to_frame(src)
     if world == "sea_inv":
         f = np.ascontiguousarray(f[::-1])

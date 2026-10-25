@@ -2,7 +2,8 @@
 
 Handoff document so any new session can continue without the original conversation.
 Owner works solo (no team). Keep token use low: **do not run multi-agent workflows**; work inline.
-Reply in the language of the owner's latest message (usually English). The OC has **no name yet** (ask).
+Reply in the language of the owner's latest message (usually English). The owner called the OC **XIYIN** on
+2026-10-25 (confirm it is her final name).
 
 ## 1. The OC (source of truth: `art/reference/oc_reference_sheet.webp`)
 Anime cat-girl: long straight deep-navy hair, one ahoge, navy cat ears with pink inner ears, small blue
@@ -149,6 +150,13 @@ Owner allowed autonomous generation tests and fal video (MiniMax H3 first); outf
 except core character shots. First production block 64.4-84.6 s: `pv4/block_64.py` (render needs the caches in
 `pv4/.cache/`: mattes from `pv4/qa_frames.py`, vocal stem from `tools/separate.py`). QA record: `docs/qa_h3_block64.md`.
 Composition / benchmark measurements: `docs/research_pv_language.md` §4-6. Status and next steps: `docs/redesign_v4.md` §5.
+
+## 7e. Mouth fix + XIYIN reference survey (2026-10-25)
+Owner prefers the fal version of block 64.4-84.6 s; only the mouths were out of proportion. `pv4/mouthfix.py` shrinks
+the generated mouths to the sheet's proportions inside `pv4/block_64.py` (no new generation; QA in
+`docs/qa_h3_block64.md`). Survey of cheeky small-girl references (16 anime PVs / VTuber MVs, measured shots, faces,
+mouths, proposed beat mapping): `docs/research_xiyin_refs.md`. References of this type are kept (owner: skipping them
+makes the result diverge from XIYIN's design); her proportions always come from the sheet.
 
 ## 8. Open items
 1. Owner: confirm SFX levels by ear (phone + headphones). 2. Owner: choose the OC's name.

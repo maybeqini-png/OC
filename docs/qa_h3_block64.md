@@ -65,3 +65,37 @@ crops and are expression changes, not distortions.
   lyric columns over the moon in white (moved to dark sky).
 - Cuts vs morae: all 11 cuts are on mora onsets (by construction); offset to the nearest beat -4.9..+4.4 frames
   (the voice is not always on the beat; the picture follows the voice).
+
+## Mouth proportion fix (2026-10-25, owner: "the only issue is the mouth being out of proper proportion")
+The owner prefers the fal (H3) version of the block; the generated mouths were too big. No new generation (0 fal spend).
+- Measured with one detector (`pv4/mouthfix.segment`: the largest non-skin hole enclosed by skin in the lower face; checked
+  on crops of every used drawing). Widths as a share of the face box:
+  - XIYIN's sheet smile: 0.103.
+  - H3 open mouths: median 0.12-0.14, up to 0.18 wide and 0.12 high, so wider than her own smile.
+  - Hand-drawn small-girl references while talking: 0.05-0.09 (UTOPIA, NGNL ED, Dragon Maid, Takagi); see
+    `docs/research_xiyin_refs.md` §2.
+- Fix (`pv4/mouthfix.py`, applied to each source frame before compositing in `pv4/block_64.py`):
+  - sizes up to 0.07 x 0.05 stay as drawn; the excess above is compressed to 35 %, so the mouth still opens and closes
+    with the voice;
+  - the mouth is scaled about its top-centre, so it stays under the nose;
+  - the original mouth and its pink lip shading are removed and filled with a plane fit of the surrounding skin;
+  - the ink line is thickened before the shrink so it keeps the face's line weight;
+  - the scale is median-smoothed over 5 source frames.
+- Result on the used drawings:
+  - d01: 14 of 20 changed (k 0.69-0.74);
+  - p02b: 5 of 8;
+  - p04: 11 of 23 (k 0.64-0.68);
+  - p07e: 57 of 80 (k 0.62-0.70);
+  - p05d: 0 (closed mouths only).
+- QA:
+  - before/after crops of every used drawing (scratchpad `qa/mfix/ba_*.jpg`) and of the rendered block every 6th frame,
+    including the inverted この声で shot (`qa/mfix/final_*.jpg`);
+  - full-resolution zooms of the strongest cases.
+- Found and fixed during QA:
+  - inpainting from the border smeared the lip shading back as a pink blot (p04 f37), so the fill is now a plane fit;
+  - the shrunk line art was thinner and paler than the face's other lines, so it is now thickened first;
+  - the thin centre of a teeth grin vanished (p04 f29), so thin strokes are detected by black-hat as well.
+- Not changed: half-closed mouths below the threshold (e.g. p07e f159-161) and closed mouths; the 768P close-ups are still
+  softer than the 1080P shots.
+- Face boxes: `python mouthfix.py <lbpcascade_animeface.xml> <clip>...` (needs OpenCV 4) rebuilds
+  `pv4/.cache/faceboxes_<clip>.npy`.
