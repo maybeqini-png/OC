@@ -2,9 +2,10 @@
 
 Handoff document so any new session can continue without the original conversation.
 Owner works solo (no team). Keep token use low: **do not run multi-agent workflows**; work inline.
-Reply in the language of the owner's latest message (usually English). The OC has **no name yet** (ask).
+Reply in the language of the owner's latest message (usually English). The OC is **XIYIN** (named by the owner
+2026-10-29; the Chinese characters are not confirmed yet, ask).
 
-## 1. The OC (source of truth: `art/reference/oc_reference_sheet.webp`)
+## 1. The OC: XIYIN (source of truth: `art/reference/oc_reference_sheet.webp`)
 Anime cat-girl: long straight deep-navy hair, one ahoge, navy cat ears with pink inner ears, small blue
 cat-shaped hair clip (position as in the sheet), blue half-lidded eyes, small confident closed-mouth smile.
 Oversized navy sweater, sailor collar with cobalt stripes, navy tie with a small black cat emblem,
@@ -33,10 +34,30 @@ Key vocal times (s): 3.7 ねえねえ / 7.6 ふふん そろそろ いくよ / 1
 125.8 final chorus / 137.36 めっ / ≈147 最後まで 歌いきるよ / 154.0 ほらね やっぱり / 158.5 ふふん たぶんね /
 ≈163-172.5 また来てよね / outro to 178.6. Beat ≈0.4411 s (tempo drifts slightly; snap edits to local beats).
 
-## 3. Creative direction (decided)
-**Cinematic 2.5D anime**: full-quality anime illustrations, cut out and layered in depth, 3D camera moves
-(parallax, push-ins), depth of field, bloom, light rays, light film grain. Pixel art was tested
-(`art/pixel_tests/`) and set aside except as optional game-style pop-ups (MISS!, NO COUNT).
+## 3. Creative direction (changed 2026-10-29)
+Decided by the owner:
+- **Pixel-art PV, rendered deterministically in code** (Python/Pillow/NumPy + FFmpeg; every frame a function of
+  time). **No video generation models for any shot.**
+- XIYIN must be **drawn as pixel art** (hand-placed sprites, fixed palette), not filtered down from the
+  illustrations. `art/pixel_tests/` shows why: the filtered sprites lose value separation (hair, sweater and
+  background merge into one navy) and at 96 px the half-lidded eyes break into noise.
+
+Proposed by the assistant, waiting for the owner's OK:
+- Framing: XIYIN streams herself playing a rhythm game. The song's gag (brags 「大天才」 → MISS → 「ノーカン!」 →
+  counter → 「めっ」) maps onto judgement text (PERFECT / MISS / NO COUNT) and a combo counter, so the pixel/game
+  look is in character for her (as it is for Silver Wolf, whose official PV uses rhythm-game UI and pixel fonts).
+- Pixel value fixes: hair clearly brighter than the sweater (cobalt → sky ramp), near-black navy sweater, light
+  warm backgrounds; eyes as a fixed hand-drawn 3-4 px half-lid shape; the sleeping-cat chest patch enlarged as a
+  recurring signature (small details like the clip and tie emblem vanish at pixel size).
+- Bilingual hook text for Bilibili: 余裕だもん / ノーカン / めっ shown large, with Chinese lines viewers can type as
+  danmaku (e.g. ノーカン → 不算不算！).
+- First test before any full render: one hand-drawn 128 px bust + a 6-frame MISS → ノーカン sprite animation.
+- Release the 16-30 s Shorts first and measure completion and like rate before the full PV.
+
+Kept from the earlier direction: the story device, palette roles, hidden details and signature gesture below.
+Earlier direction (2026-10-21, superseded for the picture style): **cinematic 2.5D anime** (cut-out
+illustrations layered in depth, 3D camera moves, depth of field, bloom, light rays, grain); pixel art was then
+used only for game-style pop-ups (MISS!, NO COUNT).
 Story device: **cool her vs real her** (comedic take on Gura's REFLECT split face). Navy streaming room at
 night turns into an imaginary stage when she is confident, collapses back when she fails. Chat = the audience.
 Palette: ink navy #1B2340, cobalt #3C6DF0, sky #9CC4FF, white #F4F6FB; coral #FF7B8A only for feelings
@@ -48,9 +69,18 @@ References studied (ideas only, never copy designs): Shigure Ui 「粛聖!! ロ�
 chat-as-crowd, prop gag, copyable dance) and 「ひっひっふー」, Gawr Gura 「REFLECT」, Mizumiya Su
 「うみゃうにゃはっぴーらいふ」 (sticker titles), Otonose Kanade 「GREATEST」/「アイシカケ」 (cinematic close-up),
 32ki 「メズマライザー」 (copyable pose, hidden details), Frieren character PVs (name card).
+Pixel references from the owner (2026-10-29), **not viewed yet** (`b23.tv` is blocked in the session; need the
+files or full `bilibili.com/video/BV…` links): 「一句话让opus烧40亿token做的爱丽丝mv」 (b23.tv/ADqrKU2),
+「[UT]人类……很高兴认识你，再见。Opus5.5」 (b23.tv/XziVbf3), 「【像素崩铁】音游风银狼PV」 (b23.tv/MZHmpUp).
+Genre lessons (web research, not frame analysis): each borrows attention (a game IP's fandom, a famous song, or
+the Opus 5.5 code-rendered-video trend) and uses a style that fits its subject. XIYIN borrows none of that, so
+the pixel style has to be justified by her own story (see the proposed rhythm-game framing above).
+Research write-up on deterministic PV production: https://claude.ai/artifact/VGp4FeD6AcqwvPXWxyuS7g (private).
 
 ## 4. Storyboard (times on `t2_optimized_full`)
-Asset tags: S still+motion, E expression swap, C chibi, A needs generated motion, T text/graphics (done in code).
+Written for the 2.5D direction: shot content stands, the picture treatment will be redone in pixel art.
+Asset tags: S still+motion, E expression swap, C chibi, A real motion (now a hand-drawn pixel sprite animation,
+never a video model), T text/graphics (done in code).
 | # | Time | Lyric | Picture | Text / FX |
 |---|---|---|---|---|
 | 1 | 0-3.2 | intro | dark room, monitor glow, silhouette from behind, ear twitches on beat (S) | grain, LIVE dot |
@@ -63,7 +93,7 @@ Asset tags: S still+motion, E expression swap, C chibi, A needs generated motion
 | 8 | ≈27.8-33.5 | ざんねんでした 余裕だもん | finger wag, logo slam (S+T) | sticker logo |
 | 9 | 34.4-42.4 | ほら スマートに キメちゃうよ | over-cool pose held, slow push-in (S) | |
 | 10 | 42.6 | えっ | freeze, stage cracks to room, patch opens one eye (E) | counter 1 |
-| 11 | 43.05-43.9 | あいたたた | fall: chibi or generated motion (C/A) | thud, lemon 「ドテッ」 |
+| 11 | 43.05-43.9 | あいたたた | fall: chibi or sprite animation (C/A) | thud, lemon 「ドテッ」 |
 | 12 | 44.18-45.1 | ちょっと待った | palm-out "wait", ears flat (E) | |
 | 13 | 45.8-48.7 | いまのは カウントに… | referee X with sleeves (S) | lemon ノーカン stamp |
 | 14 | 49.2-≈52 | あーもう にやけないでよ | pout, chat floods ニヤニヤ (E) | coral blush |
@@ -101,14 +131,14 @@ P2 referee X, P3 ぷいっ, P4 せーの crouch, P5 wave, P6 fallen, P7 paw boop
 backgrounds B1 room (mid-tone, lighter than her sweater), B2 small stage, B3 big stage, each 16:9 and 9:16.
 Rules: always use the reference sheet; plain light-grey background; no text; never name real artists or
 VTubers in image prompts; face-only variants via masked edits (or transplant the changed region onto the base).
+For the pixel PV, these illustrations (and `art/generated/`, `pv3/stickers/`) are the design and colour source
+for the sprites; the sprite list is set after the pixel test.
 
-## 6. Generation plan (owner wants the assistant to generate everything via API)
-- Images: compare **NovelAI V5** (anime-specialised; transparent backgrounds; V5 Full inpainting; but
-  Precise Reference / Vibe Transfer reportedly still fall back to V4.5) vs the **OpenAI image model**
-  (passed the alignment test with masked edits; slightly flatter style than the sheet). Pick one for ALL assets.
-- Video (only ~4 shots: fall, めっ combo, ぷいっ turn, wave): **fal.ai** bake-off with start+end frames —
-  Wan 3.0, MiniMax H3, Kling O3/3.0 Pro, Vidu Q3 Pro; 2 shots × 2 takes × ~3 s ≈ $5-10. Score by measurement:
-  on-model colours, line/flat-shading retention, flicker, end-frame match, clean background for cutout.
+## 6. Generation plan (updated 2026-10-29)
+- **Video generation models: not used** (owner decision 2026-10-29). The fal.ai bake-off is cancelled.
+  `pv3/seedance/` (Seedance 2.5 first/last-frame pack) is kept only as history; do not submit it.
+- Image models (NovelAI V5 via `.claude/skills/oc-gen`, OpenAI): **open question** whether new stills may still
+  be generated as source material for the pixel sprites. Ask the owner before any image-model call.
 - Always quote cost and get the owner's OK before any paid run.
 - Keys are **network secrets injected by the environment's proxy** as request headers (no env vars; the
   assistant never sees them): NovelAI `Authorization: Bearer` for `*.novelai.net`; OpenAI `Authorization: Bearer`
@@ -130,13 +160,17 @@ VTubers in image prompts; face-only variants via masked edits (or transplant the
   2.5D camera, expression swaps, blink + lip-sync, stamps, chat, ノーカン counter, captions, grain) produce draft 1.
 - Render: `render.py segment i 4` x4 in parallel, concat, mux `audio/t2_optimized_full.mp3`. Video files are not
   committed (size); rebuild from the repo. No video model used; key-pose cuts replace motion shots.
+- 2026-10-23: `pv2/` (puppet rig from the reference sheet + 撮影-style compositing) and `pv3/` (phrase-synced
+  storyboard, `autorig.py` deformation, one typographic system, 75 drawings). Reuse `pv3/lyrics_timed.json`
+  (ASR-aligned syllable timing) for the pixel PV. Both are superseded for the picture style.
 
-## 8. Open items
-1. Owner: confirm SFX levels by ear (phone + headphones). 2. Owner: choose the OC's name.
-3. Owner: add API keys/domains, start a new session. 3b. Assistant, first task of the new session: write and
-live-test a repo skill at `.claude/skills/oc-gen/` (SKILL.md + scripts) for NovelAI V5 / OpenAI image generation
-and masked edits (always attach the reference sheet), fal start/end-frame video jobs (submit, poll, download),
-a cost quote + explicit owner OK before every paid call, and a manifest log of prompt/model/seed per output.
-Never send or write keys: the proxy injects auth headers for the allowed hosts. 4. Assistant: image-model test (NAI V5 vs OpenAI),
-then generate the asset list. 5. Assistant: fal video bake-off. 6. Assistant: cue sheet (frame-exact captions +
-shot list), 2.5D compositing, final edit of PV + 3 Shorts.
+## 8. Open items (2026-10-29)
+1. Owner: confirm SFX levels by ear (phone + headphones).
+2. Owner: confirm XIYIN's Chinese characters.
+3. Owner: allow the network domains for the references, or upload the three reference videos as files.
+4. Owner: approve the rhythm-game framing and the pixel test (128 px bust + 6-frame MISS → ノーカン animation).
+5. Owner: decide whether image models may still be used for new source stills.
+6. Assistant: frame-by-frame breakdown of the three pixel references once they are available.
+7. Assistant: pixel test → pixel model sheet (palette, bust, chibi sprite, expression parts) → sprite animations
+   for the A shots → pixel PV + 3 Shorts, all rendered in code. Never send or write keys: the proxy injects auth
+   headers for the allowed hosts.
