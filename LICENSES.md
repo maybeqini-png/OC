@@ -11,6 +11,11 @@
 | v2 character stickers (`art/generated/pv3/`, `pv3/stickers/`) | NovelAI V4.5 Precise Reference (owner's sheet / `art/reference/refboard_A.png`) + V5 img2img 0.2 | NovelAI terms (verify) | Colour-locked to the sheet; per-image deltaE in `pv3/stickers/qa.json` |
 | 4x master of the sheet, rig layers (`pv2/rig/`) | Real-ESRGAN x4plus-anime via the `ncnn` PyPI wheel; LaMa ONNX (github.com/CloudyTabzy/LaMa-OxiONNX) | Real-ESRGAN BSD-3-Clause; LaMa Apache-2.0 (verify the ONNX export) | Puppet rig experiment, not used in v2 |
 | Reference MV storyboards (analysis only) | YouTube storyboard thumbnails via yt-dlp | Owners' copyright; not stored in the repo, not used in the video | See `docs/reference_breakdown.md` |
+| Pixel references (analysis only, 2026-10-29) | Bilibili BV11unF6fEmq, BV1PUHf6cEG6 (1080p30 video via yt-dlp), BV1xW4y197K9 (platform preview frames); YouTube cover thumbnails | Owners' copyright; kept in the session scratchpad only, not in the repo, not used in the video | See `docs/pixel_reference_breakdown.md` |
+| Font: Fusion Pixel 12px Proportional ja / zh_hans (`pixel/fonts/*.woff2`) | npm `@fontsource/fusion-pixel-12px-proportional-jp` / `-sc` 5.3.0 (font version 2024.05.12, TakWolf) | SIL Open Font License 1.1 (`pixel/fonts/OFL-FusionPixel.txt`, includes the notices of the fonts it merges) | Files unmodified as distributed; main lyric font (JP + Simplified Chinese) |
+| Font: Press Start 2P (`pixel/fonts/PressStart2P.ttf`) | Google Fonts API (fonts.gstatic.com), version 3.000 | SIL Open Font License 1.1 (`pixel/fonts/OFL-PressStart2P.txt`) | Latin only; judgement / score text |
+| Font: 美咲ゴシック 8px (`pixel/fonts/misaki_gothic.ttf`) | littlelimit.net, misaki_ttf_2021-05-05.zip (Num Kadoma) | Free software: use, copy, redistribute, modified or not, commercial or not, no warranty (`pixel/fonts/misaki-readme.txt`) | Tiny HUD text; kanji too crushed for lyrics |
+| Pixel SFX (planned) | To be synthesized in code, like `tools/optimize.py` | No third-party audio | |
 | Analysis models (not shipped in the video) | UVR MDX-Net Voc_FT, rembg isnet-anime, Whisper-small and ReazonSpeech via sherpa-onnx | Various open licenses (verify before redistribution) | Used for analysis and cutouts only |
 
 ## Known deviations from the OC design (to review)

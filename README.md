@@ -69,12 +69,15 @@ References studied (ideas only, never copy designs): Shigure Ui 「粛聖!! ロ�
 chat-as-crowd, prop gag, copyable dance) and 「ひっひっふー」, Gawr Gura 「REFLECT」, Mizumiya Su
 「うみゃうにゃはっぴーらいふ」 (sticker titles), Otonose Kanade 「GREATEST」/「アイシカケ」 (cinematic close-up),
 32ki 「メズマライザー」 (copyable pose, hidden details), Frieren character PVs (name card).
-Pixel references from the owner (2026-10-29), **not viewed yet** (`b23.tv` is blocked in the session; need the
-files or full `bilibili.com/video/BV…` links): 「一句话让opus烧40亿token做的爱丽丝mv」 (b23.tv/ADqrKU2),
-「[UT]人类……很高兴认识你，再见。Opus5.5」 (b23.tv/XziVbf3), 「【像素崩铁】音游风银狼PV」 (b23.tv/MZHmpUp).
-Genre lessons (web research, not frame analysis): each borrows attention (a game IP's fandom, a famous song, or
-the Opus 5.5 code-rendered-video trend) and uses a style that fits its subject. XIYIN borrows none of that, so
-the pixel style has to be justified by her own story (see the proposed rhythm-game framing above).
+Pixel references from the owner (2026-10-29), analysed in `docs/pixel_reference_breakdown.md`: the Opus 5.5
+Alice MV (BV11unF6fEmq, a game session in which the lyrics are the level), the Undertale Asgore fight (BV1PUHf6cEG6,
+game mechanics as story beats, 「*」 narration), the pixel Silver Wolf rhythm PV (BV1xW4y197K9, one fixed Muse
+Dash-like layout and a result screen), plus similar JP/US works (sasakure.UK dot PV, TORIENA 「PULSE FIGHTER」,
+ゆず 「ALWAYS」). Each borrows attention (a game IP's fandom, a famous song, or the Opus 5.5 trend) and uses a style
+that fits its subject. XIYIN borrows none of that, so the premise has to come from her own story.
+Proposed combination (waiting for the owner's OK): a fixed rhythm-stage layout as the backbone, 「*」 narration
+boxes for the gags, tile-built words only for the hooks (余裕, 大天才, ノーカン, めっ), LIVE on/off bookends and a
+result-screen end card.
 Research write-up on deterministic PV production: https://claude.ai/artifact/VGp4FeD6AcqwvPXWxyuS7g (private).
 
 ## 4. Storyboard (times on `t2_optimized_full`)
@@ -137,8 +140,9 @@ for the sprites; the sprite list is set after the pixel test.
 ## 6. Generation plan (updated 2026-10-29)
 - **Video generation models: not used** (owner decision 2026-10-29). The fal.ai bake-off is cancelled.
   `pv3/seedance/` (Seedance 2.5 first/last-frame pack) is kept only as history; do not submit it.
-- Image models (NovelAI V5 via `.claude/skills/oc-gen`, OpenAI): **open question** whether new stills may still
-  be generated as source material for the pixel sprites. Ask the owner before any image-model call.
+- Image model: **NovelAI V5 ("N5") via `.claude/skills/oc-gen`**, which the owner allows the assistant to use
+  directly (2026-10-29), as source material for the pixel sprites (generate on the reference sheet, then reduce to
+  a fixed pixel grid and palette and clean up by hand). ChatGPT / OpenAI images are no longer needed.
 - Always quote cost and get the owner's OK before any paid run.
 - Keys are **network secrets injected by the environment's proxy** as request headers (no env vars; the
   assistant never sees them): NovelAI `Authorization: Bearer` for `*.novelai.net`; OpenAI `Authorization: Bearer`
@@ -148,6 +152,9 @@ for the sprites; the sprite list is set after the pixel test.
 ## 7. Files
 - `audio/` final master + Shorts (MP3). Large WAVs/stems not committed; rebuild with `tools/`.
 - `art/` reference sheet, aligned ChatGPT face frames, pixel-art tests.
+- `pixel/fonts/` pixel fonts with their licenses: Fusion Pixel 12px ja / zh_hans (lyrics, Chinese lines), Press
+  Start 2P (judgement / score), 美咲ゴシック 8px (tiny HUD). DotGothic16 was tested and dropped (strokes drop out
+  at 16 px without anti-aliasing).
 - `tools/` separate.py (UVR MDX-Net vocal separation via onnxruntime), analyze.py (technical/music/vocal
   measurements), asr.py (sherpa-onnx Whisper-small + ReazonSpeech lyric intelligibility), optimize.py
   (SFX/mix/Shorts), plot_window.py, compare_opening.py, pixelize.py. Paths inside are the old session's
@@ -167,10 +174,8 @@ for the sprites; the sprite list is set after the pixel test.
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones).
 2. Owner: confirm XIYIN's Chinese characters.
-3. Owner: allow the network domains for the references, or upload the three reference videos as files.
-4. Owner: approve the rhythm-game framing and the pixel test (128 px bust + 6-frame MISS → ノーカン animation).
-5. Owner: decide whether image models may still be used for new source stills.
-6. Assistant: frame-by-frame breakdown of the three pixel references once they are available.
-7. Assistant: pixel test → pixel model sheet (palette, bust, chibi sprite, expression parts) → sprite animations
+3. Owner: approve the proposed combination (section 3) and the pixel test (128 px bust + 6-frame MISS → ノーカン
+   animation, sprites sourced from NovelAI V5 and reduced to a pixel grid).
+4. Assistant: pixel test → pixel model sheet (palette, bust, chibi sprite, expression parts) → sprite animations
    for the A shots → pixel PV + 3 Shorts, all rendered in code. Never send or write keys: the proxy injects auth
    headers for the allowed hosts.
