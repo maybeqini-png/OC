@@ -15,7 +15,9 @@
 | Font: Fusion Pixel 12px Proportional ja / zh_hans (`pixel/fonts/*.woff2`) | npm `@fontsource/fusion-pixel-12px-proportional-jp` / `-sc` 5.3.0 (font version 2024.05.12, TakWolf) | SIL Open Font License 1.1 (`pixel/fonts/OFL-FusionPixel.txt`, includes the notices of the fonts it merges) | Files unmodified as distributed; main lyric font (JP + Simplified Chinese) |
 | Font: Press Start 2P (`pixel/fonts/PressStart2P.ttf`) | Google Fonts API (fonts.gstatic.com), version 3.000 | SIL Open Font License 1.1 (`pixel/fonts/OFL-PressStart2P.txt`) | Latin only; judgement / score text |
 | Font: 美咲ゴシック 8px (`pixel/fonts/misaki_gothic.ttf`) | littlelimit.net, misaki_ttf_2021-05-05.zip (Num Kadoma) | Free software: use, copy, redistribute, modified or not, commercial or not, no warranty (`pixel/fonts/misaki-readme.txt`) | Tiny HUD text; kanji too crushed for lyrics |
-| Pixel SFX (planned) | To be synthesized in code, like `tools/optimize.py` | No third-party audio | |
+| XIYIN chibi sprite sources (`art/generated/pixel_src/`) | NovelAI V5 (`nai-diffusion-5-full`, 832x1216, 0 Anlas), prompts in `prompts.sh`, seeds in `manifest.jsonl` | NovelAI terms (commercial use reported; verify) | `s05_me_boop_4115.png` is the one used for めっ; the other two s05 files are rejected takes |
+| Pixel sprites (`pixel/sprites/`) | Converted from the sources above by `pixel/sprite.py`; faces hand-drawn in `pixel/faces.py` | Derived from the NovelAI sources (same terms); hand-drawn parts are the project's own | Disclose AI-assisted sprites |
+| Typewriter blips (pixel PV) | Synthesized square-wave blips in `pixel/stage.py` | No third-party audio | |
 | Analysis models (not shipped in the video) | UVR MDX-Net Voc_FT, rembg isnet-anime, Whisper-small and ReazonSpeech via sherpa-onnx | Various open licenses (verify before redistribution) | Used for analysis and cutouts only |
 
 ## Known deviations from the OC design (to review)

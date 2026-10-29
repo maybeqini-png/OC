@@ -3,7 +3,8 @@
 Handoff document so any new session can continue without the original conversation.
 Owner works solo (no team). Keep token use low: **do not run multi-agent workflows**; work inline.
 Reply in the language of the owner's latest message (usually English). The OC is **XIYIN** (named by the owner
-2026-10-29; the Chinese characters are not confirmed yet, ask).
+2026-10-29; written in Latin letters, no Chinese name). On-screen text is Japanese or English by default.
+The owner has asked the assistant to work autonomously on the pixel PV (2026-10-29).
 
 ## 1. The OC: XIYIN (source of truth: `art/reference/oc_reference_sheet.webp`)
 Anime cat-girl: long straight deep-navy hair, one ahoge, navy cat ears with pink inner ears, small blue
@@ -11,8 +12,11 @@ cat-shaped hair clip (position as in the sheet), blue half-lidded eyes, small co
 Oversized navy sweater, sailor collar with cobalt stripes, navy tie with a small black cat emblem,
 light-blue sleeping-cat chest patch, striped cuffs with paw prints, dark grey shorts with a cobalt side stripe,
 navy cat tail, navy knee socks with a cobalt stripe and paw print, chunky black lace-up boots with blue accents.
-Personality for this song: acts cool and smug → trips → "that doesn't count" → blushes → owns it.
-Teasing and self-assured; never needy; never sexualised or "brat"-framed.
+Personality (owner, 2026-10-29): a **mischievous, cheeky little brat**: smug, teasing, pranks her chat, never
+admits a mistake (「ノーカン!」), tongue-out あっかんべー, cat-paw めっ boop. Playful and kid-like; never needy.
+Song arc: acts cool and smug → trips → "that doesn't count" → blushes → owns it.
+Hard line: **strictly non-sexual**. No メスガキ-style innuendo, fanservice or suggestive poses or framing, in art,
+prompts, lyrics or captions (also required by Bilibili / YouTube rules). Cheeky means pranks and attitude only.
 
 ## 2. The song (final audio in `audio/`)
 - Base: Gemini/Lyria track 2 (Anime Idol Pop, ~136 BPM, C# major), opening repaired ("A2": the stray
@@ -42,15 +46,15 @@ Decided by the owner:
   illustrations. `art/pixel_tests/` shows why: the filtered sprites lose value separation (hair, sweater and
   background merge into one navy) and at 96 px the half-lidded eyes break into noise.
 
-Proposed by the assistant, waiting for the owner's OK:
+Proposed by the assistant, approved by the owner 2026-10-29 (on-screen text in Japanese/English, not Chinese):
 - Framing: XIYIN streams herself playing a rhythm game. The song's gag (brags 「大天才」 → MISS → 「ノーカン!」 →
   counter → 「めっ」) maps onto judgement text (PERFECT / MISS / NO COUNT) and a combo counter, so the pixel/game
   look is in character for her (as it is for Silver Wolf, whose official PV uses rhythm-game UI and pixel fonts).
 - Pixel value fixes: hair clearly brighter than the sweater (cobalt → sky ramp), near-black navy sweater, light
   warm backgrounds; eyes as a fixed hand-drawn 3-4 px half-lid shape; the sleeping-cat chest patch enlarged as a
   recurring signature (small details like the clip and tie emblem vanish at pixel size).
-- Bilingual hook text for Bilibili: 余裕だもん / ノーカン / めっ shown large, with Chinese lines viewers can type as
-  danmaku (e.g. ノーカン → 不算不算！).
+- Hook text: 余裕だもん / ノーカン / めっ shown large in Japanese with a short English line (e.g. ノーカン →
+  "DOESN'T COUNT!"), easy for viewers to repeat in comments and danmaku.
 - First test before any full render: one hand-drawn 128 px bust + a 6-frame MISS → ノーカン sprite animation.
 - Release the 16-30 s Shorts first and measure completion and like rate before the full PV.
 
@@ -75,7 +79,7 @@ game mechanics as story beats, 「*」 narration), the pixel Silver Wolf rhythm 
 Dash-like layout and a result screen), plus similar JP/US works (sasakure.UK dot PV, TORIENA 「PULSE FIGHTER」,
 ゆず 「ALWAYS」). Each borrows attention (a game IP's fandom, a famous song, or the Opus 5.5 trend) and uses a style
 that fits its subject. XIYIN borrows none of that, so the premise has to come from her own story.
-Proposed combination (waiting for the owner's OK): a fixed rhythm-stage layout as the backbone, 「*」 narration
+Approved combination (2026-10-29): a fixed rhythm-stage layout as the backbone, 「*」 narration
 boxes for the gags, tile-built words only for the hooks (余裕, 大天才, ノーカン, めっ), LIVE on/off bookends and a
 result-screen end card.
 Research write-up on deterministic PV production: https://claude.ai/artifact/VGp4FeD6AcqwvPXWxyuS7g (private).
@@ -152,7 +156,7 @@ for the sprites; the sprite list is set after the pixel test.
 ## 7. Files
 - `audio/` final master + Shorts (MP3). Large WAVs/stems not committed; rebuild with `tools/`.
 - `art/` reference sheet, aligned ChatGPT face frames, pixel-art tests.
-- `pixel/fonts/` pixel fonts with their licenses: Fusion Pixel 12px ja / zh_hans (lyrics, Chinese lines), Press
+- `pixel/fonts/` pixel fonts with their licenses: Fusion Pixel 12px ja (lyrics; zh_hans kept as a spare), Press
   Start 2P (judgement / score), 美咲ゴシック 8px (tiny HUD). DotGothic16 was tested and dropped (strokes drop out
   at 16 px without anti-aliasing).
 - `tools/` separate.py (UVR MDX-Net vocal separation via onnxruntime), analyze.py (technical/music/vocal
@@ -170,12 +174,25 @@ for the sprites; the sprite list is set after the pixel test.
 - 2026-10-23: `pv2/` (puppet rig from the reference sheet + 撮影-style compositing) and `pv3/` (phrase-synced
   storyboard, `autorig.py` deformation, one typographic system, 75 drawings). Reuse `pv3/lyrics_timed.json`
   (ASR-aligned syllable timing) for the pixel PV. Both are superseded for the picture style.
+- 2026-10-29: **pixel PV test** (`pixel/`), 41.6-69.0 s (stumble → ノーカン → chorus → めっ), rendered in code:
+  - Sprite sources: 7 chibi poses from NovelAI V5 (0 Anlas), `art/generated/pixel_src/` (`prompts.sh`, manifest).
+  - `pixel/sprite.py convert` turns a source into an editable text grid (`sprites/*.auto.txt`, one character per
+    palette role; hair and sweater split per image by 2-means so the hair is always brighter than the sweater).
+    `pixel/faces.py` smooths the grid, redraws the face from hand-made eye/mouth templates, fixes parts the
+    converter gets wrong and writes `sprites/*.txt` + `*.png` (about 48x80 px, shown at x5).
+  - `pixel/stage.py` draws the rhythm stage on a 384x216 screen (x5 = 1080p): pastel grid stage, scrolling floor,
+    paw / cat notes on the sung syllables, PERFECT bursts, combo (99 → MISS on えっ), score, MISS counter pawed
+    back to 0, LIVE badge, rising chat, karaoke lyric line, 「＊」 narration boxes with typewriter blips, block
+    words (ドテッ, ノーカン, べー, 余裕, めっ!), PAUSE, READY?/GO!, めっ x2 zoom, RETRY? menu.
+    `python3 pixel/stage.py preview <t...> --out sheet.png` for stills;
+    `python3 pixel/stage.py render --t0 41.6 --t1 69.0 --out clip.mp4` renders in about 1 minute.
+  - QC of the test render: 822 frames, video and audio both 27.40 s, 0 decode errors, BT.709 tags, -13.1 LUFS,
+    peak -0.9 dBFS (limiter at -1 dB); notes vs audio onsets: median 12 ms, 20/24 within 100 ms.
 
 ## 8. Open items (2026-10-29)
-1. Owner: confirm SFX levels by ear (phone + headphones).
-2. Owner: confirm XIYIN's Chinese characters.
-3. Owner: approve the proposed combination (section 3) and the pixel test (128 px bust + 6-frame MISS → ノーカン
-   animation, sprites sourced from NovelAI V5 and reduced to a pixel grid).
-4. Assistant: pixel test → pixel model sheet (palette, bust, chibi sprite, expression parts) → sprite animations
-   for the A shots → pixel PV + 3 Shorts, all rendered in code. Never send or write keys: the proxy injects auth
-   headers for the allowed hosts.
+1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
+2. Approved by the owner (2026-10-29, "proceed autonomously"): the combination in section 3 and the pixel test.
+3. Assistant, next: a cleaner jump / cheer source (the jump pose's bent legs read as one skin-coloured blob); the
+   sleeping-cat chest patch on the sprites; 2-3 frame idle and hit animations; then extend the stage to the whole
+   song (0-178.6 s) with the remaining gags, and 9:16 versions for the 3 Shorts. Never send or write keys: the
+   proxy injects auth headers for the allowed hosts.
