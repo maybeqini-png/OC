@@ -239,6 +239,8 @@ for the sprites; the sprite list is set after the pixel test.
     `realesr-animevideov3` on CPU (`pixel/upscale.py`, `pixel/plates/build.sh`; the plates are not committed).
   - Render: `python3 pixel/pv.py render --out pv.mp4 --jobs 4` (about 0.3 s per frame per process);
     `python3 pixel/pv.py preview <t...> --out sheet.png` for stills.
+  - QC of v1: 5360 frames, video 178.67 s / audio 178.65 s, 0 decode errors, BT.709 tags, -13.8 LUFS integrated,
+    true peak -0.4 dBTP (aim for -1 next time: lower the limiter), segment joins checked frame by frame.
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
