@@ -196,6 +196,16 @@ for the sprites; the sprite list is set after the pixel test.
   from the reference sheet (hair base (73, 99, 173), sweater (56, 61, 89)). Output in `pixel/sprites2/`.
   Still to do on v2: socks partly hair-blue in the run poses, sweater side panel / cuff stripes, the remaining
   poses (punch, jump-swipe, trip, ノーカン, あっかんべー, めっ, giggle), run cycle, background, 640x360 stage.
+- 2026-10-30: **sprite v3 (sharpness)** after owner feedback ("looks blurry"). Measured causes: (1) the NovelAI
+  "pixel art" is soft (over half of its colour runs are 1 px), and v2 re-gridded those in-between colours; (2) odd
+  display scales (x3, and x5 in the first test) put sprite-pixel edges across the 2x2 chroma blocks of 4:2:0
+  video: test encode, sprite-edge error 95th percentile 17.3 at x3 vs 5.3 at x2 and 4.0 at x4.
+  Fix: `snap.clean()` maps every source pixel to one fixed role-based palette (from the sheet) before the
+  majority snap, thin features win thin cells, then a clean 1 px outline; sprites are 200 px tall
+  (`pixel/sprites3/`, heights per pose in `heights.json`) on a **960x540 game screen shown at x2** (even scale);
+  a 3840x2160 master (x4) can be exported for YouTube. Dropped: `p02_run_b` (eyes came out dark).
+  Consistency plan: gameplay motion is rigged from one side-view master (run A) instead of new generations;
+  gag poses keep the fixed palette. Known: some tails stay navy where they touch the sweater.
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.

@@ -1,0 +1,14 @@
+{
+ "p01_smug_a": 200,
+ "p01_smug_b": 200,
+ "p02_run_a": 200,
+ "p02_run_b": 200,
+ "p02_run_c": 200,
+ "p03_hit_ground": 224,
+ "p04_hit_air": 200,
+ "p05_trip": 200,
+ "p06_nocount": 229,
+ "p07_akanbe": 203,
+ "p08_me": 203,
+ "p09_giggle": 203
+}

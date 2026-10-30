@@ -38,7 +38,7 @@ RAMPS = {
 def part_labels(a, fg):
     """0 = keep colour, 1 hair, 2 sweater, 3 socks, 4 accent (per source pixel)."""
     h, s, v = sprite.hsv(a)
-    blue = fg & (h >= 195) & (h <= 265) & (v >= 0.10) & (v < 0.75) & (s >= 0.15)
+    blue = fg & (h >= 190) & (h <= 265) & (v >= 0.10) & (s >= 0.15)
     X = np.stack([s[blue], v[blue], (h[blue] - 220) / 60], 1)
     c = np.array([np.percentile(X, 20, 0), np.percentile(X, 80, 0)])
     for _ in range(20):
@@ -64,6 +64,8 @@ def part_labels(a, fg):
         cy = (sl[0].start + sl[0].stop) / 2
         if cy > 0.55 * H and (near_boots[sl] & m).any():
             out[sl][m] = 3
+            continue
+        if area < 0.0015 * total and v[sl][m].mean() > 0.70:   # eyes, hair clip: keep their own bright blue
             continue
         if area < 0.004 * total:
             ring = ndimage.binary_dilation(m, iterations=3) & ~m
@@ -95,15 +97,30 @@ def part_labels(a, fg):
     return out
 
 
-def snap(src, height=160, colors=32, recolor=True):
+def face_width(a, fg):
+    """Width (source px) of the face: the largest skin-coloured blob in the upper half of the figure."""
+    h, s, v = sprite.hsv(a)
+    skin = fg & ((h <= 40) | (h >= 345)) & (s >= 0.03) & (s < 0.35) & (v >= 0.80)
+    skin[a.shape[0] // 2:] = False
+    comp, n = ndimage.label(skin)
+    if n == 0:
+        return None
+    i = int(np.argmax(ndimage.sum(skin, comp, range(1, n + 1)))) + 1
+    xs = np.nonzero(comp == i)[1]
+    return xs.max() - xs.min() + 1
+
+
+def snap(src, height=160, colors=32, recolor=True, face_px=None):
+    """face_px: size by face width (art px) instead of figure height, so every pose shares one pixel scale."""
     a = np.asarray(Image.open(src).convert("RGB")).astype(np.float32) / 255
     fg = sprite.cutout(a)
     ys, xs = np.nonzero(fg)
     sl = (slice(ys.min(), ys.max() + 1), slice(xs.min(), xs.max() + 1))
     a, fg = a[sl], fg[sl]
     parts = part_labels(a, fg) if recolor else np.zeros(fg.shape, np.int8)
-    cell = a.shape[0] / height
-    H, W = height, int(round(a.shape[1] / cell))
+    fw = face_width(a, fg) if face_px else None
+    cell = fw / face_px if fw else a.shape[0] / height
+    H, W = int(round(a.shape[0] / cell)), int(round(a.shape[1] / cell))
     px = (a[fg] * 255).astype(np.uint8).reshape(-1, 1, 3)
     pal_img = Image.fromarray(px).quantize(colors=colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
     pal = np.array(pal_img.getpalette()[: colors * 3]).reshape(colors, 3).astype(np.float32)
@@ -178,3 +195,91 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------- v3: clean pixel art with one fixed palette
+# The NovelAI "pixel art" is soft (over half of its colour runs are 1 px: blended edges, in-between colours), so
+# re-gridding its own colours looks blurry. v3 maps every source pixel to a fixed, role-based palette first
+# (hair / sweater / socks+boots / accents by brightness rank inside the part, everything else by nearest colour),
+# then takes the majority per cell, with thin features (outline, pupils, mouth, eye shine) winning thin cells,
+# then despeckles and redraws a clean 1 px silhouette outline.
+OUTLINE = (24, 28, 54)
+PART_RAMPS = {
+    1: ([(40, 58, 118), (56, 78, 148), (73, 99, 173), (118, 146, 214)], [0.15, 0.30, 0.43, 0.12]),   # hair
+    2: ([(28, 31, 50), (44, 48, 74), (60, 66, 96)], [0.20, 0.55, 0.25]),                              # sweater
+    3: ([(30, 32, 46), (48, 52, 72), (66, 72, 96)], [0.35, 0.45, 0.20]),                              # socks, boots
+    4: ([(71, 97, 174), (150, 180, 235)], [0.6, 0.4]),                                                # accents
+}
+OTHER = {"outline": OUTLINE, "skin": (255, 236, 226), "skin_shadow": (240, 196, 186), "blush": (255, 165, 170),
+         "ear_pink": (236, 160, 168), "iris": (64, 110, 222), "iris_light": (130, 175, 245), "pupil": (28, 38, 86),
+         "white": (248, 250, 255), "mouth": (196, 80, 100), "shorts": (76, 80, 100), "shorts_dark": (56, 60, 78),
+         "cobalt": (71, 97, 174), "sky": (156, 196, 255)}
+THIN = {"outline": 0.28, "pupil": 0.25, "mouth": 0.25, "white": 0.3, "iris_light": 0.3}
+
+
+def _lab(rgb):
+    c = np.asarray(rgb, np.float32) / 255
+    c = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+    M = np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]])
+    xyz = c @ M.T / np.array([0.9505, 1.0, 1.089])
+    f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116)
+    return np.stack([116 * f[..., 1] - 16, 500 * (f[..., 0] - f[..., 1]), 200 * (f[..., 1] - f[..., 2])], -1)
+
+
+def clean(src, height=112):
+    a = np.asarray(Image.open(src).convert("RGB")).astype(np.float32) / 255
+    fg = sprite.cutout(a)
+    ys, xs = np.nonzero(fg)
+    sl = (slice(ys.min(), ys.max() + 1), slice(xs.min(), xs.max() + 1))
+    a, fg = a[sl], fg[sl]
+    parts = part_labels(a, fg)
+    colours = list(OTHER.values())
+    names = list(OTHER.keys())
+    base = len(colours)
+    for g, (ramp, _) in PART_RAMPS.items():
+        colours += ramp
+    pal = np.array(colours, np.float32)
+    idx = np.full(fg.shape, -1, np.int16)
+    lum = a @ np.array([0.299, 0.587, 0.114], np.float32)
+    off = base
+    for g, (ramp, share) in PART_RAMPS.items():
+        m = fg & (parts == g)
+        if m.any():
+            L = lum[m]
+            r = (np.argsort(np.argsort(L, kind="stable"), kind="stable") + 0.5) / len(L)
+            idx[m] = off + np.searchsorted(np.cumsum(share)[:-1], r)
+        off += len(ramp)
+    m = fg & (parts == 0)
+    lab_src = _lab(a[m] * 255)
+    lab_pal = _lab(np.array(list(OTHER.values()), np.float32))
+    idx[m] = ((lab_src[:, None] - lab_pal[None]) ** 2).sum(2).argmin(1)
+    # very dark pixels anywhere are outline
+    idx[fg & (lum < 0.13)] = names.index("outline")
+    cell = a.shape[0] / height
+    H, W = height, int(round(a.shape[1] / cell))
+    out = np.full((H, W), -1, np.int16)
+    thin = {names.index(k): v for k, v in THIN.items()}
+    for y in range(H):
+        y0, y1 = int(round(y * cell)), max(int(round((y + 1) * cell)), int(round(y * cell)) + 1)
+        for x in range(W):
+            x0, x1 = int(round(x * cell)), max(int(round((x + 1) * cell)), int(round(x * cell)) + 1)
+            mm = fg[y0:y1, x0:x1]
+            if mm.mean() < 0.5:
+                continue
+            cnt = np.bincount(idx[y0:y1, x0:x1][mm], minlength=len(pal))
+            pick = int(cnt.argmax())
+            for i, frac in thin.items():
+                if i != pick and cnt[i] >= frac * mm.sum():
+                    pick = i
+                    break
+            out[y, x] = pick
+    out = despeckle(out)
+    o = names.index("outline")
+    edge = (out >= 0) & ~ndimage.binary_erosion(out >= 0, structure=np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]]),
+                                                 border_value=0)
+    out[edge] = o
+    rgba = np.zeros((H, W, 4), np.uint8)
+    ok = out >= 0
+    rgba[ok, :3] = pal[out[ok]]
+    rgba[ok, 3] = 255
+    return Image.fromarray(rgba, "RGBA")
