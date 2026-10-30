@@ -18,6 +18,9 @@
 | XIYIN chibi sprite sources (`art/generated/pixel_src/`) | NovelAI V5 (`nai-diffusion-5-full`, 832x1216, 0 Anlas), prompts in `prompts.sh`, seeds in `manifest.jsonl` | NovelAI terms (commercial use reported; verify) | `s05_me_boop_4115.png` is the one used for めっ; the other two s05 files are rejected takes |
 | Pixel sprites (`pixel/sprites/`) | Converted from the sources above by `pixel/sprite.py`; faces hand-drawn in `pixel/faces.py` | Derived from the NovelAI sources (same terms); hand-drawn parts are the project's own | Disclose AI-assisted sprites |
 | Typewriter blips (pixel PV) | Synthesized square-wave blips in `pixel/stage.py` | No third-party audio | |
+| 2D anime plates and lyric props (`art/generated/anime_bg/`) | NovelAI V5 (`nai-diffusion-5-full`, 1536x640 / 1024x1024 / 704x1472, 0 Anlas), prompts in `prompts.sh`, seeds in `manifest.jsonl` | NovelAI terms (commercial use reported; verify) | Takes with garbled lettering were regenerated and deleted; chosen takes listed in `pixel/scene.py` / `pixel/plates/build.sh` |
+| Plate upscaling model (tool only, not shipped) | Real-ESRGAN `realesr-animevideov3-x2` from the realesrgan-ncnn-vulkan v0.2.5.0 release (github.com/xinntao/Real-ESRGAN), run with the `ncnn` PyPI package on CPU | BSD-3-Clause (Real-ESRGAN, ncnn) | Model files not stored in the repo |
+| Font: M PLUS Rounded 1c ExtraBold / Bold (`pv/fonts/`) in the pixel PV | See the M PLUS Rounded 1c row above | SIL Open Font License 1.1 | Block-word glyphs (sampled onto a tile grid) and English subtitles |
 | Analysis models (not shipped in the video) | UVR MDX-Net Voc_FT, rembg isnet-anime, Whisper-small and ReazonSpeech via sherpa-onnx | Various open licenses (verify before redistribution) | Used for analysis and cutouts only |
 
 ## Known deviations from the OC design (to review)

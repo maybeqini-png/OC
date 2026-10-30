@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+# derived plates (rebuild with pixel/plates/build.sh)
+pixel/plates/*.png

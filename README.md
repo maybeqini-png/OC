@@ -83,6 +83,17 @@ Approved combination (2026-10-29): a fixed rhythm-stage layout as the backbone, 
 boxes for the gags, tile-built words only for the hooks (余裕, 大天才, ノーカン, めっ), LIVE on/off bookends and a
 result-screen end card.
 Research write-up on deterministic PV production: https://claude.ai/artifact/VGp4FeD6AcqwvPXWxyuS7g (private).
+Backgrounds (owner feedback 2026-10-30): code-drawn pixel cities read as generic ("too AI-generated, lacking the
+right elements") and N5 pixel-art scenes read as "too AI, too cyber" (lo-fi neon / cyberspace look, garbled fake
+lettering). Current direction: **2D anime pop backgrounds built from the song**, Alice-MV game grammar on top.
+- Plates and props are NovelAI V5 drawings in a flat anime style (cel shading, clean lineart): summer sky, sunset
+  town, manga speed lines, blush pattern, sunburst rays, starry riverbank, pink checker pop, dusk riverside, a sky
+  climb, a festival with fireworks, a dawn rooftop; props are lyric motifs as white-bordered stickers (crown for
+  大天才, mic for この声, camera + prohibition sign for スクショは きんし, bandage for あいたたた, heart for めっ,
+  penlights for きみも, trophy for the result screen, a navy cat plush). No cyber / neon scenes, no text in images
+  (takes with garbled lettering are regenerated).
+- XIYIN stays a pixel sprite; lyrics are bold block words (M PLUS Rounded 1c ExtraBold sampled onto a tile
+  grid) that assemble from flying tiles; key-cap lyric row, game HUD, coins / hop blocks / chorus targets.
 
 ## 4. Storyboard (times on `t2_optimized_full`)
 Written for the 2.5D direction: shot content stands, the picture treatment will be redone in pixel art.
@@ -206,6 +217,28 @@ for the sprites; the sprite list is set after the pixel test.
   a 3840x2160 master (x4) can be exported for YouTube. Dropped: `p02_run_b` (eyes came out dark).
   Consistency plan: gameplay motion is rigged from one side-view master (run A) instead of new generations;
   gag poses keep the fixed palette. Known: some tails stay navy where they touch the sweater.
+
+- 2026-10-30: **full PV v1** (0-178.65 s), `pixel/pv.py` (+ `scene.py`, `blocks.py`, `anim.py`):
+  - Two layers per frame: an HD layer (1920x1080: anime plate, stickers, English subtitle) and the 960x540 pixel
+    game layer at x2 (ground tiles per section, block words, coins / hop blocks / chorus targets with PERFECT
+    bursts, XIYIN, HUD with LIVE/OFF, LV/EXP, score, MISS, combo, key-cap lyric row, chat, 「＊」 narration,
+    menus). Every frame is a function of t; four segments render in parallel and are joined losslessly.
+  - Run cycle rigged from the one run-A master (`anim.py`: legs split at the hips and swung with a RotSprite-style
+    resample, hair flutter, feet grounded, one stride per beat; beat grid 136 BPM, phase 0.024 s, measured from the
+    onset envelope with no drift). Gag poses are the v3 front poses.
+  - Flow: stage curtain title (PRESS START, curtains open on ねえねえ) → tile-flip into the summer sky (大天才 +
+    crown, ticked checkboxes, 完璧 + trophy) → sunset town (余裕, キメ + star) → trips on a 「っ」 block: MISS, manga
+    shock lines, PAUSE menu, 「＊」 narration, ノーカン stamp (MISS pawed back to 0 and the combo restored), chat
+    ニヤニヤ, あっかんべー, blush pattern, READY?/GO! → chorus on sunburst rays (targets every beat, a second ノーカン,
+    めっ punch-in, RETRY?) → starry riverbank (本気, この声 + mic, shooting stars) → pink pop (camera flash, the
+    screenshot becomes a polaroid, 禁止 + prohibition sign, tossed away; なまいき) → dusk riverside (ぷいっ facing
+    away, ぷふっ giggle, 悔しい, つまんない) → rainbow block stairs one step per beat (本番) → curtain closes and
+    opens on the festival (fireworks, 見せ場, めっ, きみも + penlights, 最後まで) → STAGE CLEAR result → dawn rooftop
+    (余裕でしょ, また来てよね, LIVE → OFF, save card, credits) → power off.
+  - Plates: `art/generated/anime_bg/prompts.sh` (all V5 normal size, 0 Anlas), upscaled x2 with Real-ESRGAN
+    `realesr-animevideov3` on CPU (`pixel/upscale.py`, `pixel/plates/build.sh`; the plates are not committed).
+  - Render: `python3 pixel/pv.py render --out pv.mp4 --jobs 4` (about 0.3 s per frame per process);
+    `python3 pixel/pv.py preview <t...> --out sheet.png` for stills.
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
