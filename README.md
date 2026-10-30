@@ -189,6 +189,14 @@ for the sprites; the sprite list is set after the pixel test.
   - QC of the test render: 822 frames, video and audio both 27.40 s, 0 decode errors, BT.709 tags, -13.1 LUFS,
     peak -0.9 dBFS (limiter at -1 dB); notes vs audio onsets: median 12 ms, 20/24 within 100 ms.
 
+- 2026-10-30: **sprite v2** after owner feedback (v1 sprites looked unattractive; hair colour off-model).
+  Sources are now drawn by NovelAI V5 *as pixel art* (2-head chibi, big eyes; prompt `PX` in
+  `art/generated/pixel_src/prompts.sh`), then `pixel/snap.py` snaps them to a true grid (160 px tall, shown x3 on
+  a 640x360 game screen) and repaints hair / tail / ears, sweater, socks / boots and accents with ramps sampled
+  from the reference sheet (hair base (73, 99, 173), sweater (56, 61, 89)). Output in `pixel/sprites2/`.
+  Still to do on v2: socks partly hair-blue in the run poses, sweater side panel / cuff stripes, the remaining
+  poses (punch, jump-swipe, trip, ノーカン, あっかんべー, めっ, giggle), run cycle, background, 640x360 stage.
+
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
 2. Approved by the owner (2026-10-29, "proceed autonomously"): the combination in section 3 and the pixel test.
