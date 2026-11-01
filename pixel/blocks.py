@@ -150,21 +150,21 @@ def draw_word(img, text, cx, cy, t, style, t_now, t_land, seed=0, assemble=0.55,
     n = len(pos)
     for i, (x, y) in enumerate(pos):
         r1, r2, r3 = rng.random(), rng.random(), rng.random()
-        if leave and t_now >= leave[0]:                    # scatter: hop up then fall with gravity
-            u = t_now - leave[0] - r3 * 0.12
+        if leave and t_now >= leave[0]:                    # leave: columns drop away left to right
+            u = t_now - leave[0] - (x / max(1, w)) * leave[1] * 0.35 - r3 * 0.05
             if u < 0:
                 px, py = x0 + x, y0 + y
             else:
-                px = x0 + x + (r1 - 0.5) * 160 * u
-                py = y0 + y - (60 + 120 * r2) * u + 1500 * u * u
+                px = x0 + x
+                py = y0 + y - 30 * u + 1400 * u * u
         else:                                              # assemble: fly in from above / the right
             delay = (x / max(1, w)) * assemble * 0.45 + r3 * assemble * 0.15
             u = (t_now - t0 - delay) / (assemble * 0.55)
             if u <= 0:
                 continue
             e = ease_out_back(u)
-            sx = x0 + x + (r1 - 0.3) * 420
-            sy = y0 + y - 260 - r2 * 240
+            sx = x0 + x + 40 + r1 * 120
+            sy = y0 + y - 140 - r2 * 100
             px = sx + (x0 + x - sx) * e
             py = sy + (y0 + y - sy) * e
         img.alpha_composite(ti, (int(px), int(py)))

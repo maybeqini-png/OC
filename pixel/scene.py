@@ -174,3 +174,41 @@ def dim(img, k=0.45, colour=(27, 35, 64)):
     a[m, :3] = (a[m, :3] * (1 - k) + np.array(colour) * k).astype(np.uint8)
     a[~m, :3] = (a[~m, :3] * (1 - k * 0.5) + np.array(colour) * k * 0.5).astype(np.uint8)
     return Image.fromarray(a, "RGBA")
+
+
+WIPE_SLOPE = 0.45
+WIPE_BAND = 44
+
+
+def wipe_reached(kind, p, x, y):
+    """True where the wipe has passed (output px)."""
+    if kind == "center":
+        r = p * (math.hypot(OW / 2, OH / 2) + WIPE_BAND)
+        return np.hypot(x - OW / 2, y - OH / 2) < r - WIPE_BAND
+    if kind == "up":
+        return y > OH - p * (OH + WIPE_BAND) + WIPE_BAND
+    c = p * (OW + OH * WIPE_SLOPE + WIPE_BAND)
+    return x + y * WIPE_SLOPE < c - WIPE_BAND
+
+
+def wipe(a, b, p, kind="diag", band=(60, 109, 240), edge=(255, 255, 255)):
+    """Clean wipe from a to b with a solid band (and a white leading edge) riding the boundary."""
+    if p <= 0:
+        return a
+    if p >= 1:
+        return b
+    yy, xx = np.mgrid[0:OH, 0:OW]
+    if kind == "center":
+        d = np.hypot(xx - OW / 2, yy - OH / 2) - p * (math.hypot(OW / 2, OH / 2) + WIPE_BAND)
+    elif kind == "up":
+        d = (OH - p * (OH + WIPE_BAND)) - yy
+    else:
+        d = xx + yy * WIPE_SLOPE - p * (OW + OH * WIPE_SLOPE + WIPE_BAND)
+    out = np.asarray(a).copy()
+    B = np.asarray(b)
+    inside = d < -WIPE_BAND
+    out[inside] = B[inside]
+    bandm = (d >= -WIPE_BAND) & (d < 0)
+    out[bandm] = (*band, 255)
+    out[(d >= -6) & (d < 0)] = (*edge, 255)
+    return Image.fromarray(out, "RGBA")

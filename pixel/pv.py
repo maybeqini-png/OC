@@ -50,8 +50,8 @@ def beat_of(t):
 
 # ---------------------------------------------------------------- camera
 SPEED_KEYS = [(0, 0), (11.9, 0), (12.9, 150), (27.0, 150), (28.0, 180), (42.3, 180), (42.61, 0), (54.73, 0),
-              (55.6, 240), (64.2, 240), (64.8, 30), (68.3, 30), (69.3, 150), (83.0, 150), (84.0, 170), (98.3, 170),
-              (99.2, 20), (109.2, 20), (110.2, 150), (116.2, 150), (116.55, 136), (125.2, 136), (125.6, 0),
+              (55.6, 240), (64.2, 240), (64.8, 0), (68.3, 0), (69.3, 150), (83.0, 150), (84.0, 170), (98.3, 170),
+              (99.2, 0), (109.4, 0), (110.2, 150), (116.2, 150), (116.55, 136), (125.2, 136), (125.6, 0),
               (126.0, 0), (126.8, 240), (150.4, 240), (152.2, 0), (DUR + 1, 0)]
 _KT = np.array([k[0] for k in SPEED_KEYS])
 _KV = np.array([k[1] for k in SPEED_KEYS], float)
@@ -130,25 +130,19 @@ def background(t):
                 if p < 0.5:
                     return S.curtain(a, "curtain_closed", p / 0.4)
                 return S.curtain(b, "curtain_closed", 1 - (p - 0.6) / 0.4)
-            return S.tile_flip(a, b, p, direction={"up": "diag"}.get(tr[4], tr[4]))
+            return S.wipe(a, b, p, tr[4])
     return plate_of(section_at(t), t)
 
 
 def ground_style_at(t):
-    """Per-screen-column ground style (switches in step with the plate flip)."""
+    """Per-screen-column ground style (switches where the wipe crosses the ground band)."""
     for tr in TRANS:
         if tr[0] <= t < tr[1] and tr[4] != "curtain":
             a, b = SECTIONS[tr[2]][2], SECTIONS[tr[3]][2]
             p = flip_progress(tr, t)
-            cols, rows = OW // 120, OH // 120
 
             def f(x, a=a, b=b, p=p, kind=tr[4]):
-                c, r = min(cols - 1, max(0, (x * 2) // 120)), rows - 1
-                if kind == "center":
-                    order = math.hypot(c - cols / 2 + 0.5, (r - rows / 2 + 0.5) * 1.6) / math.hypot(cols / 2, rows * 0.8)
-                else:
-                    order = (c + r * 0.6) / (cols + rows * 0.6)
-                return b if (p - order * 0.45) / 0.55 >= 0.5 else a
+                return b if bool(S.wipe_reached(kind, p, x * 2 + 30, OH - 90)) else a
             return f
     st = SECTIONS[section_at(t)][2]
     if 125.0 <= t < 126.6:
@@ -208,8 +202,7 @@ WORDS = [
     (42.61, "えっ", "lemon", 4, 470, 210, False, 43.7),
     (46.66, "ノーカン", "cobalt", 5, 500, 175, False, 49.4),
     (54.39, "せーの", "coral", 4, 480, 190, False, 55.1),
-    (55.64, "余裕だもん", "coral", 5, 600, 160, True, 57.0),
-    (57.43, "余裕だもん", "gold", 5, 600, 170, True, None),
+    (55.64, "余裕だもん", (("coral", 0), ("gold", 57.43)), 5, 620, 150, False, 59.2),
     (61.92, "ノーカン", "cobalt", 5, 620, 175, True, 64.3),
     (71.52, "見ててよね", "white", 4, 620, 180, True, None),
     (75.66, "本気", "gold", 6, 620, 175, True, None),
@@ -223,9 +216,8 @@ WORDS = [
     (109.7, "悔しい", "coral", 5, 640, 180, True, None),
     (113.48, "つまんない", "navy", 4, 660, 185, True, 115.7),
     (124.58, "本番", "gold", 7, 560, 170, False, 125.35),
-    (126.23, "余裕だもん", "white", 5, 600, 160, True, 127.25),
-    (127.38, "もっと", "lemon", 4, 700, 290, True, None),
-    (128.46, "余裕だもん", "gold", 5, 600, 165, True, None),
+    (126.23, "余裕だもん", (("white", 0), ("gold", 128.46)), 5, 620, 150, False, 129.7),
+    (127.38, "もっと", "lemon", 3, 780, 270, False, 129.7),
     (132.34, "見せ場", "coral", 6, 620, 175, True, None),
     (142.16, "見ててよね", "white", 4, 620, 175, True, None),
     (144.7, "きみも", "cyan", 6, 640, 175, True, None),
@@ -264,8 +256,11 @@ def draw_words(img, t):
         x = word_x(w, t)
         if x < -500 or x > W + 500:
             continue
-        B.draw_word(img, text, int(x), cy + int(cam_lift(t)) * 0, tile, style, t, t_land,
-                    seed=int(t_land * 100), leave=(leave, 0.8) if leave else None)
+        if isinstance(style, tuple):                    # a style change re-lands the word with a flash
+            cur = [s for s in style if t >= s[1]][-1]
+            style, t_land = cur[0], max(t_land, cur[1])
+        B.draw_word(img, text, int(x), cy, tile, style, t, t_land,
+                    seed=int(w[0] * 100), leave=(leave, 0.8) if leave else None)
 
 
 def current_line(t):
@@ -422,10 +417,41 @@ def score_at(t):
 
 
 # ---------------------------------------------------------------- XIYIN
+def stand(name, cx, t, mirror=False, dy=0):
+    """A standing pose with a 1 px breath on the off-beat."""
+    k = 1 if (beat_of(t) % 1) >= 0.5 else 0
+    return anim.breathe(name, k), cx, GROUND + dy, mirror
+
+
+@lru_cache(None)
+def air_jumps():
+    """One jump per pair of air targets (Muse Dash-style: she rides up to hit both)."""
+    out = []
+    tg = targets()
+    for n, (tt, lane, miss) in enumerate(tg):
+        if lane == "air" and (n == 0 or tg[n - 1][1] != "air"):
+            end = tt
+            for t2, l2, _ in tg[n + 1:]:
+                if l2 != "air":
+                    break
+                end = t2
+            out.append((tt - 0.24, end + 0.24))
+    return tuple(out)
+
+
+def air_height(t):
+    for a, b in air_jumps():
+        if a <= t < b:
+            u = (t - a) / (b - a)
+            return 100 * min(1.0, 4 * u * (1 - u) * 1.35)
+    return 0.0
+
+
 def xiyin(t):
     """(sprite, centre x, feet y, mirrored)."""
     lift = climb_lift(t) - cam_lift(t)
     cx = RUN_X
+    v = speed(t)
     if t < 4.02:
         return None
     if t < 11.9:                                          # title: on stage in the spotlight
@@ -437,77 +463,62 @@ def xiyin(t):
             name = "p01_smug_b"
         elif 9.98 <= t:
             name = "p03_hit_ground"
-        sp, feet = anim.pose(name)
-        return sp, 480, GROUND + int(rise * 260), False
+        return stand(name, 480, t, dy=int(rise * 260))
     if t < 13.6:                                          # starts running, eases to the run position
         u = min(1, (t - 11.9) / 1.7)
         cx = int(480 + (RUN_X - 480) * (1 - (1 - u) ** 2))
-    if 42.61 <= t < 54.73:                                # the stumble gag
+    if 42.61 <= t < 54.73:                                # the stumble gag (the world is stopped)
         if t < 44.14:
-            sp, feet = anim.pose("p05_trip")
+            sp = anim.pose("p05_trip")[0]
             y = GROUND - int(40 * math.sin(min(1, (t - 42.61) / 0.45) * math.pi)) if t < 43.06 else GROUND
             shake = 3 if 43.0 < t < 43.3 and int(t * 30) % 2 else 0
             return sp, cx + shake, y, False
         if t < 46.3:
             return anim.pose("p05_trip")[0], cx, GROUND, False
         if t < 50.9:
-            return anim.pose("p06_nocount")[0], cx, GROUND, False
+            return stand("p06_nocount", cx, t)
         if t < 52.0:
-            return anim.pose("p07_akanbe")[0], cx, GROUND, False
+            return stand("p07_akanbe", cx, t)
         if t < 53.54:
-            return anim.pose("p01_smug_b")[0], cx, GROUND, False
+            return stand("p01_smug_b", cx, t)
         if t < 54.39:
             breath = int(3 * math.sin((t - 53.54) * 7))
-            return anim.pose("p01_smug_a")[0], cx, GROUND + breath, False
+            return stand("p01_smug_a", cx, t, dy=breath)
         return anim.jump_frame()[0], cx, GROUND - 10, False
-    if 64.6 <= t < 68.3:                                  # 笑ったでしょ / めっ / もういっかい
-        name = "p01_smug_b" if t < 67.06 else ("p08_me" if t < 67.54 else "p01_smug_a")
-        return anim.pose(name)[0], cx, GROUND, False
-    if 85.82 <= t < 87.19:                                # スクショ: blocks the camera
-        return anim.pose("p03_hit_ground")[0], cx, GROUND, False
-    if 93.4 <= t < 95.4:
-        return anim.pose("p06_nocount")[0], cx, GROUND, False
-    if 99.2 <= t < 109.7:                                 # ぷいっ / 目があえば / ぷふっ
+    if 64.8 <= t < 68.3:                                  # 笑ったでしょ / めっ / もういっかい (stopped)
+        return stand("p01_smug_b" if t < 67.06 else ("p08_me" if t < 67.54 else "p01_smug_a"), cx, t)
+    if 99.2 <= t < 109.4:                                 # ぷいっ / 目があえば / ぷふっ (stopped)
         if t < 103.75:
-            return anim.pose("p06_nocount")[0], cx, GROUND, True
+            return stand("p06_nocount", cx, t, mirror=True)
         if t < 107.48:
-            return anim.pose("p01_smug_b")[0], cx, GROUND, False
-        return anim.pose("p09_giggle")[0], cx, GROUND, False
-    if 136.68 <= t < 137.3:
+            return stand("p01_smug_b", cx, t)
+        return stand("p09_giggle", cx, t)
+    if 136.68 <= t < 137.3:                               # めっ punch-in (zoomed, the ground is out of frame)
         return anim.pose("p08_me")[0], cx, GROUND, False
     if t >= 150.9:                                        # stage clear and the ending
         u = min(1, max(0, (t - 150.9) / 1.6))
         cx = int(RUN_X + (480 - RUN_X) * (1 - (1 - u) ** 2))
         if t < 152.3:
-            sp, feet = anim.run_at(t * min(1, speed(t) / 200 + 0.3))
-            return sp, cx, GROUND, False
+            return anim.run_at(t, max(60, v))[0], cx, GROUND, False
         name = "p01_smug_a"
         for a, n in ((152.3, "p01_smug_b"), (153.6, "p01_smug_a"), (154.47, "p01_smug_b"), (156.66, "p03_hit_ground"),
                      (157.8, "p01_smug_b"), (159.33, "p01_smug_a"), (161.98, "p09_giggle"), (163.32, "p08_me"),
                      (170.5, "p01_smug_a")):
             if t >= a:
                 name = n
-        return anim.pose(name)[0], 480, GROUND, False
-    # chorus hits
-    for tt, lane, miss in targets():
-        if 0 <= t - tt < 0.2 and not miss:
-            if lane == "air":
-                return anim.pose("p04_hit_air")[0], cx + 10, GROUND - 90, False
-            return anim.pose("p03_hit_ground")[0], cx + 10, GROUND, False
-    for tt, lane, miss in targets():                      # jump up toward an air target
-        if lane == "air" and not miss and 0 <= tt - t < 0.2:
-            return anim.jump_frame()[0], cx, GROUND - int(90 * (1 - (tt - t) / 0.2)), False
-    if 30.14 <= t < 30.7:
-        return anim.pose("p07_akanbe")[0], cx, GROUND, False
+        return stand(name, 480, t)
+    ah = air_height(t)
+    if ah > 0:
+        return anim.jump_frame()[0], cx, GROUND - int(ah), False
     h, air = hop_at(t)
     if air:
         return anim.jump_frame()[0], cx, GROUND - int(h) - int(lift), False
     if 116.55 <= t < 125.8:
         k = beat_of(t) - CLIMB_B0
         f = k - math.floor(k)
-        sp = anim.jump_frame()[0] if 0.15 < f < 0.75 and k < CLIMB_N else anim.run_at(t)[0]
+        sp = anim.jump_frame()[0] if 0.15 < f < 0.75 and k < CLIMB_N else anim.run_at(t, v)[0]
         return sp, cx, GROUND - int(lift), False
-    return anim.run_at(t)[0], cx, GROUND - int(lift), False
+    return anim.run_at(t, max(60, v))[0], cx, GROUND - int(lift), False
 
 
 _MIRROR = {}
@@ -524,11 +535,18 @@ def draw_xiyin(img, t, rim_col):
     if not st:
         return
     sp, cx, feet, mirror = st
-    _, fy = anim.grounded(sp)
+    fy = anim.feet_of(sp)
     if mirror:
         sp = mirrored(sp)
     if rim_col:
         sp = anim.rim(sp, rim_col)
+    if not 116.0 <= t < 125.8 and t >= 4.4:            # dithered contact shadow on the ground
+        air = max(0, GROUND - feet)
+        w = max(20, 64 - air // 3)
+        d = ImageDraw.Draw(img)
+        for i in range(-w // 2, w // 2, 2):
+            hh = 3 if abs(i) < w // 3 else 2
+            d.rectangle([cx + i + (0 if (i // 2) % 2 else 1), GROUND - hh, cx + i + 1, GROUND - 1], fill=(20, 22, 50))
     img.alpha_composite(sp, (int(cx - sp.width // 2), int(feet - fy)))
     return cx, feet - fy
 
@@ -1036,7 +1054,7 @@ def render(t0, t1, out, jobs):
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(video), "-ss", f"{t0:.3f}", "-t", f"{dur:.3f}",
                     "-i", str(AUDIO), "-i", str(blips), "-filter_complex",
                     f"[1:a]afade=t=in:d=0.05,afade=t=out:st={max(0, dur - 1.2):.3f}:d=1.2[s];"
-                    "[s][2:a]amix=inputs=2:normalize=0,alimiter=limit=0.89:level=false[a]",
+                    "[s][2:a]amix=inputs=2:normalize=0,alimiter=limit=0.84:level=false[a]",
                     "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-ar", "48000",
                     "-movflags", "+faststart", str(out)], check=True)
     for s in segs:

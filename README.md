@@ -242,6 +242,19 @@ for the sprites; the sprite list is set after the pixel test.
   - QC of v1: 5360 frames, video 178.67 s / audio 178.65 s, 0 decode errors, BT.709 tags, -13.8 LUFS integrated,
     true peak -0.4 dBTP (aim for -1 next time: lower the limiter), segment joins checked frame by frame.
 
+- 2026-11-01: **full PV v2** after owner feedback ("too many flaws, her legs look broken"). Audit and fixes:
+  - Legs: v1 swung the master's two legs as rigid pieces about the hip, so knees never bent, the legs never
+    passed each other and the back leg was a dark blob. `pixel/legs.py` now draws two-bone IK legs (skin thighs,
+    navy kneehighs with the blue band from the sheet, boots cut from the master and rigid with the shin), the legs
+    alternate half a stride apart, the planted foot keeps pace with the ground, the far leg uses shadow tones.
+  - No more pose popping: chorus hits no longer swap to front-facing punch poses every beat; she rides up to the
+    air targets with the rigged jump. Standing gag poses only appear while the world is stopped (no gliding),
+    and standing poses breathe by 1 px on the beat. A dithered contact shadow grounds her.
+  - Transitions: the tile flip (read as glitch stripes) is replaced by clean wipes (diagonal, iris, rise) with
+    a cobalt band; the ground switches where the wipe crosses it.
+  - Block words leave by dropping column by column instead of spraying; each chorus shows one 余裕だもん that
+    turns gold on the repeat instead of two words piling up; limiter lowered for -1 dBTP.
+
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
 2. Approved by the owner (2026-10-29, "proceed autonomously"): the combination in section 3 and the pixel test.

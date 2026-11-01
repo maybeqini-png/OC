@@ -1,10 +1,10 @@
 """XIYIN sprite animation from one master drawing (character consistency: every gameplay frame comes from the
 same pixels, nothing is re-generated).
 
-Run cycle (Muse Dash-like): the run-A master is split at the hips into body, back leg and front leg. The legs
-swing in opposite directions around hip pivots, the body bobs at the passing position, and the trailing hair
-flutters by one pixel. Rotations use a RotSprite-style resample (x4 nearest, rotate, majority back down) so the
-pixel clusters stay clean. A full stride takes one beat; N_PHASE frames are precomputed (no per-frame shimmer).
+Run cycle (Muse Dash-like): the upper body is the run-A master above the shorts hem; the legs are drawn by
+legs.py as two-bone IK legs (knees bend forward, the legs alternate and pass each other, the planted foot keeps
+pace with the ground, boots cut from the master). The hip bobs twice per stride and the trailing hair flutters
+by one pixel. A full stride takes one beat; N_PHASE frames per stride are precomputed per stride length.
 """
 import math
 from functools import lru_cache
@@ -12,6 +12,8 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+
+import legs as legs_mod
 
 HERE = Path(__file__).parent
 BEAT = 60 / 136
@@ -89,19 +91,41 @@ def flutter(im, phase):
     return Image.fromarray(a, "RGBA")
 
 
+BODY_CUT = 127                             # body = master rows above the shorts hem; legs are drawn by legs.py
+_FEET = {}
+
+
+def feet_of(im):
+    """Feet row of a sprite: fixed ground line for rigged frames, lowest opaque row otherwise."""
+    return _FEET[id(im)][1] if id(im) in _FEET else grounded(im)[1]
+
+
 @lru_cache(None)
-def run_frame(i):
-    """Phase frame i of N_PHASE (0 = front leg fully forward)."""
+def body_layer():
+    m = np.asarray(_padded(master())).copy()
+    m[BODY_CUT + PAD:] = 0
+    return Image.fromarray(m, "RGBA")
+
+
+def _assemble(legs, bob, phase):
+    body = flutter(body_layer(), phase) if phase is not None else body_layer()
+    out = Image.fromarray(legs, "RGBA")
+    out.alpha_composite(body, (0, int(round(bob))))
+    feet = int(legs_mod.GROUND_TOP + 31 + 1 + PAD)
+    _FEET[id(out)] = (out, feet)
+    return out, feet
+
+
+STANCE_SPEED = 203.0                       # ground speed (px/s) at which a stride of 1.0 has no foot slide
+
+
+@lru_cache(None)
+def run_frame(i, stride=1.0):
+    """Phase frame i of N_PHASE (one stride: both legs step once)."""
     phase = i / N_PHASE
-    body, back, front = run_parts()
-    ang = SWING * math.cos(2 * math.pi * phase)
-    pb = (PIVOT_BACK[0] + PAD, PIVOT_BACK[1] + PAD)
-    pf = (PIVOT_FRONT[0] + PAD, PIVOT_FRONT[1] + PAD)
-    out = Image.new("RGBA", body.size, (0, 0, 0, 0))
-    out.alpha_composite(rotsprite(back, pb, ang), (0, 0))
-    out.alpha_composite(flutter(body, phase), (0, 0))
-    out.alpha_composite(rotsprite(front, pf, -ang), (0, 0))
-    return grounded(out)
+    size = body_layer().size
+    legs, bob = legs_mod.legs_frame(phase, (size[1], size[0]), PAD, stride)
+    return _assemble(legs, bob, phase)
 
 
 def grounded(im):
@@ -113,21 +137,34 @@ def grounded(im):
 
 @lru_cache(None)
 def jump_frame():
-    """Tucked jump from the same master: both legs swung forward and up."""
-    body, back, front = run_parts()
-    pb = (PIVOT_BACK[0] + PAD, PIVOT_BACK[1] + PAD)
-    pf = (PIVOT_FRONT[0] + PAD, PIVOT_FRONT[1] + PAD)
-    out = Image.new("RGBA", body.size, (0, 0, 0, 0))
-    out.alpha_composite(rotsprite(back, pb, -30), (0, 0))
-    out.alpha_composite(body, (0, 0))
-    out.alpha_composite(rotsprite(front, pf, 28), (0, 0))
-    return grounded(out)
+    """Tucked jump from the same master body."""
+    size = body_layer().size
+    legs = legs_mod.tucked_legs((size[1], size[0]), PAD)
+    return _assemble(legs, -2, None)
 
 
-def run_at(t):
-    """(sprite, feet_y) of the run cycle at song time t (one stride per beat)."""
+def run_at(t, speed=STANCE_SPEED):
+    """(sprite, feet_y) of the run cycle at song time t (one stride per beat), stride matched to the ground speed."""
     i = int((t / BEAT) * N_PHASE) % N_PHASE
-    return run_frame(i)
+    stride = min(1.25, max(0.6, round(speed / STANCE_SPEED * 10) / 10))
+    return run_frame(i, stride)
+
+
+@lru_cache(None)
+def breathe(name, k):
+    """Standing pose with the upper body lowered k px (a 1 px idle breath on the beat)."""
+    im, feet = pose(name)
+    if not k:
+        return im
+    a = np.asarray(im)
+    rows = np.nonzero(a[..., 3].any(1))[0]
+    cut = int(rows.min() + (rows.max() - rows.min()) * 0.62)
+    out = a.copy()
+    out[rows.min() + k:cut + k] = a[rows.min():cut]
+    out[rows.min():rows.min() + k] = 0
+    im2 = Image.fromarray(out, "RGBA")
+    _FEET[id(im2)] = (im2, feet)
+    return im2
 
 
 @lru_cache(None)
