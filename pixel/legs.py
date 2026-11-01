@@ -21,19 +21,19 @@ SOCK_FAR, SOCK_FAR_HI = (32, 35, 56), (46, 50, 78)
 BAND, BAND_HI = (73, 99, 173), (118, 146, 214)
 BAND_FAR = (56, 78, 148)
 
-L1, L2 = 29.0, 16.0                       # thigh (hip-knee), shin (knee-boot top)
-R_THIGH = (7.0, 5.8)                      # radius at hip, at knee
-R_SHIN = (5.6, 5.4)
-HIP_NEAR, HIP_FAR = (74.0, 119.0), (65.0, 118.0)
-GROUND_TOP = 165.0                        # boot-top height when standing on the ground
-BOOT_TOP = (88.0, 168.0)                  # boot pivot on the master (top centre of the shaft)
-BOOT_AXIS = math.degrees(math.atan2(5, 17))   # master shin direction, degrees from straight down toward +x
+# rig geometry per master drawing (master-sprite pixels before padding)
+FRONT = dict(master="sprites3/p02_run_a.png", L1=29.0, L2=16.0, R_THIGH=(7.0, 5.8), R_SHIN=(5.6, 5.4),
+             HIP_NEAR=(74.0, 119.0), HIP_FAR=(65.0, 118.0), GROUND_TOP=165.0, BOOT_TOP=(88.0, 168.0),
+             BOOT_AXIS=math.degrees(math.atan2(5, 17)), BOOT_BOX=(166, 200, 76, 131), STRIDE=1.0)
+SIDE = dict(master="sprites4/a01_run_9803.png", L1=24.0, L2=14.0, R_THIGH=(9.5, 7.6), R_SHIN=(7.2, 6.6),
+            HIP_NEAR=(71.0, 136.0), HIP_FAR=(61.0, 135.0), GROUND_TOP=168.0, BOOT_TOP=(90.0, 169.0),
+            BOOT_AXIS=math.degrees(math.atan2(8, 12)), BOOT_BOX=(168, 200, 80, 130), STRIDE=0.85, SOLE=False,
+            SOCK_COLS=((44, 48, 74),))
 
-# boot-top path relative to the hip over one stride (phase, dx, y); y is absolute so the stance foot stays on
-# the ground while the hip bobs. Stance 0-0.38, swing after.
-PATH = [(0.00, 17, GROUND_TOP), (0.12, 7, GROUND_TOP), (0.25, -5, GROUND_TOP), (0.38, -17, GROUND_TOP - 1),
-        (0.50, -26, GROUND_TOP - 12), (0.62, -23, GROUND_TOP - 27), (0.75, -4, GROUND_TOP - 30),
-        (0.87, 15, GROUND_TOP - 20), (1.00, 17, GROUND_TOP)]
+# boot-top path relative to the hip over one stride (phase, dx, dy below ground top); the stance foot stays on
+# the ground while the hip bobs. Stance 0-0.38, swing after. dy is relative to the rig's GROUND_TOP.
+PATH = [(0.00, 17, 0), (0.12, 7, 0), (0.25, -5, 0), (0.38, -17, -1), (0.50, -26, -12), (0.62, -23, -27),
+        (0.75, -4, -30), (0.87, 15, -20), (1.00, 17, 0)]
 
 
 def catmull(points, u):
@@ -61,7 +61,7 @@ def hip_bob(u):
     return 1.6 * math.cos(4 * math.pi * (u - 0.25))
 
 
-def ik(hip, ankle, l1=L1, l2=L2):
+def ik(hip, ankle, l1, l2):
     """Knee for a two-bone leg, knee bending toward +x (forward)."""
     hx, hy = hip
     ax, ay = ankle
@@ -94,26 +94,29 @@ def capsule(shape, p0, p1, r0, r1):
 
 
 @lru_cache(None)
-def boot_piece():
-    """The run-A front boot (rows from the shaft top down), with the sheet's blue trim; sock pixels removed."""
-    m = np.asarray(Image.open(HERE / "sprites3" / "p02_run_a.png").convert("RGBA")).copy()
+def boot_piece(master, box, sole=True, extra_sock=()):
+    """The master's near boot (rows from the shaft top down), with the sheet's blue trim; sock pixels removed."""
+    m = np.asarray(Image.open(HERE / master).convert("RGBA")).copy()
     a = np.zeros_like(m)
-    region = (slice(166, 200), slice(76, 131))
+    region = (slice(box[0], box[1]), slice(box[2], box[3]))
     a[region] = m[region]
+    sock_cols = [BAND, BAND_HI, (56, 78, 148), (248, 250, 255)] + list(extra_sock)
     sock = np.isin(a[..., :3].reshape(-1, 3).view([("", a.dtype)] * 3).ravel(),
-                   np.array([BAND, BAND_HI, (56, 78, 148), (248, 250, 255)], np.uint8).view([("", np.uint8)] * 3).ravel())
+                   np.array(sock_cols, np.uint8).view([("", np.uint8)] * 3).ravel())
     a.reshape(-1, 4)[sock] = 0
     op = a[..., 3] > 0
     rows = np.nonzero(op.any(1))[0]
     top = rows.min()
-    for y in (top + 1, top + 2):                        # blue rim at the top of the shaft (sheet)
-        xs = np.nonzero(op[y])[0]
-        if len(xs) > 2:
-            a[y, xs[1]:xs[-1]] = (*BAND, 255)
-    for x in range(op.shape[1]):                        # blue line just above the sole
-        ys = np.nonzero(op[:, x])[0]
-        if len(ys) > 4:
-            a[ys[-1] - 2, x] = (*BAND, 255)
+    if sole:
+        for y in (top + 1, top + 2):                    # blue rim at the top of the shaft (sheet)
+            xs = np.nonzero(op[y])[0]
+            if len(xs) > 2:
+                a[y, xs[1]:xs[-1]] = (*BAND, 255)
+    if sole:
+        for x in range(op.shape[1]):                    # blue line just above the sole
+            ys = np.nonzero(op[:, x])[0]
+            if len(ys) > 4:
+                a[ys[-1] - 2, x] = (*BAND, 255)
     return Image.fromarray(a, "RGBA")
 
 
@@ -133,14 +136,15 @@ def rot_about(im, pivot, deg, k=4):
 
 
 @lru_cache(None)
-def boot_rotated(deg):
+def boot_rotated(master, box, top, deg, sole=True, extra_sock=()):
     """Boot piece rotated by a whole number of degrees about its shaft top."""
-    return rot_about(boot_piece(), BOOT_TOP, deg)
+    return rot_about(boot_piece(master, box, sole, extra_sock), top, deg)
 
 
-def draw_leg(canvas, hip, ankle, far, pad):
+def draw_leg(canvas, hip, ankle, far, pad, cfg=FRONT):
     """Draw one leg (thigh, sock, boot, outline) into the RGBA array canvas; pad offsets master coordinates."""
-    kx, ky, ankle = ik(hip, ankle)
+    R_THIGH, R_SHIN, BOOT_TOP = cfg["R_THIGH"], cfg["R_SHIN"], cfg["BOOT_TOP"]
+    kx, ky, ankle = ik(hip, ankle, cfg["L1"], cfg["L2"])
     hip_p = (hip[0] + pad, hip[1] + pad)
     knee_p = (kx + pad, ky + pad)
     ank_p = (ankle[0] + pad, ankle[1] + pad)
@@ -163,7 +167,8 @@ def draw_leg(canvas, hip, ankle, far, pad):
         layer[sock_m & (dist_from_knee >= 6) & (dist_from_knee < 7)] = (*BAND_HI, 255)
     # boot, rigid with the shin
     theta = math.degrees(math.atan2(ank_p[0] - knee_p[0], ank_p[1] - knee_p[1]))
-    boot = boot_rotated(int(round(theta - BOOT_AXIS)))
+    boot = boot_rotated(cfg["master"], cfg["BOOT_BOX"], BOOT_TOP, int(round(theta - cfg["BOOT_AXIS"])),
+                        cfg.get("SOLE", True), cfg.get("SOCK_COLS", ()))
     b = np.asarray(boot)
     ox, oy = int(round(ank_p[0] - BOOT_TOP[0])), int(round(ank_p[1] - BOOT_TOP[1]))
     h, w = b.shape[:2]
@@ -188,21 +193,23 @@ def draw_leg(canvas, hip, ankle, far, pad):
     canvas[op] = layer[op]
 
 
-def legs_frame(u, shape, pad, stride=1.0):
+def legs_frame(u, shape, pad, stride=1.0, cfg=FRONT):
     """Both legs at stride phase u: returns (canvas RGBA, hip bob in px). stride scales the step length so the
     planted foot keeps pace with the ground at different running speeds."""
     canvas = np.zeros((*shape, 4), np.uint8)
     bob = hip_bob(u)
-    for far, uu, hip in ((True, (u + 0.5) % 1.0, HIP_FAR), (False, u % 1.0, HIP_NEAR)):
+    g = cfg["GROUND_TOP"]
+    for far, uu, hip in ((True, (u + 0.5) % 1.0, cfg["HIP_FAR"]), (False, u % 1.0, cfg["HIP_NEAR"])):
         hx, hy = hip[0], hip[1] + bob
-        dx, ay = catmull(PATH, uu)
-        draw_leg(canvas, (hx, hy), (hx + dx * stride, ay), far, pad)
+        dx, dy = catmull(PATH, uu)
+        draw_leg(canvas, (hx, hy), (hx + dx * stride * cfg["STRIDE"], g + dy), far, pad, cfg)
     return canvas, bob
 
 
-def tucked_legs(shape, pad):
-    """Jump: both knees up (near leg forward, far leg tucked back)."""
+def tucked_legs(shape, pad, cfg=FRONT, near=(6, -22), far_=(-14, -18)):
+    """Jump: both knees up (near leg forward, far leg tucked back); offsets from the hip x / ground top."""
     canvas = np.zeros((*shape, 4), np.uint8)
-    for far, hip, ank in ((True, HIP_FAR, (-14, 150)), (False, HIP_NEAR, (6, 146))):
-        draw_leg(canvas, hip, (hip[0] + ank[0], ank[1]), far, pad)
+    g = cfg["GROUND_TOP"]
+    for far, hip, ank in ((True, cfg["HIP_FAR"], far_), (False, cfg["HIP_NEAR"], near)):
+        draw_leg(canvas, hip, (hip[0] + ank[0], g + ank[1]), far, pad, cfg)
     return canvas
