@@ -27,3 +27,21 @@ exn() { [ -f "$OUT/$1_raw.png" ] || $NAI img2img --model $M --image $OUT/base_no
 for seed in 31005 31006; do for s in 0.45 0.55; do
   exn blinkc_${s}_${seed} $s $seed "3::closed eyes::, both eyes closed, eyelashes, smile, closed mouth"
 done; done
+# expressions (2026-11-01): source = base with eyes and mouth erased (base_noface.png); only eyes / mouth (and
+# cheeks where noted in pixel/vtmodel.py) are pasted back onto the base
+exf() { [ -f "$OUT/$1_raw.png" ] || $NAI img2img --model $M --image $OUT/base_noface.png --strength 0.5 --seed $2 --w 1024 --h 1024 --prompt "$BASE, $3" --negative "$NEG" --out "$OUT/$1_raw.png"; }
+for seed in 32001 32002; do
+  exf smug_$seed $seed "2::smug::, half-closed eyes, smirk, fang, :3, confident"
+  exf wink_$seed $seed "2::one eye closed::, wink, ;), smile, closed mouth"
+  exf determined_$seed $seed "2::determined::, confident smile, sparkling eyes, closed mouth"
+  exf cheer_$seed $seed "2::happy::, big smile, open mouth, sparkling eyes, excited, blush"
+  exf shocked_$seed $seed "2::surprised::, wide-eyed, small pupils, open mouth, :o"
+  exf pain_$seed $seed "2::>_<::, eyes shut tight, wince, open mouth, teary"
+  exf angry_$seed $seed "2::angry::, pout, puffed cheeks, furrowed brow, glaring, closed mouth"
+  exf hmph_$seed $seed "2::closed eyes::, pout, hmph, offended, closed mouth"
+  exf flustered_$seed $seed "2::embarrassed::, blush, wavy mouth, teary eyes, flustered"
+  exf honest_$seed $seed "gentle smile, soft eyes, half-closed eyes, calm, closed mouth"
+  exf sing_$seed $seed "2::singing::, closed eyes, open mouth, happy"
+  exf laugh_$seed $seed "2::laughing::, closed eyes, ^_^, open mouth, happy tears, blush"
+  exf frustrated_$seed $seed "2::frustrated::, teary eyes, pout, trembling lips, blush"
+done
