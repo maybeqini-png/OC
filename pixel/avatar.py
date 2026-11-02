@@ -1,9 +1,10 @@
 """XIYIN's in-game avatar for the v3 PV: a pixel chibi in true side view, facing right and looking where she runs
 (the VTuber, not the avatar, is the one who looks at the viewer).
 
-Run cycle: the upper body of the side-view master (sprites4/a01_run_9803) on the two-bone IK legs of legs.py
+Run cycle: the upper body of the side-view master (sprites4c/a01_run_9803; white artifacts removed by spriteclean.py)
+on the two-bone IK legs of legs.py
 (knees bend forward, the legs alternate, the planted foot keeps pace with the ground). One stride per beat.
-Attack / hurt frames are separate side-view drawings snapped to the same palette (sprites4/), shown briefly as in
+Attack / hurt frames are separate side-view drawings snapped to the same palette (sprites4c/), shown briefly as in
 Muse Dash, where the strike frames follow the chart.
 """
 import math
@@ -66,21 +67,23 @@ def _register(im, feet):
     return im
 
 
-def flutter(im, phase, zone=(0, 30, 52, 128)):
-    """1 px travelling wave on the trailing hair and tail."""
-    a = np.asarray(im).copy()
-    x0, y0, x1, y1 = (v + PAD for v in zone)
-    for y in range(y0, y1):
-        s = int(round(1.2 * math.sin(2 * math.pi * phase + (y - y0) / 9)))
-        if s:
-            row = a[y, x0:x1].copy()
-            sh = np.roll(row, s, axis=0)
-            if s > 0:
-                sh[:s] = row[:s]
-            else:
-                sh[s:] = row[s:]
-            a[y, x0:x1] = sh
-    return Image.fromarray(a, "RGBA")
+def flutter(im, phase):
+    """Secondary motion on the trailing hair and the tail (pixel-exact, nearest neighbour):
+    - hair (x < 56, rows 30-132): horizontal wave, amplitude 0 at the head growing to 2 px at the tips, phase lagging
+      down the strand (follow-through);
+    - tail (x < 50, rows 128-162): vertical wag, 0 at the root growing to 2 px at the tip, lagging towards the tip.
+    Coordinates are master pixels (before padding)."""
+    a = np.asarray(im)
+    H, W = a.shape[:2]
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    x, y = xx - PAD, yy - PAD
+    w_hair = np.clip((56 - x) / 30, 0, 1) * np.clip((y - 30) / 40, 0, 1) * (y < 132)
+    dx = 2.0 * w_hair * np.sin(2 * math.pi * phase - (y - 30) / 14 - (56 - x) / 22)
+    w_tail = np.clip((50 - x) / 26, 0, 1) * ((y >= 128) & (y < 162))
+    dy = 2.0 * w_tail * np.sin(2 * math.pi * phase + 1.2 - (50 - x) / 9)
+    sx = np.clip(np.rint(xx - dx), 0, W - 1).astype(int)
+    sy = np.clip(np.rint(yy - dy), 0, H - 1).astype(int)
+    return Image.fromarray(a[sy, sx], "RGBA")
 
 
 @lru_cache(None)
@@ -118,7 +121,7 @@ def jump_frame(kind="up"):
 @lru_cache(None)
 def frame(name):
     """A whole side-view drawing (attack / hurt), padded like the rig, feet on its lowest row."""
-    im = _padded(Image.open(HERE / "sprites4" / f"{name}.png").convert("RGBA"))
+    im = _padded(Image.open(HERE / "sprites4c" / f"{name}.png").convert("RGBA"))
     return _register(im, grounded(im))
 
 

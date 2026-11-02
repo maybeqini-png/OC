@@ -472,6 +472,9 @@ def alpha3():
     H, W = a.shape[:2]
     near = np.sqrt(((a - BG3) ** 2).sum(-1)) < 11
     light = (a.min(-1) > 222) & (a.max(-1) - a.min(-1) < 18)      # V5's white rim around the outline
+    # background seen through gaps between strands, tinted by the upscaler: light, low saturation and not reddish
+    # (skin is redder than it is blue; the background grey is not)
+    light |= (a.mean(-1) > 215) & (a.max(-1) - a.min(-1) < 35) & (a[..., 2] >= a[..., 0] - 2)
     lab, _ = ndimage.label(near | light)
     border = set(np.unique(np.concatenate([lab[0], lab[:, 0], lab[:, -1]]))) - {0}
     bg = np.isin(lab, list(border))

@@ -32,7 +32,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from scipy import ndimage
 
 import avatar as AV
-import vtmodel as VTM
+import vtmotion as VMO
 import blocks as B
 import scene as S
 from stage import lyrics, put_text, text_mask
@@ -268,15 +268,16 @@ def avatar_height(t):
 
 @lru_cache(None)
 def hurt_frame(flash):
-    """Hurt: the run master tilted back with a white or coral flash (consistent with the run, no new drawing)."""
+    """Hurt: the run master tilted back, flickering between her own colours and a light coral tint (as Muse Dash's
+    damage blink; a white tint read as a white blob)."""
     base = AV.run_frame(3)
     im = legs_rot(base, 9)
-    a = np.asarray(im).copy()
-    m = a[..., 3] > 0
-    col = np.array(WHITE if flash else CORAL)
-    a[m, :3] = (a[m, :3] * 0.45 + col * 0.55).astype(np.uint8)
-    out = Image.fromarray(a, "RGBA")
-    return AV._register(out, AV.feet_of(base))
+    if flash:
+        a = np.asarray(im).copy()
+        m = a[..., 3] > 0
+        a[m, :3] = (a[m, :3] * 0.6 + np.array(CORAL) * 0.4).astype(np.uint8)
+        im = Image.fromarray(a, "RGBA")
+    return AV._register(im, AV.feet_of(base))
 
 
 def legs_rot(im, deg):
@@ -477,66 +478,68 @@ def frozen_game():
     return game_layer(PAUSE[0] - 1e-3)
 
 
-# ---------------------------------------------------------------- the VTuber (her model: vtmodel.py)
-VT = [  # (t, expression) per lyric line; "base" gets blinks and a mouth flap on the sung syllables
-    (0.0, "base"), (4.02, "wink"), (4.56, "base"), (7.69, "smug"), (8.62, "base"), (9.98, "determined"),
-    (10.7, "base"), (14.19, "smug"), (17.81, "cheer"), (19.5, "base"), (23.34, "determined"), (28.31, "smug"),
-    (31.78, "wink"), (34.95, "base"), (37.28, "determined"), (42.61, "shocked"), (42.99, "pain"), (44.14, "angry"),
-    (46.3, "hmph"), (49.67, "flustered"), (53.54, "honest"), (54.39, "determined"), (55.64, "sing"),
-    (59.41, "smug"), (61.92, "wink"), (64.46, "smug"), (67.06, "angry"), (67.54, "cheer"), (68.7, "base"),
-    (71.52, "wink"), (72.7, "honest"), (76.7, "determined"), (84.81, "shocked"), (86.38, "angry"),
-    (87.19, "flustered"), (89.9, "hmph"), (93.46, "angry"), (98.9, "hmph"), (103.75, "flustered"),
-    (107.48, "laugh"), (109.7, "frustrated"), (113.01, "smug"), (116.55, "honest"), (119.32, "determined"),
-    (123.15, "angry"), (124.58, "determined"), (126.23, "sing"), (129.9, "cheer"), (133.29, "smug"),
-    (136.68, "angry"), (137.24, "cheer"), (138.7, "base"), (142.16, "wink"), (142.77, "laugh"),
-    (145.96, "cheer"), (146.7, "sing"), (151.9, "cheer"), (154.47, "smug"), (159.33, "wink"), (161.98, "smug"),
-    (163.32, "honest"), (166.0, "cheer"), (169.6, "base")]
+# ---------------------------------------------------------------- the VTuber (model v3: vt3.py, motion: vtmotion.py)
+# She sings along while she plays: a neutral face with lip-sync on the sung syllables and blinks, plus short
+# expression accents on the key words (start, end, expression). Accents switch on a cut with a small pop.
+ACCENTS = [
+    (4.02, 4.50, "wink"), (7.69, 8.55, "smug"), (9.98, 10.70, "smug"),
+    (14.19, 14.95, "smug"), (17.81, 19.30, "happy"), (23.34, 25.00, "smug"),
+    (28.31, 29.20, "smug"), (31.78, 32.50, "wink"), (37.28, 38.00, "smug"), (39.06, 41.20, "sing"),
+    (42.61, 42.99, "shocked"), (42.99, 44.14, "pain"), (44.14, 46.30, "angry"), (46.30, 47.40, "pout"),
+    (49.67, 53.54, "flustered"), (53.54, 54.39, "closed"), (54.39, 55.20, "smug"),
+    (55.64, 56.50, "happy"), (58.40, 59.40, "happy"), (59.41, 60.30, "smug"), (61.92, 62.70, "wink"),
+    (64.46, 65.30, "smug"), (66.90, 67.54, "angry"), (67.54, 68.70, "happy"),
+    (71.52, 72.30, "wink"), (74.90, 75.80, "smug"), (79.50, 82.50, "sing"),
+    (84.81, 85.60, "shocked"), (86.38, 87.19, "angry"), (87.19, 89.70, "flustered"),
+    (89.90, 90.80, "pout"), (93.46, 94.50, "angry"),
+    (98.90, 101.00, "pout"), (103.75, 105.20, "flustered"), (107.48, 109.50, "happy"), (109.70, 111.00, "flustered"),
+    (113.01, 114.00, "smug"), (119.32, 120.20, "smug"),
+    (123.15, 123.90, "angry"), (124.58, 125.40, "smug"),
+    (126.23, 127.00, "happy"), (128.90, 130.00, "happy"), (132.50, 133.30, "happy"),
+    (133.29, 134.00, "smug"), (136.68, 137.24, "angry"), (137.24, 138.50, "happy"),
+    (142.16, 142.77, "wink"), (142.77, 143.60, "happy"), (145.00, 145.80, "wink"),
+    (146.70, 151.00, "sing"), (151.90, 153.50, "happy"),
+    (154.47, 155.30, "smug"), (157.40, 158.40, "smug"), (159.33, 160.10, "wink"), (161.98, 162.80, "smug"),
+    (166.00, 167.50, "happy")]
 BIG_CAM = [(42.61, 54.39), (64.46, 67.9), (98.9, 103.2), (107.48, 109.5), (136.68, 137.3)]
+VFACE = (358, 405, 260, 230)       # face box of model v3 (x, y, w, h) in 1024 units
 
 
-@lru_cache(None)
-def syllables():
-    return sorted({ct for ln in lyrics() for ph in ln["phrases"] for ct in ph["chars"]})
+def vt_state(t):
+    """(expression, since, eyes closed, mouth) at t."""
+    since = 0.0
+    for a, b, name in ACCENTS:
+        if a <= t < b:
+            if name == "closed":                     # 深呼吸: eyes closed, mouth shut
+                return "neutral", a, True, None
+            return name, a, False, None
+        if b <= t:
+            since = b
+    return "neutral", since, VMO.eyes_closed_at(t), VMO.mouth_at(t)
 
 
-def vt_at(t):
-    name, since = VT[0][1], 0.0
-    for a, n in VT:
-        if t >= a:
-            name, since = n, a
-    if name == "base":
-        if any(0 <= t - s < 0.11 for s in syllables()):
-            return "talk", since
-        if (t % 3.1) < 0.12:
-            return "blink", since
-    return name, since
+def vt_pop(t, since):
+    """A small pop when the expression changes (cut, never a cross-fade)."""
+    u = (t - since) / 0.16
+    return 1.0 + 0.018 * math.sin(math.pi * u) if 0 <= u < 1 else 1.0
 
 
-def vt_motion(t, since):
-    """VTuber-like idle: a sway, a small bounce on the beat and a pop when the expression changes."""
-    sway = 1.3 * math.sin(t * 1.7)
-    bob = 6 * abs(math.sin(math.pi * beat_of(t)))
-    pop = 1.0 - 0.05 * max(0.0, 1 - (t - since) / 0.15)
-    return sway, bob, pop
+def vt_image(t, size):
+    name, since, closed, mouth = vt_state(t)
+    beat = beat_of(t) if GAME_IN - 1 <= t < GAME_OUT and not (PAUSE[0] <= t < PAUSE[1]) else None
+    return VMO.render(name, t, size, closed, mouth, beat, vt_pop(t, since))
 
 
 def draw_vtuber(canvas, t, box, face_frac=0.42, face_y=0.40):
     """Draw her model into the cam box (x0, y0, x1, y1), framed on her face."""
-    name, since = vt_at(t)
-    sway, bob, pop = vt_motion(t, since)
     x0, y0, x1, y1 = box
-    fx, fy, fw, fh = VTM.FACE_BOX
-    s = (face_frac * (x1 - x0)) / fw * pop
+    fx, fy, fw, fh = VFACE
+    s = (face_frac * (x1 - x0)) / fw
     size = max(8, int(1024 * s))
-    im = VTM.model_scaled(name, size)
+    im = vt_image(t, size)
     s = size / 1024
     px, py = (fx + fw / 2) * s, (fy + fh / 2) * s
-    if abs(sway) > 0.3:
-        w0, h0 = im.size
-        im = im.rotate(sway, resample=Image.Resampling.BICUBIC, expand=True)
-        px += (im.width - w0) / 2
-        py += (im.height - h0) / 2
-    tx, ty = (x0 + x1) / 2, y0 + face_y * (y1 - y0) + bob
+    tx, ty = (x0 + x1) / 2, y0 + face_y * (y1 - y0)
     layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     layer.alpha_composite(im, (int(tx - px), int(ty - py)))
     mask = Image.new("L", canvas.size, 0)
@@ -713,8 +716,8 @@ HOOKS = [  # stream stamp words: (t_land, text, style, tile, cx, cy, leave)
     (46.66, "ノーカン", "cobalt", 3, 240, 250, 49.4), (55.64, "余裕だもん", "coral", 4, 470, 180, 57.25),
     (57.43, "余裕だもん", "gold", 4, 470, 180, 59.3), (61.92, "ノーカン", "cobalt", 4, 470, 180, 63.8),
     (124.58, "本番", "gold", 6, 470, 190, 125.6), (126.23, "余裕だもん", "white", 4, 470, 180, 128.2),
-    (128.46, "余裕だもん", "gold", 4, 470, 180, 129.8), (156.66, "余裕でしょ", "cobalt", 5, 300, 150, 159.2),
-    (163.32, "また来てよね", "cobalt", 5, 300, 150, 169.5)]
+    (128.46, "余裕だもん", "gold", 4, 470, 180, 129.8), (156.66, "余裕でしょ", "cobalt", 3, 450, 78, 159.2),
+    (163.32, "また来てよね", "cobalt", 3, 450, 78, 169.5)]   # room scenes: small, clear of the chat and her face
 
 
 def hook_active(t):
@@ -775,33 +778,37 @@ def draw_narration(img, t):
 
 # ---------------------------------------------------------------- results screen
 def draw_results(hd, t):
+    """Result screen of the game (part of the game picture, under the stream overlay): Muse Dash-style portrait on
+    the left, an opaque score panel in the middle, clear of the cam box at the top right."""
     u = ease((t - CLEAR_T - 0.4) / 0.5)
     if u <= 0:
         return
     _, score, combo, best, hp, misses, gauge = state(CLEAR_T)
     panel = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
     d = ImageDraw.Draw(panel)
-    d.rectangle([0, 0, OW, OH], fill=(20, 26, 70, int(150 * u)))
-    x = int(1960 - 980 * u)
-    d.rounded_rectangle([x, 140, x + 900, 900], radius=30, fill=(255, 255, 255, 245), outline=(60, 109, 240, 255), width=6)
-    d.text((x + 450, 210), "STAGE CLEAR", font=ui_font(72), fill=(60, 109, 240), anchor="mm")
+    d.rectangle([0, 0, OW, OH], fill=(20, 26, 70, int(205 * u)))
+    pw = 700
+    x = int(OW + 40 - (OW + 40 - 740) * u)
+    d.rounded_rectangle([x, 150, x + pw, 900], radius=30, fill=(255, 255, 255, 255), outline=(60, 109, 240, 255),
+                        width=6)
+    d.text((x + pw // 2, 220), "STAGE CLEAR", font=ui_font(64), fill=(60, 109, 240), anchor="mm")
     rows = [("SCORE", f"{score:07d}"), ("MAX COMBO", str(best)), ("PERFECT", str(len(hits()) + 40)),
             ("MISS", "0"), ("ノーカン", "×2")]
     for i, (k, v) in enumerate(rows):
         if t >= CLEAR_T + 0.9 + i * 0.18:
-            y = 330 + i * 86
-            d.text((x + 70, y), k, font=ui_font(44), fill=(30, 40, 90), anchor="lm")
-            d.text((x + 830, y), v, font=ui_font(52), fill=(255, 90, 110) if k == "ノーカン" else (30, 40, 90),
+            y = 330 + i * 84
+            d.text((x + 50, y), k, font=ui_font(40), fill=(30, 40, 90), anchor="lm")
+            d.text((x + pw - 50, y), v, font=ui_font(46), fill=(255, 90, 110) if k == "ノーカン" else (30, 40, 90),
                    anchor="rm")
     if t >= CLEAR_T + 1.9:
         k = min(1.0, (t - CLEAR_T - 1.9) / 0.15)
-        d.text((x + 760, 800), "S", font=ui_font(int(150 + 60 * (1 - k))), fill=(255, 196, 40), anchor="mm",
+        d.text((x + pw - 110, 800), "S", font=ui_font(int(140 + 60 * (1 - k))), fill=(255, 196, 40), anchor="mm",
                stroke_width=6, stroke_fill=(120, 60, 20))
     hd.alpha_composite(panel)
     if t >= CLEAR_T + 0.6:                                  # the Muse portrait, as on Muse Dash's result screen
         v = ease((t - CLEAR_T - 0.6) / 0.4)
-        im = VTM.model_scaled("cheer", 900)
-        hd.alpha_composite(im, (int(-560 + 560 * v), OH - im.height + 60))
+        im = VMO.render("happy", t, 900)
+        hd.alpha_composite(im, (int(-620 + 560 * v), OH - im.height + 60))
 
 
 # ---------------------------------------------------------------- the room and the shutdown screen
@@ -821,13 +828,8 @@ def room_frame(t, monitor_img, vt_visible=True, push=0.0):
                                       fill=(255, 255, 255, 26))
         room.alpha_composite(glare, MON[:2])
     if vt_visible:                                   # her model, waist up, in front of her chair
-        name, since = vt_at(t)
-        sway, bob, pop = vt_motion(t, since)
-        size = int(960 * pop)
-        im = VTM.model_scaled(name, size)
-        if abs(sway) > 0.3:
-            im = im.rotate(sway, resample=Image.Resampling.BICUBIC, expand=True)
-        room.alpha_composite(im, (1390 - im.width // 2, OH - im.height + 70 + int(bob)))
+        im = vt_image(t, 960)
+        room.alpha_composite(im, (1390 - im.width // 2, OH - im.height + 70))
     if push > 0:
         e = ease(push)
         x0 = MON[0] * e
@@ -915,6 +917,11 @@ def game_frame(t):
     """The game picture (HD): stage plate + pixel game layer."""
     hd = game_background(game_time(t)).copy()
     layer = frozen_game() if PAUSE[0] <= t < PAUSE[1] else game_layer(t)
+    fade = 1 - ease((t - CLEAR_T - 0.4) / 0.5)          # the result screen replaces the game
+    if fade < 1:
+        a = np.asarray(layer).copy()
+        a[..., 3] = (a[..., 3] * max(0.0, fade)).astype(np.uint8)
+        layer = Image.fromarray(a, "RGBA")
     hd.alpha_composite(layer.resize((OW, OH), Image.Resampling.NEAREST))
     return hd
 
@@ -954,10 +961,9 @@ def compose(t):
         return stream_overlay(hd, t, game=False) if push < 0.6 else hd
     if t < GAME_OUT:
         hd = game_frame(t)
-        hd = stream_overlay(hd, t, game=True)
         if t >= CLEAR_T:
             draw_results(hd, t)
-        return hd
+        return stream_overlay(hd, t, game=True)
     pull = max(0.0, 1 - (t - GAME_OUT) / 0.9)          # back out of the monitor to her room
     mon = game_frame(min(t, GAME_OUT - 0.04))
     draw_results(mon, GAME_OUT - 0.04)

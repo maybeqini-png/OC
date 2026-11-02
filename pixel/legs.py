@@ -25,7 +25,7 @@ BAND_FAR = (56, 78, 148)
 FRONT = dict(master="sprites3/p02_run_a.png", L1=29.0, L2=16.0, R_THIGH=(7.0, 5.8), R_SHIN=(5.6, 5.4),
              HIP_NEAR=(74.0, 119.0), HIP_FAR=(65.0, 118.0), GROUND_TOP=165.0, BOOT_TOP=(88.0, 168.0),
              BOOT_AXIS=math.degrees(math.atan2(5, 17)), BOOT_BOX=(166, 200, 76, 131), STRIDE=1.0)
-SIDE = dict(master="sprites4/a01_run_9803.png", L1=24.0, L2=14.0, R_THIGH=(9.5, 7.6), R_SHIN=(7.2, 6.6),
+SIDE = dict(master="sprites4c/a01_run_9803.png", L1=24.0, L2=14.0, R_THIGH=(9.5, 7.6), R_SHIN=(7.2, 6.6),
             HIP_NEAR=(71.0, 136.0), HIP_FAR=(61.0, 135.0), GROUND_TOP=168.0, BOOT_TOP=(90.0, 169.0),
             BOOT_AXIS=math.degrees(math.atan2(8, 12)), BOOT_BOX=(168, 200, 80, 130), STRIDE=0.85, SOLE=False,
             SOCK_COLS=((44, 48, 74),))

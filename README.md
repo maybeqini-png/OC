@@ -262,6 +262,20 @@ for the sprites; the sprite list is set after the pixel test.
   Real-ESRGAN x4plus-anime to 2048 px with a cut-out alpha. All generations at normal size (0 Anlas). The Opus
   plan's free V5 generations then ran out (HTTP 402, 13-15 Anlas per image, 1 left): more N5 work needs Anlas or
   a new key from the owner.
+- 2026-11-02: **stream PV v3b: clean motion** after the owner approved model v3 ("focus on the cleanliness of the
+  character's motions, hair and other details; no unwanted white artifacts"). Research: `docs/motion_cleanliness_reference.md`.
+  - VTuber (`pixel/vtmotion.py`): Live2D-style idle (breath / roll / sway on non-commensurate sine cycles from the
+    Cubism framework), CubismEyeBlink timing, lip-sync from the lyric syllables (vowel -> open / small / closed,
+    on twos), expression accents on a cut; hair sways with follow-through while face, hand and sleeve stay rigid;
+    one premultiplied resample per frame with edge padding, so no pale fringe. Cut-out also drops a bluish-white
+    hair-gap speck the old gap test missed.
+  - Avatar (`pixel/spriteclean.py` -> `pixel/sprites4c/`): background seen through hair gaps made transparent,
+    pure-white hair shines -> light hair blue, white collar / chest / sock lines -> her light-blue stripe, white face
+    and thighs of the punch / air poses -> her skin tones; hair and tail follow-through on the run; the hurt blink
+    tints coral instead of white.
+  - Results screen drawn under the stream overlay (lyrics and cam stay on top), opaque panel clear of the cam, the
+    game fades out under it; end hooks smaller and clear of her face.
+  - N5 quota: V5's free allowance recharges over time; V4.5 at normal size stays free (measured 0 Anlas).
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
