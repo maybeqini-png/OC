@@ -47,8 +47,13 @@ Evidence level: **observed** (measured or read on the frames above).
   un-mixed from white (alpha from the projection onto the inside colour, colour = inside colour), so no white rim.
 - Stage plates get a pastel haze (blur + tint) so the monsters and XIYIN read as in Muse Dash.
 
-## Status
-- Sky stage family drafted (V4.5, free): cat-mochi (ground), cat paper-plane (air), pinwheel (saw). Mock-up at
-  game scale with the hazed sky plate and an HD chibi runner test (V5). Awaiting the owner's verdict before the
-  other stage families, the HD runner frames, notes, judgement graphics and HUD are built.
-- The V5 free allowance ran out again on 2026-11-02 (HTTP 402, 30 Anlas per image); V4.5 stays free.
+## Status (2026-11-02, after the owner approved the night mock-up)
+- Monster families, all V5 (0 Anlas), cut out by `pixel/mdsprites.py`: sky (goggles cloud cat, propeller paper-plane
+  cat, star blade), sunset (pudding cat, bat-winged taiyaki, orange-slice saw), pop (gumball robot cat, candy bat,
+  lollipop saw), night (speaker robot cat, bat cat orb, gear with an eye), festival (daruma cat, lantern cat,
+  pinwheel saw). Stages without their own family reuse one (pinkpop = pop, twilight = sunset, climb = sky).
+- XIYIN's HD runner (`pixel/mdrunner.py`): one V5 run drawing on rigged legs (one body for every run / jump frame),
+  V5 punch and air-swipe drawings for the strike frames; all three recoloured to the owner's sheet
+  (`pixel/mdrecolor.py`) after the owner noted the hair colour was wrong.
+- HD game layer (`pixel/mdgame.py`) used by `pixel/stream.py`. The HP / FEVER bars stay at the top centre: the
+  bottom band holds the lyric key-caps and subtitles.

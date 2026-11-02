@@ -30,10 +30,22 @@ PICKS = {                       # sprite name -> (N5 take, height in px at 1080p
     "n_ground": ("n_ground_47001", 170),      # night stage, ground enemy (speaker robot cat)
     "n_air": ("n_air_47002", 135),            # night stage, air enemy (bat cat orb)
     "n_saw": ("n_saw_47003", 150),            # night stage, saw obstacle (gear with an eye, jump over)
+    "k_ground": ("k_ground_48001", 150),      # sky: goggles cloud cat
+    "k_air": ("k_air_48002", 130),            # sky: propeller paper-plane cat
+    "k_saw": ("k_saw_48003", 150),            # sky: star blade with a grumpy cat face
+    "u_ground": ("u_ground_48001", 150),      # sunset: pudding cat
+    "u_air": ("u_air_48001", 125),            # sunset: bat-winged taiyaki
+    "u_saw": ("u_saw_48001", 150),            # sunset: orange-slice saw
+    "p_ground": ("p_ground_48001", 165),      # pop: gumball robot cat with a lens eye
+    "p_air": ("p_air_48002", 125),            # pop: candy-wrapper bat cat
+    "p_saw": ("p_saw_48003", 150),            # pop: swirl lollipop saw
+    "f_ground": ("f2_ground_48001", 155),     # festival: daruma cat
+    "f_air": ("f2_air_48002", 135),           # festival: lantern cat
+    "f_saw": ("f2_saw_48011", 150),           # festival: pinwheel saw
 }
 
 
-def cutout(im, light=200, sat_max=60, band_px=3):
+def cutout(im, light=200, sat_max=60, band_px=3, holes=(), crop=True):
     """Flat sprite on white -> RGBA without a white fringe.
     background = light, unsaturated pixels connected to the border (the coloured outline stops the flood fill);
     edge band: each pixel is a mix of the nearest inside colour C_in and white W, so
@@ -43,6 +55,7 @@ def cutout(im, light=200, sat_max=60, band_px=3):
     sat = a.max(-1) - a.min(-1)
     lab, _ = ndimage.label((lum >= light) & (sat < sat_max))
     border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+    border |= {lab[y, x] for x, y in holes} - {0}       # background trapped inside the drawing (e.g. hair gaps)
     fg = ~np.isin(lab, list(border))
     fg = ndimage.binary_opening(fg, iterations=1)
     lab2, n = ndimage.label(fg)                       # drop specks and detached marks (speed lines are kept if big)
@@ -59,7 +72,7 @@ def cutout(im, light=200, sat_max=60, band_px=3):
     rgb = np.where(inner[..., None], a, c_in)
     rgba = np.dstack([rgb, alpha * 255]).clip(0, 255).astype(np.uint8)
     out = Image.fromarray(rgba, "RGBA")
-    return out.crop(out.getbbox())
+    return out.crop(out.getbbox()) if crop else out
 
 
 @lru_cache(None)

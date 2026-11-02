@@ -102,3 +102,47 @@ for seed in 47001 47002 47003; do
   gsolo n_air $seed "night city theme, flying cat orb monster, round deep purple body, small cat ears, purple bat wings spread, glowing orange angry eyes, magenta belly, sly grin with two fangs, floating, facing left"
   gsolo n_saw $seed "night city theme, spinning circular saw blade obstacle, dark slate gear disc, neon magenta jagged teeth, glowing cyan ring, single glowing orange eye in the center with an angry eyelid, round, flat, front view"
 done
+# 2026-11-02 OWNER VERDICT (night mock-up, md_mock_night.png): "It looks good, but pay close attention to the art
+# quality frame by frame." -> same recipe for the other families (designs from the round 4 sheets, *_46002 mostly).
+for seed in 48001 48002 48003; do
+  gsolo k_ground $seed "pastel sky theme, walking round cloud cat monster, fluffy white cloud body with sky blue shading, pointed cat ears, pilot goggles with a yellow tinted visor, glowing yellow eyes, smug grin with fangs, pink blush, little paws, medium blue outline, walking, from side, facing left"
+  gsolo k_air $seed "pastel sky theme, flying paper airplane cat monster, white paper wings with sky blue folds, cat head with pointed ears at the front, propeller on top with a pink hub, sharp yellow eyes, open mouth with fangs, medium blue outline, flying, facing left"
+  gsolo k_saw $seed "pastel sky theme, spinning circular saw blade obstacle, white jagged blade ring with sky blue outline, pink pinwheel petals inside, grumpy blue cat face in the center with fangs, round, flat, front view"
+  gsolo u_ground $seed "sunset theme, sweets theme, walking pudding cat monster, custard yellow pudding body, dark caramel top with cat ears, angry white eyes, fanged scowl, short violet legs, violet outline, walking, from side, facing left"
+  gsolo u_air $seed "sunset theme, sweets theme, flying taiyaki fish monster, golden brown fish shaped cake body, scale pattern, purple bat wings, angry eyes, open mouth, coral outline, flying, facing left"
+  gsolo u_saw $seed "sunset theme, spinning orange slice saw blade obstacle, bright orange citrus slice with segments, jagged sawtooth rim, evil grin with sharp teeth, narrow violet eyes, round, flat, front view"
+  gsolo p_ground $seed "candy pop theme, sweets theme, walking gumball machine robot cat, pink round glass dome head with cat ears, colorful gumballs inside the dome, big camera lens eye, smug grin with fangs, pink body, stubby legs, magenta outline, walking, from side, facing left"
+  gsolo p_air $seed "candy pop theme, sweets theme, flying candy bat cat, round mint green body wrapped like a candy with pink striped twisted wrapper ends as wings, cat ears, angry eyes, fanged grin, teal outline, flying, facing left"
+  gsolo p_saw $seed "candy pop theme, spinning swirl lollipop saw blade obstacle, pink and lemon yellow spiral candy disc, jagged white sugar teeth around the rim, mischievous glaring eyes and a fanged grin on the candy, round, flat, front view"
+  gsolo f2_ground $seed "summer festival theme, walking daruma cat monster, round red daruma body with cat ears, cream face with bold angry eyebrows, golden pattern on the belly, small brown paws, dark red outline, walking, from side, facing left"
+  gsolo f2_air $seed "summer festival theme, flying paper lantern cat monster, glowing cream paper lantern body with ribs, cat ears, small golden wings, glowing orange eyes, fanged grin, dark red outline, floating, facing left"
+  gsolo f2_saw $seed "summer festival theme, spinning pinwheel saw obstacle, red and cream paper pinwheel blades with sharp tips, golden round center with a grinning face and sharp teeth, angry eyes, round, flat, front view"
+done
+# picks: k 48001/48002/48003, u 48001 x3, p 48001/48002/48003, f2 ground 48001 (48002 has lettering), air 48002.
+# Festival saws all had a pinwheel stick (wrong when spinning): saw again without one.
+for seed in 48011 48012 48013; do
+  gsolo f2_saw $seed "summer festival theme, spinning round saw blade obstacle shaped like a paper pinwheel, eight red and cream paper blades with sharp tips around a circle, golden round center with a grinning face and sharp teeth, angry eyes, no stick, no handle, round, flat, front view"
+done
+# ---- HD runner v2 (2026-11-02): on-model to the owner's sheet (x_run_4200x drew thighhighs and light shorts).
+# True side view facing right; flat cel style with a clean dark navy line. The run cycle itself is rigged
+# (one body drawing + drawn legs, as the approved pixel avatar), so only the body pose has to be good here.
+XY2="1girl, solo, chibi, 2.5 heads tall, young girl, cat girl, from side, profile, facing right, looking ahead, navy blue cat ears, pink inner ear, very long straight hair, deep navy blue hair, one ahoge, small blue cat hairclip, blue half-closed eyes, smug, oversized dark navy sweater, sailor collar with cobalt blue stripes, navy necktie, sleeves past wrists, cobalt striped cuffs, dark grey shorts, navy cat tail, navy knee socks with a cobalt stripe, chunky black lace-up boots with blue soles"
+XSTYLE2="game character sprite, full body, clean vector illustration, crisp clean lineart, dark navy lineart, flat color, cel shading, one shadow tone, simple design, white background, simple background, centered"
+XNEG2="looking at viewer, front view, three-quarter view, from front, blunt bangs, hime cut, wide-eyed, cyan hair, purple hair, light blue hair, thighhighs, pantyhose, white shorts, skirt, pixel art, 3d, realistic, sketch, text, watermark, signature, multiple views, character sheet, lowres, blurry, jpeg artifacts, mature, adult, tall, nsfw, suggestive, shadow, floor, motion lines, speed lines, effects"
+gx2() { nai_guard generate --model $M --prompt "$XY2, $3, $XSTYLE2" --negative "$XNEG2" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 49001 49002 49003 49004 49005 49006; do gx2 y_run $seed "running, mid stride, arms swinging, leaning forward, hair flowing behind"; done
+for seed in 49011 49012 49013; do gx2 y_punch $seed "cat punch, punching forward with one sleeve, arm fully extended forward, determined smug grin, running"; done
+for seed in 49021 49022 49023; do gx2 y_air $seed "jumping, mid-air, swiping one arm forward and up, knees tucked, smug grin"; done
+for seed in 49031 49032 49033; do gx2 y_hurt $seed "hurt, flinching backward, eyes shut tight, knocked back, arms up, comedic"; done
+# y_* 4900x: poses and finish good and consistent, but hair and sweater read near-black (sheet: clearly blue hair).
+# v3 of the tags: brighter hair, blue line instead of dark navy, black/dark hair in the negative.
+XY3="${XY2/deep navy blue hair/royal blue hair, bright blue hair highlights}"
+XY3="${XY3/oversized dark navy sweater/oversized navy blue sweater}"
+XSTYLE3="${XSTYLE2/dark navy lineart/dark blue lineart}"
+gx3() { nai_guard generate --model $M --prompt "$XY3, $3, $XSTYLE3" --negative "$XNEG2, black hair, dark hair, black sweater" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 49101 49102 49103 49104; do gx3 z_run $seed "running, mid stride, arms swinging, leaning forward, hair flowing behind"; done
+for seed in 49111 49112 49113; do gx3 z_punch $seed "cat punch, punching forward with one sleeve, arm fully extended forward, determined smug grin, running"; done
+for seed in 49121 49122 49123; do gx3 z_air $seed "jumping, mid-air, swiping one arm forward and up, knees tucked, smug grin"; done
+for seed in 49131 49132 49133; do gx3 z_hurt $seed "hurt, flinching backward, eyes shut tight, knocked back, arms up, comedic"; done
+# picks for the HD runner: z_run_49102 (rig body), z_punch_49113, z_air_49123; hurt takes unused (none read as hurt).
+# y_* takes: hair and sweater near-black, unused. All three picks are recoloured to the sheet by pixel/mdrecolor.py.

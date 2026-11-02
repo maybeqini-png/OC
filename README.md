@@ -282,6 +282,20 @@ for the sprites; the sprite list is set after the pixel test.
   (`f_night_46002`) is the strongest; its three roles were regenerated alone (`n_*_4700x`), cut out by
   `pixel/mdsprites.py` (no white fringe on dark / pink / blue) and mocked up at 1080p by `pixel/md_mock.py`
   (`docs/img/md_mock_night.png`). Waiting for the owner's approval before the other families and the video rebuild.
+- 2026-11-02: **HD game layer** after the owner approved the night mock-up ("pay close attention to the art quality
+  frame by frame"):
+  - Families for sky, sunset, pop and festival (V5 solo takes, 0 Anlas; picks in `pixel/mdsprites.py`).
+  - XIYIN's HD runner `pixel/mdrunner.py`: body of V5 `z_run_49102` (white trapped between hair strands removed,
+    drawn legs cut below the shorts) on IK legs drawn as smooth capsules in her colours with the drawn boot as a
+    rigid foot; hair / tail follow-through; strike frames `z_punch_49113`, `z_air_49123`; hurt = tilted run frame
+    with a coral blink. Rendered at drawing scale and downscaled once (290 px tall).
+  - Owner: "the hair colour of the character is still incorrect". `pixel/mdrecolor.py` snaps the drawings to the
+    sheet: flat regions between the line art (gaps sealed by a 2 px erosion), hair / sweater / accent classes by
+    seeds, each class's tones mapped to the sheet's measured tones (hair 79,101,169; sweater 55,60,89).
+  - `pixel/mdgame.py` draws the game in HD (see `docs/rhythm_game_style_reference.md`); `pixel/stream.py` uses it.
+  - `pixel/plates/build.sh` now also builds the room plate (v3 `r02_room_9712`), which was missing from it.
+  - QC: frame sequences around hits and jumps, all special moments (misses, pause, wipes, steps, hold, fever,
+    clear), and an automatic pale-edge scan of every runner frame and sprite (only 1-2 face-skin edge pixels).
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.

@@ -2,12 +2,13 @@
 
 Premise (owner, 2026-11-01): XIYIN is a VTuber, not an in-game character. She streams herself playing a
 Muse Dash-like runner; the runner is her avatar inside the game (pixel chibi, true side view, facing right and
-looking where she runs). Opening: her streaming room with the computer; ending: the result screen, her goodbye,
+looking where she runs; HD chibi since 2026-11-02). Opening: her streaming room with the computer; ending: the result screen, her goodbye,
 then the PC's shutdown screen.
 
 Layers per frame (back to front):
-  room plate (opening / ending) or the game: stage plate (HD) + game pixel layer (960x540 at x2: ground, gears,
-  pickups, enemies, avatar, hit effects, game HUD)
+  room plate (opening / ending) or the game: hazed stage plate + HD game layer (pixel/mdgame.py, 1920x1080:
+  floor, judgement rings, stage monster families, saws, pickups, hold ribbon, XIYIN's HD runner from
+  pixel/mdrunner.py, hit effects, PERFECT / combo, HP / FEVER / score)
   stream overlay: VTuber cam (on-model HD stickers, one expression per lyric line), chat, LIVE bar,
   key-cap lyrics and hook stamps (pixel, x2), English subtitle (HD).
 Game rules follow docs/runner_reference.md: constant scroll, enemies from the right on the beat in the air or
@@ -34,6 +35,7 @@ from scipy import ndimage
 import avatar as AV
 import vtmotion as VMO
 import blocks as B
+import mdgame as MG
 import scene as S
 from stage import lyrics, put_text, text_mask
 
@@ -109,8 +111,8 @@ def stage_plate(i, t):
     a, b = STAGES[i][0], STAGE_END[i]
     u = min(1, max(0, (game_time(t) - a) / (b - a)))
     if name == "climb":
-        return S.plate_view("climb", 0.5, u)
-    return S.plate_view(name, 0.06 + 0.88 * u)
+        return MG.plate_view("climb", 0.5, u)
+    return MG.plate_view(name, 0.06 + 0.88 * u)
 
 
 def game_background(t):
@@ -475,7 +477,7 @@ def game_layer(t):
 
 @lru_cache(1)
 def frozen_game():
-    return game_layer(PAUSE[0] - 1e-3)
+    return MG.game_layer(PAUSE[0] - 1e-3)
 
 
 # ---------------------------------------------------------------- the VTuber (model v3: vt3.py, motion: vtmotion.py)
@@ -915,15 +917,15 @@ def shutdown_frame(t):
 
 # ---------------------------------------------------------------- frame
 def game_frame(t):
-    """The game picture (HD): stage plate + pixel game layer."""
+    """The game picture (HD): hazed stage plate + the HD game layer (pixel/mdgame.py)."""
     hd = game_background(game_time(t)).copy()
-    layer = frozen_game() if PAUSE[0] <= t < PAUSE[1] else game_layer(t)
+    layer = frozen_game() if PAUSE[0] <= t < PAUSE[1] else MG.game_layer(t)
     fade = 1 - ease((t - CLEAR_T - 0.4) / 0.5)          # the result screen replaces the game
     if fade < 1:
         a = np.asarray(layer).copy()
         a[..., 3] = (a[..., 3] * max(0.0, fade)).astype(np.uint8)
         layer = Image.fromarray(a, "RGBA")
-    hd.alpha_composite(layer.resize((OW, OH), Image.Resampling.NEAREST))
+    hd.alpha_composite(layer)
     return hd
 
 
