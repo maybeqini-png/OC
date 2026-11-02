@@ -19,8 +19,9 @@ u p10_climb_9508 climb "--height 0"
 python3 -c "
 from PIL import Image
 im = Image.open('plates/climb.png'); im.resize((1920, round(im.height * 1920 / im.width)), Image.Resampling.LANCZOS).save('plates/climb.png')"
-# the streaming room (opening / ending, VTuber cam backdrop): v3 take 9712, fitted to 1920 px width
+# the streaming room (opening / ending, VTuber cam backdrop): v3 take 9712, fitted to 1920 px width, centre-cropped to 1080
 u ../v3/r02_room_9712 room "--height 0"
 python3 -c "
 from PIL import Image
-im = Image.open('plates/room.png'); im.resize((1920, round(im.height * 1920 / im.width)), Image.Resampling.LANCZOS).save('plates/room.png')"
+im = Image.open('plates/room.png'); im = im.resize((1920, round(im.height * 1920 / im.width)), Image.Resampling.LANCZOS)
+t = (im.height - 1080) // 2; im.crop((0, t, 1920, t + 1080)).save('plates/room.png')"  # monitor screen = stream.MON
