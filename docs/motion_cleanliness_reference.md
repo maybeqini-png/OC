@@ -91,6 +91,8 @@ Rendered sample frames and a 22 s test clip (40-62 s) were checked at full size 
 | Results | panel 96% opaque, so the cam ghosted through it; the portrait hid the lyrics and subtitle; the game avatar peeked out beside her head | results drawn under the stream overlay, opaque panel clear of the cam, game layer fades out |
 | Ending hooks | large block words over her face in the room | smaller, at the top, clear of the chat |
 | 67.5 s | "STAGE 2" text half hidden behind the big cam | starts after the cam shrinks |
+| Struck enemies | vanished in one frame 0.3 s after the hit | keep flying off, then flicker out over 3 frames |
+| Push-in / pull-back | she vanished from her room the moment the camera started pushing into the monitor (and at the end) | stays and slides out of frame with the zoom |
 
 ## Sources
 - Cubism framework source: [pixi-live2d-display 0.4.0 cubism4.es.js](https://unpkg.com/pixi-live2d-display@0.4.0/dist/cubism4.es.js),

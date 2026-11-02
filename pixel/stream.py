@@ -393,7 +393,7 @@ def draw_world_objects(img, g):
             else:                                               # struck: knocked away, burst, judgement
                 age = -dt
                 kx, ky = int(x + age * 900), int(y - age * 500)
-                if age < 0.3:
+                if age < 0.3 or (age < 0.45 and int(age * 30) % 2 == 0):    # flies off, then flickers out
                     img.alpha_composite(sp, (kx - sp.width // 2, ky))
                 burst(img, int(HIT_X + 20), y + sp.height // 2, age)
                 if age < 0.35:
@@ -827,9 +827,10 @@ def room_frame(t, monitor_img, vt_visible=True, push=0.0):
         ImageDraw.Draw(glare).polygon([(mw * 0.55, 0), (mw * 0.75, 0), (mw * 0.45, mh), (mw * 0.25, mh)],
                                       fill=(255, 255, 255, 26))
         room.alpha_composite(glare, MON[:2])
-    if vt_visible:                                   # her model, waist up, in front of her chair
-        im = vt_image(t, 960)
-        room.alpha_composite(im, (1390 - im.width // 2, OH - im.height + 70))
+    if vt_visible:                                   # her model, waist up, in front of her chair; while the view
+        im = vt_image(t, 960)                        # pushes into the monitor she slides out to the right
+        slide = int(760 * ease(push)) if push > 0 else 0
+        room.alpha_composite(im, (1390 - im.width // 2 + slide, OH - im.height + 70))
     if push > 0:
         e = ease(push)
         x0 = MON[0] * e
@@ -955,7 +956,7 @@ def compose(t):
         return shutdown_frame(t)
     if t < GAME_IN:                                   # opening: her room; she starts the game
         push = max(0.0, (t - 10.6) / (GAME_IN - 10.6))
-        hd = room_frame(t, title_frame(t), vt_visible=t < 10.6 + 0.35, push=push)
+        hd = room_frame(t, title_frame(t), push=push)
         if t < 0.8:
             hd = Image.blend(Image.new("RGBA", (OW, OH), (0, 0, 0, 255)), hd, max(0.0, t / 0.8))
         return stream_overlay(hd, t, game=False) if push < 0.6 else hd
@@ -970,7 +971,7 @@ def compose(t):
     if t > 169.9:
         mon = Image.blend(mon, desktop(), min(1.0, (t - 169.9) / 0.3))
     push_in = max(0.0, (t - 169.6) / (SHUT_T - 169.6))
-    hd = room_frame(t, mon, vt_visible=t < 169.9, push=max(pull, push_in))
+    hd = room_frame(t, mon, push=max(pull, push_in))
     return stream_overlay(hd, t, game=False) if pull < 0.4 and push_in < 0.4 else hd
 
 
