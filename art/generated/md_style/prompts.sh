@@ -39,3 +39,26 @@ gsheet() { nai_guard generate --model $M --prompt "$XY, $3, $XSTYLE" --negative 
 for seed in 43001 43002 43003 43004; do
   gsheet x_runsheet $seed "sprite sheet, running animation sequence, 4 frames in a row, same character repeated, from side, facing right, running, legs in different positions, evenly spaced"
 done
+
+# ---- round 2 (2026-11-02): the owner rejected round 1. Rules taken from Muse Dash gameplay (Steam screenshots,
+# Bilibili gameplay; see docs/rhythm_game_style_reference.md): flat fills in 2-3 tones, no black outline (outline = a
+# darker or lighter shade of the body colour, thin, slightly wobbly), very simple primitive shapes (orb, blob, cloud,
+# cone, box), minimal faces (dot / line eyes, or a visor with one glowing half-moon eye), palette tied to the stage.
+# Original XIYIN-themed designs (cats, streaming, sweets), not copies of Muse Dash creatures.
+# V5 free allowance ran out (HTTP 402, 30 Anlas per image), so round 2 uses V4.5 (free on Opus, measured 0 Anlas).
+MSTYLE="no humans, solo, game enemy sprite, simple shapes, flat color, no lineart, colored outline, thin outline, minimalist, limited palette, two-tone, cute, kawaii, centered, white background, simple background"
+MNEG="black outline, thick outline, dark outline, lineart, sketch, glossy, shiny, highlight, gradient, shading, detailed, texture, realistic, 3d, sticker, emoji, text, watermark, signature, multiple views, lowres, blurry, jpeg artifacts, shadow, ground, human, nsfw"
+gm() { nai_guard generate --model nai-diffusion-4-5-full --prompt "$3, $MSTYLE" --negative "$MNEG" --w 1024 --h 1024 --seed $2 --out "$OUT/$1_$2.png"; }
+# sky stage family (pastel blue sky): palette cyan / white / sunny yellow / pink accents
+for seed in 44001 44002 44003; do
+  gm s_mochi $seed "round mochi blob creature with cat ears, pale cyan body, light blue outline, tiny dot eyes, small open smiling mouth, pink blush dots, bouncing"
+  gm s_plane $seed "small flying paper airplane creature with cat ears, white and sky blue paper, simple dot eyes, cheeky smile, flying left, speed lines"
+  gm s_pinwheel $seed "spinning toy pinwheel saw obstacle, four pastel yellow and cyan blades, round pink center, simple, flat"
+done
+# round 2b: one flat shadow tone, a coloured outline all around, readable face at small size, a XIYIN touch
+MSTYLE2="no humans, solo, game enemy sprite, simple rounded shapes, flat color, flat shading with one darker shadow tone, colored outline, outline darker shade of body color, minimalist, limited palette, saturated pastel colors, cute, kawaii, dynamic tilted pose, centered, white background, simple background"
+gm2() { nai_guard generate --model nai-diffusion-4-5-full --prompt "$3, $MSTYLE2" --negative "$MNEG" --w 1024 --h 1024 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 44011 44012 44013 44014; do
+  gm2 s2_mochi $seed "round mochi blob creature with pointed cat ears, mint cyan body, darker teal outline, tiny navy sailor collar with light blue stripe, black dot eyes, small open smiling mouth with a fang, pink blush dots, hopping, facing left"
+  gm2 s2_plane $seed "paper airplane folded into a cat head shape, white paper with sky blue folds and outline, cat ears, two black dot eyes, cheeky open mouth, flying fast toward the left, tilted, speed lines"
+done

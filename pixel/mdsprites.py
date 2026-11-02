@@ -22,38 +22,38 @@ ROOT = HERE.parent
 SRC = ROOT / "art/generated/md_style"
 DST = HERE / "md"
 
-PICKS = {                       # sprite name -> (N5 take, height in px at 1080p, facing)
-    "mouse": ("m_mouse_41001", 150),
-    "box": ("m_box_41001", 150),
-    "bubble": ("m_bubble_41001", 140),
-    "taiyaki": ("m_taiyaki_41001", 130),
-    "yarn": ("o_yarn_41001", 130),
+PICKS = {                       # sprite name -> (N5 take, height in px at 1080p)
+    "mochi": ("s2_mochi_44012", 150),         # sky stage, ground enemy
+    "plane": ("s2_plane_44012", 140),         # sky stage, air enemy
+    "pinwheel": ("s_pinwheel_44001", 120),    # sky stage, saw obstacle (jump over)
+    "xiyin_run": ("x_run_42001", 250),        # HD chibi runner test
 }
 
 
-def cutout(im, light=200, edge=2):
+def cutout(im, light=200, sat_max=60, band_px=3):
+    """Flat sprite on white -> RGBA without a white fringe.
+    background = light, unsaturated pixels connected to the border (the coloured outline stops the flood fill);
+    edge band: each pixel is a mix of the nearest inside colour C_in and white W, so
+    alpha = |P - W| / |C_in - W| (projected), colour = C_in (the white is removed, not just faded)."""
     a = np.asarray(im.convert("RGB")).astype(np.float32)
     lum = a.mean(-1)
     sat = a.max(-1) - a.min(-1)
-    cand = (lum >= light) & (sat < 60)
-    lab, _ = ndimage.label(cand)
+    lab, _ = ndimage.label((lum >= light) & (sat < sat_max))
     border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
-    bg = np.isin(lab, list(border))
-    fg = ~bg
+    fg = ~np.isin(lab, list(border))
     fg = ndimage.binary_opening(fg, iterations=1)
-    fg = ndimage.binary_fill_holes(fg) & fg | (fg & ~bg)
-    band = fg & ~ndimage.binary_erosion(fg, iterations=edge)
-    # outline colour: the darkest pixels just inside the band
-    inner = ndimage.binary_erosion(fg, iterations=edge) & ~ndimage.binary_erosion(fg, iterations=edge + 4)
-    dark = a[inner & (lum < np.percentile(lum[inner], 30))]
-    out_col = np.median(dark, 0) if len(dark) else np.array([30, 30, 40], np.float32)
-    lo = float(out_col.mean())
-    alpha = fg.astype(np.float32)
-    al = np.clip((255 - lum) / max(1.0, 255 - lo), 0, 1)
-    alpha[band] = al[band]
-    rgb = a.copy()
-    lighter = band & (lum > lo + 8)
-    rgb[lighter] = out_col
+    lab2, n = ndimage.label(fg)                       # drop specks and detached marks (speed lines are kept if big)
+    if n:
+        sizes = ndimage.sum(fg, lab2, range(1, n + 1))
+        fg = np.isin(lab2, [i + 1 for i, s in enumerate(sizes) if s >= 400])
+    inner = ndimage.binary_erosion(fg, iterations=band_px)
+    _, (iy, ix) = ndimage.distance_transform_edt(~inner, return_indices=True)
+    c_in = a[iy, ix]
+    W = np.array([255, 255, 255], np.float32)
+    d_in = c_in - W
+    proj = ((a - W) * d_in).sum(-1) / np.maximum((d_in * d_in).sum(-1), 1.0)
+    alpha = np.where(inner, 1.0, np.where(fg, np.clip(proj, 0, 1), 0.0))
+    rgb = np.where(inner[..., None], a, c_in)
     rgba = np.dstack([rgb, alpha * 255]).clip(0, 255).astype(np.uint8)
     out = Image.fromarray(rgba, "RGBA")
     return out.crop(out.getbbox())
