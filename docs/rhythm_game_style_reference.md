@@ -57,3 +57,35 @@ Evidence level: **observed** (measured or read on the frames above).
   (`pixel/mdrecolor.py`) after the owner noted the hair colour was wrong.
 - HD game layer (`pixel/mdgame.py`) used by `pixel/stream.py`. The HP / FEVER bars stay at the top centre: the
   bottom band holds the lyric key-caps and subtitles.
+
+## Hit and speed effects (frame-by-frame study, 2026-11-02)
+Owner: "For hit effects and speed boost effects, conduct thorough online research and examine them frame by frame.
+The current look feels rather plain."
+
+Sources (viewed for analysis, kept in the session scratchpad only, never fed to the image model):
+- Official Muse Dash Steam trailer (1920x1080, 30 fps, 101 s) and the 8 official store screenshots; hits stepped
+  frame by frame at 12.13-12.53 s, 15.18-15.45 s and 19.27-19.77 s.
+- Game-feel write-ups: GamineAI "Pixel Art Combat FX Guide" (hitstop / smear / flash timing), Sword Arcade
+  "Game Feel: Hit-Stop and Screen Shake", ParticleFX "Anime Dash Afterimage" (layer breakdown), Woodpunch
+  "Anime speed lines", Prolific Studio and Bloop Animation on smear frames. VFX Apprentice returned 403.
+
+Observed in the trailer (one hit, 30 fps):
+- f0-2: one big asymmetric 4-5 point impact star, 200-260 px at 1080p, hot core + light rim, tilted, at the hit.
+- f3-4: a white-cored star with a coloured rim; f5-9: it shrinks to a small spike star and is gone by f10.
+- Thin spark dashes radiate from the hit; a white crescent swoosh from the weapon for 1-2 frames.
+- 15-25 filled confetti stars (purple / blue / pink, 20-60 px) thrown out and drifting for 0.5-1 s, much longer
+  than the impact star.
+- PERFECT: chunky letters in horizontal colour bands (pink, or yellow / orange on dark stages), white outline,
+  dark extrusion, tilted about -8 deg; pops in with smeared ghost copies for 2-3 frames; stacks on rapid hits;
+  about 0.5 s.
+- White smoke puffs where enemies are destroyed; dust puffs at the feet.
+From the articles: hit-stop 2-4 frames (35-90 ms; over 120 ms reads as a dropped frame); a high-contrast flash for
+1-2 frames; shake 4-8 frames, vertical first; particles thrown in a cone along the strike, not radially; speed
+lines thin, tapered and flickering; afterimages as staggered tinted ghosts that pulse.
+
+How the PV does it (`pixel/mdfx.py`, used by `pixel/mdgame.py`): the timeline above per hit, plus a 2-frame
+hit-stop with squash and a 1-frame white flash on the monster, smear ghosts on its flight, a 4-frame 7 px vertical
+shake of the play area, palettes per stage (pink / gold, blue for pickups). Fever: translucent diagonal bands
+sweeping the background, 44 flickering tapered speed streaks (4-frame life), three flat-colour afterimages that
+breathe with the beat, and a radial speed-line burst with a 2-frame flash when Fever starts. Hit effects draw over
+every object so a saw at the hit point never hides them.

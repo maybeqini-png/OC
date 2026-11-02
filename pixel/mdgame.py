@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+import mdfx as FX
 import mdrunner as RN
 import mdsprites as MD
 import scene as S
@@ -270,8 +271,11 @@ def miss_text(img, x, y, age):
     put(img, text_img("MISS", 44, (150, 150, 190), WHITE, 7), x, y - age * 60, alpha=1 - max(0, (age - 0.35) / 0.15))
 
 
-def draw_world(img, g):
+def draw_world(img, g, late=None, texts=None):
+    """Monsters, saws, pickups; hit effects go to `late` (drawn over everything) and judgements to `texts`."""
     st = ST()
+    late = [] if late is None else late
+    texts = [] if texts is None else texts
     cx_now = st.cam_x(g)
     for tt, kind in st.chart():
         dt = tt - g
@@ -294,8 +298,10 @@ def draw_world(img, g):
                 ic = note_icon() if kind == "note" else heart_icon()
                 y = FLOOR - 250 if kind == "note" else FLOOR - 150
                 put(img, ic, x, y + 8 * math.sin(g * 6 + tt))
-            elif dt > -0.4:
-                burst(img, x, FLOOR - 250 if kind == "note" else FLOOR - 150, -dt, (NOTE_BLUE, WHITE, CYAN))
+            elif dt > -0.95:
+                yy_ = FLOOR - 250 if kind == "note" else FLOOR - 150
+                FX.impact(img, x, yy_, -dt, int(tt * 1000), "blue", 0.6)
+                FX.confetti(img, x, yy_, -dt, int(tt * 1000), "blue", 10)
         elif kind in ("g", "a", "a_miss"):
             if dt > 1.9 or dt < -0.6:
                 continue
@@ -320,17 +326,35 @@ def draw_world(img, g):
                     sp = monster_tilt(fam, "ground", tilt)
                     hop = abs(math.sin(ph)) * 10
                     img.alpha_composite(sp, (int(x - sp.width / 2), int(FLOOR + 6 - sp.height - hop)))
-            else:                                                    # struck: knocked away, flickers out
+            else:                                                    # struck (see mdfx.py for the timeline)
                 age = -dt
+                pal = FX.STAGE_PAL.get(st.STAGES[st.stage_at(tt)][1], "pink")
+                seed = int(tt * 1000)
                 base = monster(fam, lane)
-                y0 = AIR_Y if lane == "air" else FLOOR - base.height / 2
-                kx, ky = HIT_X + 40 + age * 1500, y0 - age * 900 + age * age * 1200
-                if age < 0.3 or (age < 0.45 and int(age * 30) % 2 == 0):
-                    sp = monster_tilt(fam, lane, int(-age * 900) % 360)
-                    put(img, sp, kx, ky)
-                burst(img, HIT_X + 40, y0, age)
-                perfect(img, HIT_X + 150, (AIR_Y - 120) if lane == "air" else FLOOR - 300, age)
-                slash(img, RUN_X + 90, (AIR_Y if lane == "air" else FLOOR - 120), age)
+                y0 = AIR_Y if lane == "air" else FLOOR + 6 - base.height / 2
+                hx = HIT_X + 40
+                stop = 2 / 30                                        # hit-stop: 2 frames held, squashed
+                if age < stop:
+                    sq = base.resize((int(base.width * 1.18), int(base.height * 0.84)), Image.Resampling.LANCZOS)
+                    if age < 1 / 30:                                 # 1-frame white flash on the target
+                        a = np.asarray(sq).copy()
+                        a[..., :3] = (a[..., :3] * 0.35 + 255 * 0.65).astype(np.uint8)
+                        sq = Image.fromarray(a, "RGBA")
+                    put(img, sq, hx, y0 + (base.height - sq.height) / 2)
+                else:
+                    a2 = age - stop
+                    if a2 < 0.32:
+                        sp = monster_tilt(fam, lane, int(-a2 * 1100) % 360)
+                        for k, al in ((2, 0.18), (1, 0.36), (0, 1.0)):       # smear ghosts along the flight
+                            ak = max(0.0, a2 - k * 0.022)
+                            kx, ky = hx + ak * 1900, y0 - ak * 1100 + ak * ak * 1400
+                            put(img, sp, kx, ky, alpha=al * (1 - max(0, a2 - 0.22) / 0.1))
+                late.append(lambda im, a=age, s_=seed, p_=pal, y_=y0, ln=lane: (     # drawn over all objects
+                    FX.confetti(im, hx, y_, a, s_, p_), FX.impact(im, hx, y_, a, s_, p_, 1.25),
+                    ln == "ground" and FX.puffs(im, hx + 30, FLOOR - 30, a, s_),
+                    FX.swoosh(im, HIT_X + 50, (AIR_Y + 10 if ln == "air" else FLOOR - 120), a, up=(ln == "air"))))
+                texts.append(lambda im, a=age, p_=pal, ln=lane: FX.judgement(
+                    im, HIT_X + 170, (AIR_Y - 150) if ln == "air" else FLOOR - 330, a, p_))
     if st.HOLD[0] - 1.8 <= g < st.HOLD[1] + 0.3:
         draw_hold(img, g)
 
@@ -427,12 +451,15 @@ def shadow_img(w):
     return _ss(w, 18, dr)
 
 
-def draw_avatar(img, t):
+def draw_avatar(img, t, fever=False):
     sp, feet, cx, fy = avatar(t)
     air = FLOOR - fy
     put(img, shadow_img(max(60, int(150 - air * 0.3))), cx, FLOOR + 4)
     ax = _anchor(sp)
-    img.alpha_composite(sp, (int(round(cx - ax)), int(round(fy - feet))))
+    x0, y0 = int(round(cx - ax)), int(round(fy - feet))
+    if fever:
+        FX.afterimages(img, sp, x0, y0, ST().game_time(t))
+    img.alpha_composite(sp, (x0, y0))
 
 
 def fever_trail(img, g):
@@ -531,16 +558,41 @@ def draw_combo(img, combo, g):
 
 
 # ---------------------------------------------------------------- layer
+def hit_shake(g):
+    """Short vertical shake on each strike (4 frames, 7 px, alternating), inside the play area."""
+    st = ST()
+    for tt, kind in st.chart():
+        a = g - tt
+        if kind in ("g", "a") and 0 <= a < 4 / 30:
+            return int(round(7 * (1 - a * 30 / 4) * (1 if int(a * 30) % 2 == 0 else -1)))
+    return 0
+
+
 def game_layer(t):
     st = ST()
     g = st.game_time(t)
     img = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
+    fever = st.FEVER_T <= g < st.CLEAR_T
+    if fever:                                                # Fever backdrop: bands + flickering speed streaks
+        sky = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
+        FX.fever_bands(sky, g)
+        FX.speed_streaks(sky, g)
+        img.alpha_composite(sky.crop((0, 0, OW, FLOOR)), (0, 0))
     draw_floor(img, st.ground_style_at(g), st.cam_x(g))
+    world = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
     rs = int(g * 30) % 30
-    put(img, ring(rs), HIT_X + 40, AIR_Y)
-    put(img, ring(rs), HIT_X + 40, GROUND_LANE)
-    draw_world(img, g)
-    fever_trail(img, g)
-    draw_avatar(img, t)
+    put(world, ring(rs), HIT_X + 40, AIR_Y)
+    put(world, ring(rs), HIT_X + 40, GROUND_LANE)
+    late, texts = [], []
+    draw_world(world, g, late, texts)
+    draw_avatar(world, t, fever)
+    for f in late:
+        f(world)
+    for f in texts:
+        f(world)
+    img.alpha_composite(world, (0, hit_shake(g)))
+    if fever and g - st.FEVER_T < 0.6:
+        sp, feet, cx, fy = avatar(t)
+        FX.radial_burst(img, cx, fy - 140, g - st.FEVER_T)
     draw_hud(img, g)
     return img

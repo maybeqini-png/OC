@@ -298,6 +298,10 @@ for the sprites; the sprite list is set after the pixel test.
     clear), and an automatic pale-edge scan of every runner frame and sprite (only 1-2 face-skin edge pixels).
   - Render: 5360 frames, video 178.67 s / audio 178.65 s, 0 decode errors, BT.709, -14.1 LUFS; checked on frames
     every 2 s and on 30 consecutive frames (night stage) from the encoded file. Video not committed (size).
+- 2026-11-02: **hit and speed effects** after the owner asked for frame-by-frame research ("the current look feels
+  rather plain"): official trailer studied frame by frame, rules in `docs/rhythm_game_style_reference.md`;
+  new `pixel/mdfx.py` (impact star sequence, confetti cone, sparks, puffs, swoosh, banded PERFECT with smear
+  pop-in, hit-stop, shake, Fever bands / speed streaks / afterimages / radial burst).
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
