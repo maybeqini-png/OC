@@ -39,6 +39,8 @@ PALETTES = {   # per stage: impact core, impact rim, confetti colours, PERFECT b
                                                                    (255, 150, 220), (110, 120, 255)],
                  bands=[(190, 240, 255), (90, 180, 255), (60, 110, 240)], ext=(30, 40, 120), edge=(255, 255, 255)),
 }
+PALETTES["pass"] = dict(core=(255, 150, 30), rim=(255, 236, 170), conf=[(255, 170, 40), (255, 210, 80), (255, 120, 60)],
+                        bands=[(255, 226, 120), (255, 170, 40), (255, 110, 20)], ext=(120, 50, 40), edge=(255, 255, 255))
 STAGE_PAL = {"sky": "pink", "sunset": "pink", "pop": "pink", "night": "gold", "pinkpop": "pink",
              "twilight": "gold", "climb": "pink", "festival": "gold"}
 
@@ -333,3 +335,41 @@ def radial_burst(img, cx, cy, age, seed=3):
         taper_line(d, cx + R * math.cos(a), cy + R * math.sin(a), cx + r0 * math.cos(a), cy + r0 * math.sin(a), w,
                    0.5, (255, 255, 255, int(200 * (1 - age / 0.6))))
     img.alpha_composite(lay)
+
+
+# ---------------------------------------------------------------- dodge (jumping a saw)
+def dodge_trail(img, frames):
+    """Jump smear: her last frames as pale cyan / white silhouettes (oldest faintest), like the hit ghosts."""
+    for k, (sp, x, y) in enumerate(frames):
+        _TINT_SRC[id(sp)] = sp
+        col = (200, 240, 255) if k % 2 else (255, 255, 255)
+        img.alpha_composite(tinted(id(sp), col, [0.12, 0.2, 0.3][k % 3]), (int(x), int(y)))
+
+
+def clear_spark(img, x, y, age, seed):
+    """The saw passing under her: a short fan of sparks thrown backward off its teeth (f0-6)."""
+    f = age * FPS
+    if f >= 7:
+        return
+    rng = random.Random(seed * 17)
+    lay = Image.new("RGBA", (600, 400), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    for i in range(12):
+        a = math.radians(rng.uniform(190, 260))
+        r0 = 20 + f * 34 + rng.uniform(0, 20)
+        ln = rng.uniform(30, 70) * (1 - f / 7)
+        col = (255, 230, 120, 240) if i % 2 else (255, 255, 255, 240)
+        taper_line(d, 300 + r0 * math.cos(a), 300 + r0 * math.sin(a), 300 + (r0 + ln) * math.cos(a),
+                   300 + (r0 + ln) * math.sin(a), 6, 1, col)
+    img.alpha_composite(lay, (int(x - 300), int(y - 300)))
+
+
+def ring_flash(img, x, y, age, col=(255, 255, 255)):
+    """Flat ellipse shock ring on the floor (take-off / landing), 6 frames."""
+    if age > 0.2:
+        return
+    u = age / 0.2
+    w, h = int(120 + 220 * u), int(26 + 30 * u)
+    lay = Image.new("RGBA", (w + 20, h + 20), (0, 0, 0, 0))
+    ImageDraw.Draw(lay).ellipse([10, 10, 10 + w, 10 + h], outline=(*col, int(230 * (1 - u))), width=7)
+    img.alpha_composite(lay, (int(x - w / 2 - 10), int(y - h / 2 - 10)))

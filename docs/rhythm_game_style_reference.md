@@ -89,3 +89,12 @@ shake of the play area, palettes per stage (pink / gold, blue for pickups). Feve
 sweeping the background, 44 flickering tapered speed streaks (4-frame life), three flat-colour afterimages that
 breathe with the beat, and a radial speed-line burst with a 2-frame flash when Fever starts. Hit effects draw over
 every object so a saw at the hit point never hides them.
+
+## Obstacle dodge and stage tension (2026-11-02)
+Owner: "There are no special effects for obstacle dodging, and the background fails to create a tense atmosphere."
+Observed (official trailer and store screenshots): a cleared obstacle gets its own judgement, an orange "PASS",
+next to PERFECT; boss / tense sections sit on dark magenta-purple stages under a bright neon double frame, with
+the boss on the right edge. Text sources on near-miss or background build-up in other games gave nothing usable.
+PV dodge (pixel/mdfx.py): take-off ring and dust, a 3-frame jump smear (pale silhouettes), sparks thrown back off
+the saw's teeth as it passes under her, orange banded PASS, landing ring and dust; jump over saws raised to 210 px.
+Stage tension: N5 redraws of the plates are pending (the NovelAI key returned HTTP 401 in this session).

@@ -264,7 +264,7 @@ def avatar_height(t):
     for tg, k in chart():
         if k == "gear" and abs(t - tg) < 0.24:
             u = (t - tg + 0.24) / 0.48
-            return 82 * 4 * u * (1 - u)
+            return 105 * 4 * u * (1 - u)          # clears the HD saws (about 150 px) with room to spare
     return 0.0
 
 

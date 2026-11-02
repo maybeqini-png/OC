@@ -294,6 +294,15 @@ def draw_world(img, g, late=None, texts=None):
                 img.alpha_composite(sp, (int(x - sp.width / 2), FLOOR + 14 - sp.height + bob))
                 if kind == "gear_miss" and dt < 0:
                     miss_text(img, HIT_X, FLOOR - 200, -dt)
+                if kind == "gear" and -0.6 < dt < 0.3:               # dodge: take-off, sparks, PASS, landing
+                    sd = int(tt * 1000)
+                    late.append(lambda im, a=-dt, s_=sd: (
+                        FX.ring_flash(im, RUN_X, FLOOR, a + 0.24), FX.puffs(im, RUN_X - 40, FLOOR - 20, a + 0.24, s_, 3, 70),
+                        a >= 0 and FX.clear_spark(im, RUN_X + 10, FLOOR - 70, a, s_),
+                        a >= 0.24 and FX.ring_flash(im, RUN_X, FLOOR, a - 0.24, (255, 220, 140)),
+                        a >= 0.24 and FX.puffs(im, RUN_X + 20, FLOOR - 20, a - 0.24, s_ + 1, 3, 70)))
+                    if dt < 0:
+                        texts.append(lambda im, a=-dt: FX.judgement(im, HIT_X + 150, FLOOR - 360, a, "pass", "PASS"))
             elif dt >= 0:
                 ic = note_icon() if kind == "note" else heart_icon()
                 y = FLOOR - 250 if kind == "note" else FLOOR - 150
@@ -585,6 +594,12 @@ def game_layer(t):
     put(world, ring(rs), HIT_X + 40, GROUND_LANE)
     late, texts = [], []
     draw_world(world, g, late, texts)
+    if any(k == "gear" and abs(g - tt) < 0.24 for tt, k in st.chart()):          # jump smear over a saw
+        ghosts = []
+        for k in (3, 2, 1):
+            sp, feet, cx, fy = avatar(t - k / 30)
+            ghosts.append((sp, cx - _anchor(sp) - k * 8, fy - feet))
+        FX.dodge_trail(world, ghosts)
     draw_avatar(world, t, fever)
     for f in late:
         f(world)
