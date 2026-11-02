@@ -62,3 +62,17 @@ for seed in 44011 44012 44013 44014; do
   gm2 s2_mochi $seed "round mochi blob creature with pointed cat ears, mint cyan body, darker teal outline, tiny navy sailor collar with light blue stripe, black dot eyes, small open smiling mouth with a fang, pink blush dots, hopping, facing left"
   gm2 s2_plane $seed "paper airplane folded into a cat head shape, white paper with sky blue folds and outline, cat ears, two black dot eyes, cheeky open mouth, flying fast toward the left, tilted, speed lines"
 done
+# ---- round 3 (2026-11-02): owner: "the monsters still don't look good enough". Diagnosis vs the Muse Dash close-ups:
+# theirs are designed creatures with parts (helmet + visor + glowing eye, nested boxes + lens eyes), attitude (smug
+# grins, angry brows, teeth) and clean cel finish (steady line weight, one shadow shape, light rim); round 2 were plain
+# blobs with emoji faces. Round 3 explores with design sheets (one family per image keeps the style consistent).
+SSTYLE="no humans, game enemy design sheet, six different small monsters, mobile rhythm game enemies, chibi creatures, clean vector illustration, crisp clean lineart, colored lineart, cel shading, one shadow tone, rim light, simple bold shapes, limited palette, mischievous expressions, smug grin, angry eyebrows, sharp little fangs, glowing eyes, dynamic poses, white background, simple background, evenly spaced"
+SNEG="human, girl, boy, text, words, letters, watermark, signature, logo, black thick outline, sketch, messy lines, realistic, 3d, photo, gradient background, scenery, lowres, blurry, jpeg artifacts, nsfw"
+gsh() {  # name seed tags  (V5 first, V4.5 if V5 is not free)
+  nai_guard generate --model $M --prompt "$3, $SSTYLE" --negative "$SNEG" --w 1216 --h 832 --seed $2 --out "$OUT/$1_$2.png" ||
+  nai_guard generate --model nai-diffusion-4-5-full --prompt "$3, $SSTYLE" --negative "$SNEG" --w 1216 --h 832 --seed $2 --out "$OUT/$1_${2}_v45.png"
+}
+for seed in 45001 45002 45003; do
+  gsh sh_sky $seed "sky and clouds theme, cat theme, sky blue, white and sunny yellow with pink accents, cloud cat with wings, paper plane cat, round mochi cat with helmet visor, kite creature, propeller drone cat"
+  gsh sh_night $seed "night city theme, cat theme, deep purple and magenta bodies with neon cyan and orange glowing eyes, round helmet cat orb with visor, bat-winged cat ghost, speaker robot cat, lantern creature, drone with lens eye"
+done
