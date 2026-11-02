@@ -113,7 +113,7 @@ brows.
 | 14 | frustrated | flustered plus a pout | ハの字 + pinched | duplicate of flustered | merge, or a teary glare |
 | 15 | pain | >< wince with a tear | pinched together, inner ends up | - | keep, with pinched brows |
 
-## 4. Proposed fix (needs the owner's decisions)
+## 4. Proposed fix (written before the redraw; what was done is in section 5)
 1. **New framing.** A new N5 bust-up drawn from her sheet so the design stays:
    - from mid-chest up, the face about a third of the frame height, the collar hiding most of the neck;
    - a slight head tilt / 3/4 turn;
@@ -123,9 +123,10 @@ brows.
    - Short, thin, tapered, dark hair-outline tone, about half an eye height or less above the lid, drawn over the
      bangs.
    - They are a separate part redrawn in every expression, together with the eyes and mouth, as in Live2D 表情差分.
-   - Brow shape per expression as in section 3. Prompt tags: `short eyebrows`, `thin eyebrows`,
-     `eyebrows visible through hair`, `v-shaped eyebrows`, `raised eyebrow`, `worried eyebrows`.
-3. **One eye style** for every open eye (her sheet eye), and a rounder neutral eye than today's base.
+   - Brow shape per expression as in section 3. Prompt tags: `thin eyebrows`, `eyebrows visible through hair`,
+     `v-shaped eyebrows`, `raised eyebrow`, `worried eyebrows` (not `short eyebrows`: in V5 that means 麻呂眉
+     dots, see section 5).
+3. **One eye style** for every open eye, and a rounder neutral eye than today's base.
 4. **A tighter set of 12** without duplicates: neutral, blink, talk (a / o), smug, wink, happy, sing, shocked,
    angry, pout / hmph, flustered, pain.
 5. **N5 settings.**
@@ -136,6 +137,47 @@ brows.
    - A full redo with about 3 takes per frame is roughly 40-60 images, about 200-300 Anlas with Precise Reference
      alone. The balance is 8 Anlas.
    - Buying Anlas is the owner's call. The exact cost of each run is quoted before it starts.
+
+## 5. v3 redraw (2026-11-02)
+The owner authorised N5 generation. The balance was 1 Anlas, so Precise Reference and larger canvases were not
+available. Every image is a free normal-size V5 img2img (1024x1024, 28 steps, 0 Anlas): 107 takes in 13 rounds,
+listed in `art/generated/vtuber3/prompts.sh`. Code: `pixel/vt3.py`. Frames: `art/generated/vtuber3/final/`
+(2048 px, cut out by `model3()`).
+
+**Composition.** A paste-up of her sheet sets the framing, and V5 redraws it at 0.62:
+- mid-chest crop with the head tilted;
+- one oversized sleeve raised to her cheek (萌え袖, as in sleeves06 / vtuber04 / vtuber08);
+- the collar and hair hide most of the neck;
+- no waistband, no square ID-photo stance.
+
+The chosen take keeps her design: royal-blue hair (mean colour within 7 levels of the sheet), cat ears, cat clip,
+navy sailor collar with blue stripes, short tie with the black cat emblem, light-blue cat patch, striped cuffs.
+The face reads younger than v2: round open eyes, short face.
+
+**Eyebrows.**
+- Painting short brow guides near the eyes did not work (rounds 3, 3b, 6). V5 turned dark strokes over the hair
+  into pale hair-clip bars, or hid them under the bangs at higher strength.
+- What worked: V5 draws visible brows over the bangs when the expression asks for them (round 4). So every frame
+  takes its brows from its own V5 take, inside one band that covers both eyes and brows:
+  - smug: つり眉, one brow up;
+  - angry and pout: inner ends down (V);
+  - shocked: lifted;
+  - flustered: ハの字;
+  - pain: pinched.
+- In "short eyebrows" V5 means round 麻呂眉 dots high on the forehead (round 1). That tag sits in the negative.
+- **Limit:** in the neutral face V5 keeps the brows as thin dark lines through the bangs, about one eye height
+  above the lash line. That is higher than the references' calm faces. Three prompt variants (rounds 5, 7, 12)
+  did not bring them lower without turning neutral into smug.
+
+**Expression set (13).**
+- neutral, blink (eyes only, so the brows stay put), talk a / o (mouth only);
+- smug, wink, happy, sing, shocked, angry, pout, flustered, pain.
+- All open eyes come from the same body, so they share one eye style.
+- Removed v2 duplicates: cheer / laugh, honest, frustrated.
+
+**Cleanliness.** Each paste is aligned on a ring around its region (±10 px search). Colours are matched separately
+for skin and for hair / lines (a single fit had pulled the skin grey). The cut-out removes V5's white rim around
+the outline and the background seen through gaps between strands, and keeps the white ear fur and eye whites.
 
 ## Sources
 Japanese illustration features (pixivision; previews viewed, images not redistributed):

@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 # derived plates (rebuild with pixel/plates/build.sh)
 pixel/plates/*.png
+# VTuber model v3 intermediates (rebuild with pixel/vt3.py)
+art/generated/vtuber3/frames1024/
+art/generated/vtuber3/sheet_x2.png
