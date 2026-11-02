@@ -296,6 +296,8 @@ for the sprites; the sprite list is set after the pixel test.
   - `pixel/plates/build.sh` now also builds the room plate (v3 `r02_room_9712`), which was missing from it.
   - QC: frame sequences around hits and jumps, all special moments (misses, pause, wipes, steps, hold, fever,
     clear), and an automatic pale-edge scan of every runner frame and sprite (only 1-2 face-skin edge pixels).
+  - Render: 5360 frames, video 178.67 s / audio 178.65 s, 0 decode errors, BT.709, -14.1 LUFS; checked on frames
+    every 2 s and on 30 consecutive frames (night stage) from the encoded file. Video not committed (size).
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
