@@ -302,6 +302,7 @@ for the sprites; the sprite list is set after the pixel test.
   rather plain"): official trailer studied frame by frame, rules in `docs/rhythm_game_style_reference.md`;
   new `pixel/mdfx.py` (impact star sequence, confetti cone, sparks, puffs, swoosh, banded PERFECT with smear
   pop-in, hit-stop, shake, Fever bands / speed streaks / afterimages / radial burst).
+  Render: 5360 frames, 0 decode errors, -14.1 LUFS; hits and the Fever start checked frame by frame on the file.
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
