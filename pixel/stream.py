@@ -754,7 +754,7 @@ def draw_pause_ui(img, t):
             put_text(img, str(3 - k), "ps", (240, 230), WHITE, outline=INK, scale=6, anchor="mt")
     if 55.17 <= t < 55.7:
         put_text(img, "GO!", "ps", (480, 230), LEMON, outline=INK, scale=6, anchor="mt")
-    if 67.54 <= t < 69.2:
+    if 67.95 <= t < 69.4:                       # after the big cam has shrunk back (it ends at 67.9)
         put_text(img, "STAGE 2", "ps", (470, 200), WHITE, outline=INK, scale=4, anchor="mt")
         put_text(img, "もういっかい！", "jp", (470, 240), LEMON, outline=INK, scale=2, anchor="mt")
     if 124.7 <= t < 126.4:

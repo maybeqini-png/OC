@@ -74,6 +74,24 @@ Hosts not reachable from this session: docs.live2d.com, journal.novelai.net, cli
    open and close pass through the small mouth; repeated syllables get a small mouth in between.
 6. Expression accents on key words, switched on a cut with a 1.8% pop (no cross-fades between drawings).
 
+## 7. Audit of the stream draft (2026-11-02) and what changed
+Rendered sample frames and a 22 s test clip (40-62 s) were checked at full size and frame by frame.
+
+| Where | Flaw | Fix |
+|---|---|---|
+| VTuber cut-out | partly transparent edge pixels still held V5's light grey (pale fringe once scaled / rotated) | edge padding + premultiplied resampling (`vtmotion.clean2048`) |
+| VTuber cut-out | opaque bluish-white background speck in a hair gap next to the raised hand | gap test also takes light, low-saturation, non-reddish pixels (`vt3.alpha3`) |
+| VTuber motion | old model: a rigid sticker that rotated and bounced as a whole, blink every 3.1 s exactly, one mouth flap | breath / roll / sway, randomised blinks, three-mouth lip-sync, hair follow-through (`vtmotion`) |
+| Avatar sprites | opaque white where background shows between hair strands (run master, air pose) | transparent (`spriteclean`) |
+| Avatar sprites | pure-white hair shines read as specks | light hair blue |
+| Avatar sprites | white collar line / chest mark / sock band (her design has light-blue stripes) | light-blue stripe |
+| Avatar sprites | punch and air poses had a white face and white thighs, so the face colour flickered on every hit | her skin tones (eye whites kept) |
+| Avatar motion | hair and tail rigid apart from a 1 px wave | tapered 2 px wave on the hair tips, lagged tail wag |
+| Hurt | the whole avatar tinted 55% white (a white blob) | alternates her own colours with a light coral tint |
+| Results | panel 96% opaque, so the cam ghosted through it; the portrait hid the lyrics and subtitle; the game avatar peeked out beside her head | results drawn under the stream overlay, opaque panel clear of the cam, game layer fades out |
+| Ending hooks | large block words over her face in the room | smaller, at the top, clear of the chat |
+| 67.5 s | "STAGE 2" text half hidden behind the big cam | starts after the cam shrinks |
+
 ## Sources
 - Cubism framework source: [pixi-live2d-display 0.4.0 cubism4.es.js](https://unpkg.com/pixi-live2d-display@0.4.0/dist/cubism4.es.js),
   [cubismeyeblink.ts](https://unpkg.com/phaser3-rex-plugins@1.60.6/plugins/gameobjects/live2d/framework/src/effect/cubismeyeblink.ts),
