@@ -27,6 +27,9 @@ PICKS = {                       # sprite name -> (N5 take, height in px at 1080p
     "plane": ("s2_plane_44012", 140),         # sky stage, air enemy
     "pinwheel": ("s_pinwheel_44001", 120),    # sky stage, saw obstacle (jump over)
     "xiyin_run": ("x_run_42001", 250),        # HD chibi runner test
+    "n_ground": ("n_ground_47001", 170),      # night stage, ground enemy (speaker robot cat)
+    "n_air": ("n_air_47002", 135),            # night stage, air enemy (bat cat orb)
+    "n_saw": ("n_saw_47003", 150),            # night stage, saw obstacle (gear with an eye, jump over)
 }
 
 

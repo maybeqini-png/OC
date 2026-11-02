@@ -276,6 +276,12 @@ for the sprites; the sprite list is set after the pixel test.
   - Results screen drawn under the stream overlay (lyrics and cam stay on top), opaque panel clear of the cam, the
     game fades out under it; end hooks smaller and clear of her face.
   - N5 quota: V5's free allowance recharges over time; V4.5 at normal size stays free (measured 0 Anlas).
+- 2026-11-02: **Muse Dash-like monsters, round 4** (`art/generated/md_style/`, `prompts.sh` with the verdicts).
+  New NovelAI key works (8095 Anlas); V5 at 1024x1024 / 1216x832 cost 0 Anlas again. One V5 family sheet per stage
+  (sky, sunset, pop, night, festival; ground enemy, air enemy, saw), coloured outlines, flat cel tones. Night
+  (`f_night_46002`) is the strongest; its three roles were regenerated alone (`n_*_4700x`), cut out by
+  `pixel/mdsprites.py` (no white fringe on dark / pink / blue) and mocked up at 1080p by `pixel/md_mock.py`
+  (`docs/img/md_mock_night.png`). Waiting for the owner's approval before the other families and the video rebuild.
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.

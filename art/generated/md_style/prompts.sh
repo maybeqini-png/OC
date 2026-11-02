@@ -76,3 +76,29 @@ for seed in 45001 45002 45003; do
   gsh sh_sky $seed "sky and clouds theme, cat theme, sky blue, white and sunny yellow with pink accents, cloud cat with wings, paper plane cat, round mochi cat with helmet visor, kite creature, propeller drone cat"
   gsh sh_night $seed "night city theme, cat theme, deep purple and magenta bodies with neon cyan and orange glowing eyes, round helmet cat orb with visor, bat-winged cat ghost, speaker robot cat, lantern creature, drone with lens eye"
 done
+# 2026-11-02 OWNER VERDICT (round 3): best is sh_night_45002 (V5): clean cel finish, glowing eyes, fangs, attitude.
+# ---- round 4 (2026-11-02, V5 paid at the owner's discretion): one family sheet per stage in the sh_night_45002
+# quality but with the style rules (coloured outline = darker shade of the body, flat 2-3 tones, stage palette) and
+# the three game roles: ground enemy, flying enemy, spinning saw obstacle. Original XIYIN themes (cats, streaming,
+# sweets).
+FSTYLE="no humans, game enemy design sheet, three monsters in a row, mobile rhythm game enemies, chibi creatures, clean vector illustration, colored outline, outline darker shade of body color, flat color, cel shading, one shadow tone, rim light, simple bold shapes, limited palette, mischievous expressions, smug grin, angry eyebrows, sharp little fangs, glowing eyes, dynamic poses, white background, simple background, evenly spaced"
+FNEG="human, girl, boy, text, words, letters, watermark, signature, logo, black outline, thick black lineart, sketch, messy lines, gradient, glossy, realistic, 3d, photo, scenery, gradient background, lowres, blurry, jpeg artifacts, nsfw"
+gfam() { nai_guard generate --model $M --prompt "$3, $FSTYLE" --negative "$FNEG" --w 1216 --h 832 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 46001 46002; do
+  gfam f_sky $seed "pastel sky theme, cat theme, sky blue and white bodies with sunny yellow and pink accents, left: round cloud cat walking with pilot goggles visor and glowing yellow eyes, middle: flying paper airplane cat with propeller and fangs, right: spinning pinwheel saw blade with a grumpy cat face in the center"
+  gfam f_sunset $seed "sunset theme, sweets theme, cat theme, warm orange, peach and coral bodies with violet shadows, left: walking pudding cat with caramel top and angry eyebrows, middle: flying taiyaki fish cat with small bat wings, right: spinning orange slice saw blade with teeth and a smug face"
+  gfam f_pop $seed "candy pop theme, sweets theme, cat theme, candy pink, mint and lemon yellow bodies, left: walking gumball machine cat robot with a camera lens eye, middle: flying wrapped candy bat cat, right: spinning swirl lollipop saw blade with jagged teeth and glaring eyes"
+  gfam f_night $seed "night city theme, streaming theme, cat theme, deep purple and magenta bodies with neon cyan and orange glowing eyes, left: walking speaker robot cat with a lens eye, middle: flying bat-winged cat orb with fangs, right: spinning neon gear saw blade with a glowing visor eye"
+  gfam f_festival $seed "summer festival theme, cat theme, red, gold and cream bodies, left: walking daruma cat with angry eyebrows, middle: flying paper lantern cat with little wings and glowing eyes, right: spinning firework pinwheel saw blade with a fanged grin"
+done
+# Round 4 pick: f_night_46002 (speaker robot cat, bat cat orb, gear saw with eye) for the first game-scale mock-up.
+# Runners-up: f_sunset_46002 (pudding cat, taiyaki bat, orange saw), f_sky_46002 (goggles cloud cat).
+# ---- solo sprites (one creature per image, white background) for clean cut-outs with pixel/mdsprites.py
+SOLO="no humans, solo, single monster, mobile rhythm game enemy, chibi creature, full body, clean vector illustration, colored outline, outline darker shade of body color, flat color, cel shading, one shadow tone, rim light, simple bold shapes, limited palette, white background, simple background, centered, no shadow"
+SNEG2="$FNEG, multiple views, character sheet, two monsters, shadow, cast shadow, floor, ground, motion blur, speed lines, effects, sparkles"
+gsolo() { nai_guard generate --model $M --prompt "$3, $SOLO" --negative "$SNEG2" --w 1024 --h 1024 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 47001 47002 47003; do
+  gsolo n_ground $seed "night city theme, streaming theme, small walking robot cat, deep purple armored body, round purple helmet with cat ears, black screen visor face with glowing cyan eyes and orange pupils, smug grin with sharp white fangs, orange speaker headphones on the sides, round speaker on the chest, stubby legs and paws, walking, from side, facing left"
+  gsolo n_air $seed "night city theme, flying cat orb monster, round deep purple body, small cat ears, purple bat wings spread, glowing orange angry eyes, magenta belly, sly grin with two fangs, floating, facing left"
+  gsolo n_saw $seed "night city theme, spinning circular saw blade obstacle, dark slate gear disc, neon magenta jagged teeth, glowing cyan ring, single glowing orange eye in the center with an angry eyelid, round, flat, front view"
+done
