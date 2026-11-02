@@ -4,7 +4,15 @@
 # above the lash line). V5 img2img redraws it. Free normal-size generations (1024x1024, 28 steps, 0 Anlas).
 # Only the takes used by pixel/vt3.py FRAMES (and the sources they came from) are kept in the repo; the other takes
 # were moved out (their manifest rows stay). Re-running this script regenerates the missing ones.
-NAI="python3 .claude/skills/oc-gen/scripts/nai.py"
+# Run one set only with ONLY=<glob on the output file name>, e.g. ONLY='g_blink_*' bash prompts.sh; without it the
+# script regenerates every missing take, including rejected ones that were moved out of the repo.
+nai_guard() {
+  local prev="" out=""
+  for a in "$@"; do [ "$prev" = "--out" ] && out="$a"; prev="$a"; done
+  if [ -n "$ONLY" ] && [[ "$(basename "$out")" != $ONLY ]]; then return 0; fi
+  python3 .claude/skills/oc-gen/scripts/nai.py "$@"
+}
+NAI=nai_guard
 M=nai-diffusion-5-full
 OUT=art/generated/vtuber3
 CHAR="1girl, solo, young girl, child, petite, round face, big eyes, cat girl, navy blue cat ears, pink inner ear, very long hair, straight hair, royal blue hair, messy bangs, hair between eyes, ahoge, blue cat hairclip, blue eyes, short eyebrows, thin eyebrows, dark blue eyebrows, eyebrows visible through hair"
@@ -117,3 +125,13 @@ for seed in 36031 36032 36033; do
   gx neutral3a_0.50_${seed} 0.50 $seed "light smile, closed mouth, confident, 0.6::smug::, 1.3::eyebrows visible through hair::, thin eyebrows"
   gx neutral3b_0.50_${seed} 0.50 $seed "light smile, closed mouth, 0.6::v-shaped eyebrows::, 1.3::eyebrows visible through hair::, thin eyebrows"
 done
+# round 13 (blink v2, NOT RUN): blink takes from round 9 left a flat pale wash and different strands around the
+# eyes. Source = the composed neutral frame with the eyes filled from the surrounding skin (vt3.skin_fill) and calm
+# closed-lid hints -> neutral_closed.png; low strengths so hair and skin stay close to the neutral frame.
+# 2026-11-02: every request returned HTTP 402 (13-15 Anlas required, 1 left): the Opus plan's free normal-size
+# generations were used up. The blink frame instead uses round 9's take with a skin correction (vt3 relight).
+# Before that, a plain re-run of this script regenerated 11 rejected takes (rounds 1-2, free, deleted again); hence
+# the ONLY filter above.
+for seed in 37021 37022 37023; do for s in 0.42 0.50; do
+  [ -f "$OUT/g_blink_${s}_$seed.png" ] || $NAI img2img --model $M --image $OUT/neutral_closed.png --strength $s --seed $seed --w 1024 --h 1024 --prompt "$CHAR2, 2::closed eyes::, light smile, closed mouth, calm, $EXPOSE, $OUTFIT, $STYLE" --negative "$NEGC, wink" --out "$OUT/g_blink_${s}_$seed.png"
+done; done

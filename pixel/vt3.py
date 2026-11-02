@@ -9,7 +9,8 @@ Pipeline (generation commands and every round's notes in art/generated/vtuber3/p
 2. V5 img2img takes; the chosen one (BASE_TAKE) is the body shared by every frame.
 3. Expression takes are V5 img2img of that body (eyes / mouth painted over in skin tone, with closed-lid hint
    curves, for the closed-eye frames). compose() pastes only the brow/eye band, the mouth and the cheeks of a take
-   onto the body (aligned on a ring, colour-matched separately for skin and the rest, feathered).
+   onto the body: aligned on a ring, colour-matched separately for skin and the rest, cut along a seam where both
+   images agree and merged with a multi-band blend (no ghost strands); blink also gets a skin correction.
 4. upscale_all(): Real-ESRGAN x4plus-anime x4, Lanczos to 2048. model3(): cut-out RGBA.
 
 usage:
@@ -210,15 +211,52 @@ def erased(regions, src=None):
     return paint(im, m, tone)
 
 
+def skin_fill(im, regions):
+    """Regions replaced by a smooth fill from the surrounding skin only (normalised blur at growing scales), so blush
+    and shading continue across them; source for closed-eye takes of the neutral frame."""
+    a = np.asarray(im.convert("RGB")).astype(np.float32)
+    H, W = a.shape[:2]
+    reg = ell_mask((H, W), regions) > 0.5
+    w = ((skin3(a) > 0.9) & (a.min(-1) > 200) & ~reg).astype(np.float32)
+    fill = a.copy()
+    todo = reg.copy()
+    for s in (4, 8, 16, 32):
+        num = ndimage.gaussian_filter(a * w[..., None], (s, s, 0))
+        den = ndimage.gaussian_filter(w, s)
+        ok = todo & (den > 0.05)
+        fill[ok] = num[ok] / den[ok][:, None]
+        todo &= ~ok
+    soft = ell_mask((H, W), regions, 2.0)[..., None]
+    out = a * (1 - soft) + fill * soft
+    return Image.fromarray(out.clip(0, 255).astype(np.uint8))
+
+
 def skin3(a):
     s = (a[..., 0] > 225) & (a[..., 1] > 185) & (a[..., 2] > 165) & (a[..., 0] >= a[..., 2])
     s = ndimage.binary_opening(s, iterations=1)
     return ndimage.gaussian_filter(ndimage.binary_dilation(s, iterations=2).astype(np.float32), 1.5)
 
 
-def transplant3(base, raw, regions, cheeks=(), search=10, feather=6.0):
+def blend(B, R, m, sigmas=(1, 2, 4, 8)):
+    """Multi-band blend (Burt-Adelson, as a Gaussian stack): each frequency band is mixed with the mask blurred at
+    that band's scale, so line art switches within about a pixel while colour and shading blend over ~10 px. Coarser
+    bands leaked the base's dark irises into closed-eye frames."""
+    out = np.zeros_like(B)
+    gB, gR = B, R
+    for s in sigmas:
+        nB = ndimage.gaussian_filter(B, (s, s, 0))
+        nR = ndimage.gaussian_filter(R, (s, s, 0))
+        mk = ndimage.gaussian_filter(m, s / 2)[..., None]
+        out += (gB - nB) * (1 - mk) + (gR - nR) * mk
+        gB, gR = nB, nR
+    mk = ndimage.gaussian_filter(m, sigmas[-1] / 2)[..., None]
+    return out + gB * (1 - mk) + gR * mk
+
+
+def transplant3(base, raw, regions, cheeks=(), search=10, feather=6.0, seam=True, relight=False):
     """Paste regions of raw onto base: align raw on a ring around the regions, match its colours to the base on that
-    ring (per-channel linear fit; V5 takes drift a little in hue), then blend with feathered masks. Cheek regions only
+    ring (offsets per skin / non-skin class; V5 takes drift a little in hue), then cut each region along a seam where
+    both images agree (seam_mask; a feathered cross-fade left ghost strands). Cheeks (blush) are feathered and only
     change skin."""
     B = np.asarray(base.convert("RGB")).astype(np.float32)
     R = np.asarray(raw.convert("RGB")).astype(np.float32)
@@ -243,11 +281,80 @@ def transplant3(base, raw, regions, cheeks=(), search=10, feather=6.0):
             continue
         off = (B[cls_ring] - Rs[cls_ring]).mean(0)
         Rs += w[..., None] * off[None, None, :]
-    m = ell_mask((H, W), regions, feather) if regions else np.zeros((H, W), np.float32)
+    if relight:
+        # closed eyes over open ones: V5 leaves a flat pale wash where the eyes were painted over, so the take's skin
+        # is pulled towards the base's skin by a normalised blur of (base - take) over skin outside the eyes
+        opening = ell_mask((H, W), [(cx, cy, rx * 1.05, ry * 1.1, a) for cx, cy, rx, ry, a in EYES_ONLY]) > 0.5
+        w = ((skin3(B) > 0.9) & (skin3(Rs) > 0.9) & ~opening).astype(np.float32)
+        corr = np.zeros_like(B)
+        todo = np.ones((H, W), bool)
+        for s in (12, 24, 48):                       # wider scales fill the middle of the eye region
+            num = ndimage.gaussian_filter((B - Rs) * w[..., None], (s, s, 0))
+            den = ndimage.gaussian_filter(w, s)
+            ok = todo & (den > 0.05)
+            corr[ok] = num[ok] / den[ok][:, None]
+            todo &= ~ok
+        corr = ndimage.gaussian_filter(corr, (4, 4, 0))
+        Rs = Rs + corr * skin3(Rs)[..., None]
+    m = np.zeros((H, W), np.float32)
+    for e in regions:
+        m = np.maximum(m, seam_mask(B, Rs, e) if seam else ell_mask((H, W), [e], feather))
+    out = blend(B, Rs, m) if seam else B * (1 - m[..., None]) + Rs * m[..., None]
     if cheeks:
-        m = np.maximum(m, ell_mask((H, W), cheeks, feather) * skin3(B))
-    out = B * (1 - m[..., None]) + Rs * m[..., None]
+        mc = (ell_mask((H, W), cheeks, feather) * skin3(B))[..., None]
+        out = out * (1 - mc) + Rs * mc
     return Image.fromarray(out.clip(0, 255).astype(np.uint8)), shift, best
+
+
+def seam_mask(B, Rs, ell, lo=0.72, hi=1.12, n_ang=720, n_rad=41, bias=6.0, step=4.0):
+    """Hard-edged mask for one ellipse whose edge runs where base and take agree.
+
+    A feathered cross-fade of two different sets of bangs leaves half-transparent ghost strands. Instead, the edge is
+    a closed path around the ellipse (radius lo..hi of it, one radial step per angle step at most) with the least
+    summed colour difference (dynamic programming over the angle, all start radii, closed by start == end); bias
+    adds a small cost for larger radii so ties stay close to the core, step a cost per radial step so the path does
+    not zig-zag. The result is anti-aliased over about 1 px (blend() then softens only the low frequencies)."""
+    cx, cy, rx, ry, ang = ell
+    H, W = B.shape[:2]
+    t = math.radians(ang)
+    diff = ndimage.gaussian_filter(np.abs(B - Rs).mean(-1), 1.0)
+    phi = np.linspace(0, 2 * math.pi, n_ang, endpoint=False)
+    sc = np.linspace(lo, hi, n_rad)
+    u = sc[None, :] * rx * np.cos(phi)[:, None]
+    v = sc[None, :] * ry * np.sin(phi)[:, None]
+    xs = np.clip(cx + u * math.cos(t) - v * math.sin(t), 0, W - 1)
+    ys = np.clip(cy + u * math.sin(t) + v * math.cos(t), 0, H - 1)
+    C = ndimage.map_coordinates(diff, [ys, xs], order=1) + bias * (sc[None, :] - lo) / (hi - lo)
+    R = n_rad
+    big = 1e18
+    D = np.full((R, R), big)                       # D[start, r]
+    D[np.arange(R), np.arange(R)] = C[0]
+    back = np.zeros((n_ang, R, R), np.int8)
+    for i in range(1, n_ang):
+        cand = np.stack([np.roll(D, 1, 1) + step, D, np.roll(D, -1, 1) + step])    # from r-1, r, r+1
+        cand[0][:, 0] = big
+        cand[2][:, -1] = big
+        k = cand.argmin(0)
+        D = cand.min(0) + C[i][None, :]
+        back[i] = (k - 1).astype(np.int8)
+    st = int(np.argmin(D[np.arange(R), np.arange(R)]))
+    path = np.zeros(n_ang, int)
+    r = st
+    for i in range(n_ang - 1, -1, -1):
+        path[i] = r
+        if i:
+            r = r + back[i, st, r]          # back = previous radius - this radius
+    seam = sc[path]
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    uu = (xx - cx) * math.cos(t) + (yy - cy) * math.sin(t)
+    vv = -(xx - cx) * math.sin(t) + (yy - cy) * math.cos(t)
+    rho = np.sqrt((uu / rx) ** 2 + (vv / ry) ** 2)
+    a = np.mod(np.arctan2(vv / ry, uu / rx), 2 * math.pi) / (2 * math.pi) * n_ang
+    i0 = np.floor(a).astype(int) % n_ang
+    f = a - np.floor(a)
+    s_at = seam[i0] * (1 - f) + seam[(i0 + 1) % n_ang] * f
+    rad_px = np.sqrt((uu / rx) ** 2 * rx ** 2 + (vv / ry) ** 2 * ry ** 2) / np.maximum(rho, 1e-6)
+    return np.clip((s_at - rho) * rad_px + 0.5, 0, 1).astype(np.float32)
 
 
 LASH = (48, 36, 52)
@@ -281,21 +388,20 @@ def take(name):
 
 
 def compose(layers):
-    """layers: [(take name, regions, cheeks)] applied in order onto the base body."""
+    """layers: [(take name, regions, cheeks[, transplant3 options])] applied in order onto the base body."""
     im = Image.open(BASE_TAKE).convert("RGB")
     log = []
-    for name, regions, cheeks in layers:
-        im, shift, err = transplant3(im, take(name), regions, cheeks)
+    for name, regions, cheeks, *opt in layers:
+        im, shift, err = transplant3(im, take(name), regions, cheeks, **(opt[0] if opt else {}))
         log.append((name, shift, round(err, 1)))
     return im, log
 
 
 NEUTRAL = "x_neutral_0.45_36002"
-EYES_BLINK = [(cx, cy, rx * 1.18, ry * 1.25, a) for cx, cy, rx, ry, a in EYES_ONLY]   # covers the open lids
 _N = [(NEUTRAL, [BAND, MOUTH3], ())]
 FRAMES = {                                   # chosen takes (see art/generated/vtuber3/prompts.sh for each round)
     "neutral": _N,
-    "blink": _N + [("f_blink_0.55_37002", EYES_BLINK, ())],              # eyes only: the brows stay put
+    "blink": _N + [("f_blink_0.55_37002", list(EYES_ONLY), (), {"relight": True})],   # eyes only: brows stay
     "talk_a": _N + [("f_talka_0.52_37001", [MOUTH3], ())],
     "talk_o": _N + [("f_talko_0.52_37002", [MOUTH3], ())],
     "smug": [("f_smug_37001", [BAND, MOUTH3], CHEEKS3)],

@@ -259,7 +259,9 @@ for the sprites; the sprite list is set after the pixel test.
   NovelAI V5 from a paste-up of the sheet: head tilted, one long sleeve raised to her face, mid-chest crop. 13
   frames (neutral, blink, talk a / o, smug, wink, happy, sing, shocked, angry, pout, flustered, pain); each frame
   pastes only the brow/eye band, mouth and cheeks of a V5 take onto one fixed body, colour-matched, then
-  Real-ESRGAN x4plus-anime to 2048 px with a cut-out alpha. All generations at normal size (0 Anlas).
+  Real-ESRGAN x4plus-anime to 2048 px with a cut-out alpha. All generations at normal size (0 Anlas). The Opus
+  plan's free V5 generations then ran out (HTTP 402, 13-15 Anlas per image, 1 left): more N5 work needs Anlas or
+  a new key from the owner.
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.

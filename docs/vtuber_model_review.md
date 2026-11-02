@@ -175,9 +175,23 @@ The face reads younger than v2: round open eyes, short face.
 - All open eyes come from the same body, so they share one eye style.
 - Removed v2 duplicates: cheer / laugh, honest, frustrated.
 
-**Cleanliness.** Each paste is aligned on a ring around its region (±10 px search). Colours are matched separately
-for skin and for hair / lines (a single fit had pulled the skin grey). The cut-out removes V5's white rim around
-the outline and the background seen through gaps between strands, and keeps the white ear fur and eye whites.
+**Cleanliness.**
+- Alignment and colour: each paste is aligned on a ring around its region (±10 px search). Colours are matched
+  separately for skin and for hair / lines (a single fit had pulled the skin grey).
+- Seams: a feathered cross-fade of two takes' bangs left half-transparent ghost strands at 2048 px. Each region is
+  now cut along a closed path where the two images agree (dynamic programming around the ellipse). A multi-band
+  blend then switches line art within about a pixel and blends colour over about 10 px.
+- happy and flustered: V5 drew the cat clip on a pin bar in those takes, and the old band picked up a stray piece
+  of it. The seam leaves it out.
+- blink: the closed-eye takes kept a flat pale wash where the eyes had been painted over. The take's skin is now
+  pulled to the neutral frame's skin with a smooth correction measured on the skin around the eyes. Left: a
+  2-3 px strand cut at the outer corner of her right eye (viewer's left).
+- Cut-out: removes V5's white rim around the outline and the background seen through gaps between strands; keeps
+  the white ear fur and eye whites.
+
+**Quota.** After 118 free generations on 2026-11-02 (107 takes plus 11 accidental re-runs of rejected takes), NovelAI started charging Anlas for normal-size V5 (HTTP 402,
+13-15 Anlas per image, 1 Anlas left), so the Opus plan's free generations are used up. A planned blink v2 (round 13)
+was not run.
 
 ## Sources
 Japanese illustration features (pixivision; previews viewed, images not redistributed):
