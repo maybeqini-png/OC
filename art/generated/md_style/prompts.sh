@@ -191,3 +191,28 @@ done
 for seed in 49511 49512; do
   gx3 wx_swing $seed "swinging an oversized navy microphone like a hammer with both hands, big round mic head with a pink cat paw print and cat ears, running, determined smug grin"
 done
+# ---- armed action pack v2 (2026-11-03). Owner: "the unarmed poses aren't working well". Pose rules from research
+# (Clip Studio / Adobe dynamic-pose guides, cartoon movement fundamentals): one strong curved line of action through
+# the whole body, pushed further than real, a clear silhouette with negative space, twisted torso / asymmetric
+# shoulders and hips, the weapon extending the line of action, anticipation and follow-through as separate frames.
+# Every pose holds her paw mic (w_pawmic): Muse Dash characters attack with one signature prop.
+MIC="holding an oversized navy blue microphone used as a hammer, big round mic head with a pink cat paw print and two cat ears, sky blue handle with a ribbon"
+DYN="dynamic pose, line of action, exaggerated pose, twisted torso, leaning, full body, from side"
+ga2() { nai_guard generate --model $M --prompt "$XY3, $MIC, $DYN, $3, $XSTYLE3" --negative "$XNEG2, black hair, dark hair, black sweater, motion lines, speed lines, effects, stiff, standing straight, symmetrical" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 49601 49602 49603; do
+  ga2 v2_windup $seed "anticipation, winding up, microphone pulled far back behind her head with both hands, body coiled, leaning back, knees bent, smug grin, facing right"
+  ga2 v2_smash $seed "smashing the microphone down onto the ground in front of her, bent forward deeply, one leg back, hair flying up, fierce grin, facing right"
+  ga2 v2_swing $seed "follow-through of a big horizontal swing, microphone swung across her body to the left, spinning on one foot, other leg kicked out, hair and tail whipping around"
+  ga2 v2_upper $seed "swinging the microphone upward from low to high, jumping off one foot, stretched upward, arm fully extended above her head, facing right"
+  ga2 v2_airslam $seed "jumping, mid-air, microphone raised high overhead with both hands about to slam down, back arched, knees tucked, fierce smug grin, facing right"
+  ga2 v2_airspin $seed "jumping, mid-air, spinning sideways with the microphone held out at arm's length, horizontal body, hair and tail swirling in a spiral"
+  ga2 v2_dive $seed "jumping, diving down diagonally, microphone thrust forward and down ahead of her, body in a straight diagonal line, legs trailing behind"
+  ga2 v2_double $seed "mid-air split, thrusting the microphone upward with one arm while kicking straight down with one leg, body stretched between the two"
+  ga2 v2_hold $seed "riding the microphone like a surfboard, crouching on it, one arm out for balance, sliding forward, wind in her hair, happy"
+  ga2 v2_hurt $seed "knocked back in the air, dropping the microphone, arms and legs flailing, eyes shut in a comic cry, small tears, tumbling backward"
+  ga2 v2_fever $seed "running fast while singing into the microphone, head thrown back, eyes closed happily, free arm spread wide, big open mouth"
+  ga2 v2_victory $seed "victory pose, microphone raised high in one hand, peace sign with the other hand, winking, standing on one leg, smug smile"
+done
+# v2 review notes: strongest = windup 49601/49602, smash 49601-49603, upper 49602, airslam 49601/49602, airspin 49603
+# (the mic draws its own arc), dive 49602, hold 49602 (riding the mic), victory 49602. Weak: hurt (does not read as
+# hurt), fever (singing pose lost). Not yet recoloured or cut out.
