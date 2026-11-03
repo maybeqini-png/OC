@@ -146,3 +146,29 @@ for seed in 49121 49122 49123; do gx3 z_air $seed "jumping, mid-air, swiping one
 for seed in 49131 49132 49133; do gx3 z_hurt $seed "hurt, flinching backward, eyes shut tight, knocked back, arms up, comedic"; done
 # picks for the HD runner: z_run_49102 (rig body), z_punch_49113, z_air_49123; hurt takes unused (none read as hurt).
 # y_* takes: hair and sweater near-black, unused. All three picks are recoloured to the sheet by pixel/mdrecolor.py.
+# ---- action pack (2026-11-03): owner asked for more varied character animation after a Muse Dash analysis
+# (every hit a different attack drawing; see docs/rhythm_game_style_reference.md). Same tags and style as z_*.
+for seed in 49201 49202 49203; do
+  gx3 act_uppercut $seed "rising uppercut with one sleeve, cat paw punch upward, leaning back, one foot off the ground, determined grin"
+  gx3 act_kick $seed "spinning roundhouse kick, one leg extended forward high, arms out for balance, hair swirling, smug"
+  gx3 act_doublepaw $seed "pushing both sleeves forward together, double palm strike, cat paws, leaning forward, mouth open shouting"
+  gx3 act_air_kick $seed "jumping, mid-air flying kick diagonally downward, one leg extended, arms back, determined"
+  gx3 act_air_spin $seed "jumping, mid-air somersault, curled up spinning, tail and hair swirling, eyes closed smiling"
+  gx3 act_air_slam $seed "jumping, mid-air, both sleeves raised overhead about to hammer down, mischievous grin"
+  gx3 act_split $seed "mid-air split pose, one sleeve punching up and one leg kicking down at the same time, dynamic, confident"
+  gx3 act_hold $seed "crouching low and leaning forward, one sleeve stretched forward, sliding, focused, wind in her hair"
+  gx3 act_hurt $seed "knocked back, stumbling backward, eyes squeezed shut in a comic cry, arms flailing, small tears, cartoon dizzy"
+  gx3 act_fever $seed "excited running, arms spread wide, big open smile, sparkling eyes, hair streaming"
+  gx3 act_victory $seed "standing, victory pose, peace sign with one hand near her face, winking, smug smile, facing slightly toward the viewer"
+done
+# ---- bosses (2026-11-03): owner asked for mini-boss and main-boss scenes. Muse Dash bosses stay at the right edge
+# and fire projectiles into both lanes. Same SOLO style as the monster families; facing left toward XIYIN.
+for seed in 49301 49302 49303; do
+  gsolo b_mini $seed "candy pop theme, giant boss version of a gumball machine robot cat, huge pink glass dome head full of colorful gumballs, cat ears, big camera lens eye glowing, smug fanged grin, chunky pink robot body with candy cannon arms, magenta outline, imposing, facing left"
+  gsolo b_main $seed "summer festival theme, giant final boss, enormous red daruma lucky cat king, golden crown, one paw raised beckoning, glowing angry eyes, fanged grin, lantern ornaments, fireworks launcher on its back, dark red outline, imposing, facing left"
+done
+# close-up splash panel for the shatter transition (comic panel, no text)
+SPL="$XY3, close-up, upper body, from side, three-quarter view, dynamic angle, determined smug grin, fist raised toward the viewer, speed lines background, manga style splash panel, bold flat colors, clean lineart, cel shading"
+for seed in 49401 49402 49403; do
+  nai_guard generate --model $M --prompt "$SPL" --negative "$XNEG2, text, letters, words, speech bubble, black hair" --w 1216 --h 832 --seed $seed --out "$OUT/splash_$seed.png"
+done

@@ -114,3 +114,19 @@ sfx_forte_2 / sfx_forte_3 (large, hammer) - plus sfx_score (note), sfx_hp (heart
 and char_common_empty_jump: hits are percussion that plays along with the song, not cartoon effects. The PV now
 synthesizes a tight drum-like strike (pitch-dropping body, 1.5-6 kHz crack, click, a trace of a crunch recording)
 at mezzo, forte in Fever; swishes for jumps; short chimes for notes / hearts; hits about 9 dB under the song.
+
+## Chart and character actions (2026-11-03)
+Sources: Steam guide "Enemy Types" (steamcommunity.com/sharedfiles/filedetails/?id=1871949394), the official wiki's
+gameplay page (via search), the MDMods CustomHitSound key list, the fan charting guide (via search), trailer frames.
+- Note types: small / medium / big enemies (big ones have their own hit sound), Gemini = two linked enemies on both
+  lanes hit together, sheet (hold) notes that can be held while still hitting the other lane, ghosts (vanish, no
+  penalty), hammers swinging in from the top, gear obstacles on either lane (dodge only), raiders entering from the
+  top / bottom, mash enemies (rapid hits), bosses that stay on screen and throw enemies; collectables: blue music
+  notes and hearts.
+- Charting: the first note sits on the song's first key sound; sections start ground-only and bring in the air lane
+  when the music asks for it; repeated music sections reuse (and mirror) the same pattern; notes follow the
+  percussion and the vocal rhythm. Lanes: blue = air, pink = ground.
+- Character actions (Marija, trailer 60-63 s at 8 fps): every hit uses a different attack drawing (3-4 ground
+  swings, 3 air swings) and rarely repeats one twice in a row; each attack pose holds 2-3 frames with a crescent
+  smear, then she is straight back to running; consecutive air notes keep her airborne with a new pose per hit.
+  The developers describe the hit action as following the chart arrangement.
