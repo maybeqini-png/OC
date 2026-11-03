@@ -216,3 +216,15 @@ done
 # v2 review notes: strongest = windup 49601/49602, smash 49601-49603, upper 49602, airslam 49601/49602, airspin 49603
 # (the mic draws its own arc), dive 49602, hold 49602 (riding the mic), victory 49602. Weak: hurt (does not read as
 # hurt), fever (singing pose lost). Not yet recoloured or cut out.
+# 2026-11-03 OWNER VERDICT (v2): "the weapon is distorted, inconsistent in length, and the details are wrong".
+# Fix: N5 no longer draws the weapon. Poses are drawn gripping a plain light blue stick (easy to find by colour);
+# pixel/mdweapon.py lays ONE canonical paw-mic sprite (w_pawmic_49502) along that stick at a fixed size and puts her
+# fingers back on top, so the weapon is identical in every frame.
+STK="holding a plain straight light blue stick with both hands, simple cylinder pole"
+ga3() { nai_guard generate --model $M --prompt "$XY3, $STK, $DYN, $3, $XSTYLE3" --negative "$XNEG2, black hair, dark hair, black sweater, motion lines, speed lines, effects, stiff, standing straight, microphone, hammer, weapon head, ribbon on stick" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 49701 49702; do
+  ga3 v3_windup $seed "anticipation, winding up, stick pulled far back behind her head, body coiled, leaning back, knees bent, smug grin, facing right"
+  ga3 v3_smash $seed "smashing the stick down onto the ground in front of her, bent forward deeply, one leg back, hair flying up, fierce grin, facing right"
+  ga3 v3_upper $seed "swinging the stick upward from low to high, jumping off one foot, stretched upward, facing right"
+  ga3 v3_airslam $seed "jumping, mid-air, stick raised high overhead about to slam down, back arched, knees tucked, fierce grin, facing right"
+done
