@@ -81,3 +81,21 @@ for s in 9951 9952; do
 done
 # 2026-11-03 OWNER VERDICT: x_* (tense img2img) superseded before review; y_* (absurd stages) REJECTED: "It looks too
 # AI-generated, I don't like it. No cybernetic AI aesthetic." Kept as a record only; not used (plates/build.sh unchanged).
+# ---- XIYIN stages (2026-11-03). Owner: "Design the scenes to fit my character, following the reference game style.
+# I mainly dislike the cyber aesthetic." Her palette (navy, cobalt, sky blue, white, soft pink) and her motifs (cats,
+# school rooftop, her room, ribbons, stars, the sleeping-cat patch), flat hazy storybook stages; no neon / tech.
+NEGX="text, watermark, signature, logo, letters, words, numbers, signboard, humans, 1girl, 1boy, person, character, realistic, photo, 3d, render, neon, cyberpunk, sci-fi, futuristic, glowing lights, hologram, technology, machine, robot, speakers, screens, pipes, game controller, skyscrapers, city skyline, detailed texture, busy, cluttered, thick lineart, blurry, jpeg artifacts, lowres, nsfw"
+XST="no humans, scenery, 2d side-scrolling game stage background, whimsical storybook, flat vector illustration, simple bold shapes, minimal details, flat colors, limited palette, navy blue, cobalt blue, sky blue, white and soft pink, soft atmospheric haze, layered depth, no lineart, cute, wide shot"
+gx() { [ -f "$OUT/$1_$2.png" ] || $NAI generate --model $M --w $3 --h $4 --seed $2 --prompt "$5, $XST" --negative "$NEGX" --out "$OUT/$1_$2.png"; }
+for s in 9971 9972; do
+  gx z_sky $s 1536 640 "bright blue sky, a school rooftop with a fence floating among giant cat-shaped clouds, paper airplanes, a blue ribbon streaming across the sky"
+  gx z_sunset $s 1536 640 "sunset over a small town whose rooftops have cat ears, telephone poles, a huge sleeping navy cat lying on the far hills, warm orange sky fading to navy"
+  gx z_pop $s 1536 640 "a giant cozy toy room landscape, mountains of cat plushies, huge yarn balls, stacked building blocks, ribbons and stars, blue and pink pop colors"
+  gx z_night $s 1536 640 "quiet night, a calm river and small houses, the moon is a sleeping cat curled up, many stars, soft navy sky, a few warm paper lanterns"
+  gx z_pinkpop $s 1536 640 "a stage made of giant cushions and pillows, big hearts, cat paw stamps and polka dots in the sky, ribbons, pink and baby blue"
+  gx z_twilight $s 1536 640 "purple and navy dusk, rolling hills shaped like cat tails, a school silhouette, a cat-shaped moon rising, first stars"
+  gx z_festival $s 1536 640 "summer night festival, rows of cat-face paper lanterns, a giant lucky cat statue, fireworks shaped like cat faces and stars, blank stalls with no signs, navy sky with red and gold accents"
+  gx z_climb $s 704 1472 "vertical, tall image, a tall staircase of stacked books and cushions rising into the night sky, a crescent moon with a cat curled on it at the top, stars, soft clouds at the bottom"
+done
+# z_* picks shown to the owner (not yet wired into plates/build.sh): sky 9972, sunset 9972, pop 9971, night 9971,
+# pinkpop 9971, twilight 9972, festival 9971 (9972 has lettering on stalls), climb 9972.
