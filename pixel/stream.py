@@ -903,44 +903,29 @@ def room_frame(t, monitor_img, vt_visible=True, push=0.0):
         slide = int(760 * ease(push)) if push > 0 else 0
         room.alpha_composite(im, (1390 - im.width // 2 + slide, OH - im.height + 70))
     e = ease(push) if push > 0 else 0.0
-    vx0, vy0, vx1, vy1 = screen_view()
-    x0, y0 = vx0 * e, vy0 * e
-    x1 = OW + (vx1 - OW) * e
-    y1 = y0 + (x1 - x0) * 9 / 16
-    k = OW / (x1 - x0)
+    # Camera: a quad in room coordinates that maps to the full output. At push 0 it is the whole frame; at push 1
+    # it is the screen's 16:9 inner quad, so the drawn (tilted) screen squares up as the camera flies in. The room
+    # and the monitor picture both go through the same mapping, so the picture stays pinned to the screen.
+    full = ((0, 0), (OW, 0), (OW, OH), (0, OH))
+    cam = [_lerp(f_, q_, e) for f_, q_ in zip(full, screen_inner())]
     if e > 0:
-        room = room.crop((int(round(x0)), int(round(y0)), int(round(x1)), int(round(y1)))).resize(
-            (OW, OH), Image.Resampling.LANCZOS)
+        room = room.transform((OW, OH), Image.Transform.PERSPECTIVE, _persp_coeffs(full, cam),
+                              Image.Resampling.BICUBIC)
+    to_out = _persp_coeffs(cam, full)                                  # room point -> output point
+
+    def proj(p_):
+        x_, y_ = p_
+        a_, b_, c_, d_, e_, f_, g_, h_ = to_out
+        w_ = g_ * x_ + h_ * y_ + 1
+        return ((a_ * x_ + b_ * y_ + c_) / w_, (d_ * x_ + e_ * y_ + f_) / w_)
     if monitor_img is not None:
-        s_ = ease(max(0.0, (e - 0.55) / 0.45))
-        if wide:                                     # fills the whole screen; its 16:9 middle = the view rect
-            ex = (vx1 - vx0) * BLEED / OW
-            rect = ((vx0 - ex, vy0), (vx1 + ex, vy0), (vx1 + ex, vy1), (vx0 - ex, vy1))
-            base_q = SCREEN_Q
-        else:
-            rect = ((vx0, vy0), (vx1, vy0), (vx1, vy1), (vx0, vy1))
-            base_q = screen_inner()
-        quad = [_lerp(q, r, s_) for q, r in zip(base_q, rect)]
-        cx_ = sum(q[0] for q in quad) / 4
-        cy_ = sum(q[1] for q in quad) / 4
-        quad = [(qx + 1.5 * np.sign(qx - cx_), qy + 1.5 * np.sign(qy - cy_)) for qx, qy in quad]   # close AA seam
-        dst = [((qx - x0) * k, (qy - y0) * k) for qx, qy in quad]
+        dst = [proj(q) for q in SCREEN_Q]
+        cx_ = sum(q[0] for q in dst) / 4
+        cy_ = sum(q[1] for q in dst) / 4
+        sc_ = OW / (SCREEN_Q[1][0] - SCREEN_Q[0][0]) if e > 0 else 1.0
+        pad = 1.5 * max(1.0, (dst[1][0] - dst[0][0]) / (SCREEN_Q[1][0] - SCREEN_Q[0][0]))
+        dst = [(qx + pad * np.sign(qx - cx_), qy + pad * np.sign(qy - cy_)) for qx, qy in dst]   # close AA seam
         shot = monitor_img.convert("RGBA").copy()
-        a_ = np.asarray(shot.convert("RGB")).astype(np.float32)          # screen backing in the picture's edge
-        top, bot = a_[:24].mean((0, 1)), a_[-24:].mean((0, 1))           # colours, so no white shows mid-push
-        scr = [((qx - x0) * k, (qy - y0) * k) for qx, qy in (SCREEN_Q if wide else screen_inner())]
-        ys = [p_[1] for p_ in scr]
-        ya, yb = int(min(ys)) - 4, int(max(ys)) + 4
-        if yb > 0 and ya < OH:
-            ya, yb = max(0, ya), min(OH, yb)
-            u = np.linspace(0, 1, yb - ya)[:, None]
-            grad = (top * (1 - u) + bot * u)[:, None, :] * np.ones((1, OW, 1))
-            m = Image.new("L", (OW * 2, OH * 2), 0)
-            ImageDraw.Draw(m).polygon([(2 * x_, 2 * y_) for x_, y_ in scr], fill=255)
-            m = m.resize((OW, OH), Image.Resampling.LANCZOS).filter(ImageFilter.MaxFilter(5)).crop((0, ya, OW, yb))
-            back = Image.fromarray(grad.astype(np.uint8), "RGB").convert("RGBA")
-            back.putalpha(m)
-            room.alpha_composite(back, (0, ya))
         shot.alpha_composite(_glare(shot.width, shot.height))
         src = [(0, 0), (shot.width, 0), (shot.width, shot.height), (0, shot.height)]
         warped = shot.transform((OW, OH), Image.Transform.PERSPECTIVE, _persp_coeffs(dst, src),
