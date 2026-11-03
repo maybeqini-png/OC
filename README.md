@@ -331,7 +331,7 @@ for the sprites; the sprite list is set after the pixel test.
   speed lines) show the **in-game** XIYIN close-up (her game drawings, paw mic when the next section is armed); the
   streamer appears only in the cam box. Her body always runs off the bottom of the screen. Loadout swaps happen only
   behind a cut-in (Muse Dash never swaps a weapon mid-run).
-- Bosses (`pixel/mdboss.py`): mini-boss ニヤニヤチャット "THE GRINNING CHAT" in the twilight verse (101.5-115.8 s),
+- Bosses (`pixel/mdboss.py`): mini-boss ニヤニヤチャット "THE GRINNING CHAT" in the twilight verse (103.45-115.8 s),
   main boss ナナコロビ大王 "NANAKOROBI THE DARUMA KING" in the final chorus (126.6-146 s). WARNING band, entrance,
   enemies thrown out of the boss, flinch on hits, name plate + HP bar, dimmed stage with a vignette breathing on the
   beat, stronger shake; the chat deflates in a spin, the daruma topples, bounces upright once (七転び八起き) and

@@ -40,11 +40,14 @@ def ease_in(u):
     return u * u
 
 
+# mini-boss timing: after the streamer's big-cam reaction (stream.BIG_CAM 98.9-103.2 s), which would cover the
+# WARNING card; it then enters on 吹き出しちゃうな (about 104 s). Both bosses stay left of / below the stream's cam
+# box (top right, x 1478-1896, y 68-480 on the game picture) so their heads are never hidden behind it.
 BOSSES = {
-    "mini": dict(take="b3_mini_62011", name="ニヤニヤチャット", title="THE GRINNING CHAT", warn=101.5, enter=102.6,
-                 last=115.5, h=430, x=1600, y=560, ground=False, col=(255, 110, 190), dark=(70, 20, 70)),
+    "mini": dict(take="b3_mini_62011", name="ニヤニヤチャット", title="THE GRINNING CHAT", warn=103.45, enter=104.4,
+                 last=115.5, h=400, x=1380, y=610, ground=False, col=(255, 110, 190), dark=(70, 20, 70)),
     "main": dict(take="b2_main_62003", name="ナナコロビ大王", title="NANAKOROBI THE DARUMA KING", warn=126.6,
-                 enter=127.15, last=146.3, h=540, x=1590, y=None, ground=True, col=(255, 180, 60), dark=(90, 10, 20)),
+                 enter=127.15, last=146.3, h=540, x=1500, y=None, ground=True, col=(255, 180, 60), dark=(90, 10, 20)),
 }
 
 
