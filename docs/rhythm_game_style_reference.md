@@ -130,3 +130,13 @@ gameplay page (via search), the MDMods CustomHitSound key list, the fan charting
   swings, 3 air swings) and rarely repeats one twice in a row; each attack pose holds 2-3 frames with a crescent
   smear, then she is straight back to running; consecutive air notes keep her airborne with a new pose per hit.
   The developers describe the hit action as following the chart arrangement.
+
+## Weapons and companions (2026-11-03)
+Owner: "in Muse Dash and similar games the characters have cute weapons and hover gear". Observed (official trailer
+close-ups; character / Elfin guides): each character attacks with one signature prop tied to her identity (Rin a bass
+guitar, Marija a violin-bow sword, outfits swap it for a bat, a lollipop, a carrot), swung in a big crescent smear;
+a small winged chibi companion ("Elfin": Mio, Angela, Thanatos, Rabot-233, Little Witch, Dragon Girl, Lilith ...)
+floats behind her shoulder and only adds a passive effect. XIYIN takes (N5, 0 Anlas): weapons w_pawmic (a streaming
+mic used as a hammer, paw-print grille, cat ears), w_pawhammer (squeaky paw hammer), w_cattail (cat-tail star wand);
+companions c_sleepcat (sleepy cat spirit on a cloud, wings, nightcap - echoes her sleeping-cat chest patch) and
+c_catdrone (cat-head drone; more techy); wx_swing = XIYIN holding the paw mic, to test drawing her with the weapon.

@@ -172,3 +172,22 @@ SPL="$XY3, close-up, upper body, from side, three-quarter view, dynamic angle, d
 for seed in 49401 49402 49403; do
   nai_guard generate --model $M --prompt "$SPL" --negative "$XNEG2, text, letters, words, speech bubble, black hair" --w 1216 --h 832 --seed $seed --out "$OUT/splash_$seed.png"
 done
+# ---- weapons and floating companion (2026-11-03). Owner: "in Muse Dash and similar games the characters have cute
+# weapons and hover gear". Observed (official trailer): each character attacks with a signature prop (a bass guitar,
+# a violin-bow sword, a lollipop, a carrot) swung in a crescent smear, and a small winged chibi "Elfin" floats behind
+# the character's shoulder. XIYIN versions, original designs tied to her streamer / cat theme and her palette.
+WST="no humans, single object, game weapon item icon, cute, chunky shapes, clean vector illustration, crisp clean lineart, dark blue lineart, flat color, cel shading, one shadow tone, navy blue, cobalt blue, sky blue, white and soft pink, white background, simple background, centered"
+WNEG="text, letters, words, logo, watermark, signature, human, girl, hand, realistic, 3d, photo, metal texture, gradient background, lowres, blurry, jpeg artifacts"
+gw() { nai_guard generate --model $M --prompt "$3, $WST" --negative "$WNEG" --w 1024 --h 1024 --seed $2 --out "$OUT/$1_$2.png"; }
+CST="no humans, single small mascot creature, chibi, floating, game companion fairy, clean vector illustration, crisp clean lineart, colored lineart, flat color, cel shading, one shadow tone, white background, simple background, centered"
+gc() { nai_guard generate --model $M --prompt "$3, $CST" --negative "$WNEG" --w 1024 --h 1024 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 49501 49502; do
+  gw w_pawmic $seed "oversized streaming microphone used as a hammer, big round navy mic head with a pink cat paw print grille, cat ears on top of the mic head, cobalt handle wrapped with a sky blue ribbon"
+  gw w_pawhammer $seed "giant squeaky toy hammer shaped like a cat paw, soft round navy paw head with pink paw pads, white stitched seam, cobalt handle with a bell and a ribbon"
+  gw w_cattail $seed "magical girl wand shaped like a long cat tail curling into a star at the tip, navy and cobalt stripes, small golden bell, sky blue ribbon"
+  gc c_catdrone $seed "tiny floating round navy cat head drone with small propeller and cat ears, big blue screen eyes, little headphones, smug smile"
+  gc c_sleepcat $seed "tiny sleepy light blue cat spirit floating on a small cloud, eyes closed, nightcap, little angel wings, round and soft"
+done
+for seed in 49511 49512; do
+  gx3 wx_swing $seed "swinging an oversized navy microphone like a hammer with both hands, big round mic head with a pink cat paw print and cat ears, running, determined smug grin"
+done
