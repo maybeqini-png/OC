@@ -15,7 +15,7 @@ u p08_pink_pop_9506 pinkpop   # not used: hand-made backdrop in pixel/mdbg.py
 u z_twilight_9972 twilight      # XIYIN stage redraw (2026-11-03); before: p09_twilight_9507
 u z_festival_9971 festival      # XIYIN stage redraw (2026-11-03); before: p11_festival_9529
 u p12_dawn_9510 dawn
-u z_climb_9972 climb "--height 0"   # XIYIN stage redraw (2026-11-03); before: p10_climb_9508
+u t_climb_9962 climb "--height 0"   # weeping-eyes climb (2026-11-03, picked from t_climb_996x); before: z_climb_9972
 python3 -c "
 from PIL import Image
 im = Image.open('plates/climb.png'); im.resize((1920, round(im.height * 1920 / im.width)), Image.Resampling.LANCZOS).save('plates/climb.png')"

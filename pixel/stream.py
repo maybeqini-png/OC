@@ -112,7 +112,7 @@ def stage_plate(i, t):
     a, b = STAGES[i][0], STAGE_END[i]
     u = min(1, max(0, (game_time(t) - a) / (b - a)))
     if name == "climb":
-        return MG.plate_view("climb", 0.5, u)
+        return MG.plate_view("climb", 0.5, ease(min(1.0, u / 0.72)))   # reach the weeping eyes, then hold
     if name in BG.THEMES:                            # hand-made abstract stages scroll in parallax with the run
         return BG.view(name, cam_x(game_time(t)) * 2, (game_time(t) - PH0) / BEAT % 1)
     return MG.plate_view(name, 0.06 + 0.88 * u)
