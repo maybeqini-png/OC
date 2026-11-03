@@ -164,3 +164,69 @@ def recolor_auto(img):
     out = flat.copy()
     out[cand] = flat[cand] + corr * fade
     return Image.fromarray(out.reshape(a.shape).clip(0, 255).astype(np.uint8), "RGB")
+
+
+# ---- armed pose pack (art/generated/md_style/v3_*): owner 2026-11-03 "revert to fixing this character design".
+# Per drawing only the parts that are NOT hair are seeded (sweater incl. collar and knee socks; accents = tie and boot
+# soles); every other large blue region is hair: dark ones take the sheet's hair tones, the bright cyan underlayer
+# regions are folded into the sheet's hair base (the sheet has one flat hair colour, no underlayer). Thin saturated
+# regions (collar / cuff / sock stripes) snap to the sheet's cobalt.
+POSE_SEEDS = {
+    "v3_windup_49701": dict(sweater=[(500, 650), (560, 400), (390, 600), (470, 720), (450, 970), (600, 935)],
+                            accent=[(470, 1130), (700, 1090), (590, 620)]),
+    "v3_smash_49701": dict(sweater=[(300, 640), (520, 700), (470, 600), (430, 515), (190, 705), (390, 930)],
+                           accent=[(60, 640), (490, 1060), (600, 680)]),
+    "v3_smash_49702": dict(sweater=[(300, 720), (450, 760), (560, 850), (380, 640), (430, 860), (230, 920),
+                                    (320, 990), (300, 965)],
+                           accent=[(90, 920), (400, 1160)]),
+    "v3_upper_49701": dict(sweater=[(470, 650), (560, 420), (500, 550), (360, 600), (600, 910), (450, 980)],
+                           accent=[(750, 960), (460, 1150), (570, 620)]),
+    "v3_upper_49702": dict(sweater=[(450, 700), (560, 580), (380, 780), (360, 640), (370, 920), (410, 1010)],
+                           accent=[(230, 960), (380, 1160), (560, 720)]),
+    "v3_airslam_49701": dict(sweater=[(520, 650), (450, 350), (560, 420), (380, 680), (450, 930), (500, 1000)],
+                             accent=[(300, 930), (400, 1110), (620, 640)]),
+    "v3_airslam_49702": dict(sweater=[(520, 750), (600, 600), (420, 700), (390, 960), (420, 1040), (300, 1090)],
+                             accent=[(250, 930), (310, 1080), (640, 780)]),
+}
+
+
+def _regions(a):
+    col = _colored(a)
+    core = ndimage.binary_erosion(col, iterations=2)
+    lab, n = ndimage.label(core)
+    _, (iy, ix) = ndimage.distance_transform_edt(lab == 0, return_indices=True)
+    lab = np.where(col, lab[iy, ix], 0)
+    lab0, n0 = ndimage.label(col)
+    gone = ndimage.sum(core, lab0, range(n0 + 1)) == 0
+    lab = np.where(gone[lab0] & col, n + lab0, lab)
+    return col, lab, n + n0
+
+
+@lru_cache(None)
+def recolor_pose(name):
+    """RGB pose drawing (on white) in the sheet's colours (see POSE_SEEDS)."""
+    a = np.asarray(Image.open(SRC / f"{name}.png").convert("RGB")).astype(np.float32)
+    col, lab, n = _regions(a)
+    s = POSE_SEEDS[name]
+    pick = lambda pts: np.isin(lab, list({lab[y, x] for x, y in pts} - {0}))
+    sweater, accent = pick(s["sweater"]), pick(s["accent"])
+    lum, sat = a.mean(-1), a.max(-1) - a.min(-1)
+    idx = np.arange(n + 1)
+    size = ndimage.sum(np.ones_like(lab), lab, idx)
+    thick = ndimage.sum(ndimage.binary_erosion(col, iterations=4), lab, idx)   # thin stripes vanish in the erosion
+    med_l = ndimage.median(lum, lab, idx)
+    med_r = ndimage.median(a[..., 0], lab, idx)             # the pale stick / ground shadow have red > 100
+    med_s = ndimage.median(sat, lab, idx)                   # grey shorts / boots are not hair
+    taken = np.zeros(n + 1, bool)
+    taken[np.unique(lab[sweater | accent])] = True
+    big = (size > 800) & (thick > 0.25 * size) & ~taken & (med_r < 90) & (med_s > 50)
+    big[0] = False
+    hair_d = big & (med_l < 110)
+    hair_b = big & (med_l >= 110)                       # cyan underlayer
+    hair, streak = hair_d[lab], hair_b[lab]
+    stripes = col & ~hair & ~streak & ~sweater & ~accent & (sat > 120) & ~taken[lab] & (a[..., 0] < 90)
+    _snap(a, hair, TONES["hair"])
+    _snap(a, streak, TONES["hair"][:2], shift=0)
+    _snap(a, sweater, TONES["sweater"])
+    _snap(a, accent | stripes, TONES["accent"])
+    return Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGB")

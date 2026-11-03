@@ -294,3 +294,10 @@ done
 # sheet; step 2: every action frame from that one chibi model as the Precise Reference.
 gchibi() { nai_guard generate --model nai-diffusion-4-5-full --charref art/reference/oc_reference_sheet.webp --charref-mode "character&style" --charref-strength 0.85 --charref-fidelity 1.0 --prompt "$OC2, chibi, 2.5 heads tall, standing, neutral pose, arms at sides, from side, profile, facing right, face visible, full body, clean lineart, cel shading, anime, official art, flat color, white background, simple background" --negative "$OCNEG" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"; }
 for seed in 50201 50202 50203 50204; do gchibi chibi_model $seed; done
+# 2026-11-03 OWNER: "Discard all the previous flawed images and revert to fixing this character design" (the armed
+# v3 pack). Removed from the repo (manifest rows kept): om06_*, om085_*, sheetA_*, chibi_model_*, h45_*, h60_*,
+# c_gf5_*, c_gf45_* and the cut-out puppet (pixel/ocrig.py). The pack = v3_windup_49701, v3_smash_49702,
+# v3_upper_49701, v3_upper_49702, v3_airslam_49701, v3_airslam_49702 (v3_smash_49701 dropped: face hidden by hair),
+# fixed in code, no new generations: pixel/mdrecolor.recolor_pose snaps hair / sweater / socks / accents to the sheet's
+# measured colours (one flat hair colour, no cyan underlayer; near-black navy sweater and socks; cobalt tie, stripes,
+# soles), pixel/mdweapon.armed lays the one canonical paw mic BEHIND her so her face always shows.

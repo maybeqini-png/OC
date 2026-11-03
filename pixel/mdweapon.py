@@ -54,10 +54,13 @@ def find_stick(a):
     lab, n = ndimage.label(m)
     skin = ndimage.binary_dilation(skin_mask(a), iterations=30)
     best = None
+    touching = [i for i in range(1, n + 1) if ((lab == i) & skin).any() and (lab == i).sum() >= 1500]
     for i in range(1, n + 1):
         c = lab == i
         size = int(c.sum())
-        if size < 1500 or (not (c & skin).any() and size < 6000):
+        # pieces touching her hands win; a large piece away from them (V4.5 takes) only when none touch, so the pale
+        # ground shadow under her feet is never taken for the stick
+        if size < 1500 or (i not in touching and (touching or size < 6000)):
             continue
         ys, xs = np.nonzero(c)
         pts = np.stack([xs, ys], 1).astype(np.float32)
@@ -98,11 +101,39 @@ def find_stick(a):
 def armed(name, length=LENGTH, src=None):
     """RGBA drawing (drawing coordinates, cut out) with the canonical weapon in her hands. src: an already
     processed (e.g. recoloured) RGB version of the drawing, else the file."""
-    src = (src or Image.open(SRC / f"{name}.png")).convert("RGB")
-    a = np.asarray(src).astype(np.int16)
+    if src is None:
+        import mdrecolor
+        src = mdrecolor.recolor_pose(name) if name in mdrecolor.POSE_SEEDS else Image.open(SRC / f"{name}.png")
+    src = src.convert("RGB")
+    # the stick and her hands are found in the ORIGINAL drawing (the recolour turns boot soles / stripes into the
+    # sheet's light cobalt, which is close to the stick's colour); the body itself comes from src
+    a = np.asarray(Image.open(SRC / f"{name}.png").convert("RGB")).astype(np.int16)
     stick, e1, e2 = find_stick(a)
+    # background white trapped between hair strands, tail and body (pure white, unsaturated, bigger than a highlight)
+    # is cut out too
+    sa = np.asarray(src).astype(int)
+    white = (sa.mean(-1) > 246) & (sa.max(-1) - sa.min(-1) < 12)
+    wl, wn = ndimage.label(white)
+    wsz = ndimage.sum(white, wl, range(1, wn + 1))
+    warm = (sa[..., 0] > sa[..., 2] + 15)                       # skin, blush, the skin's red-brown line art
+    keep_ids = []
+    for i, z in enumerate(wsz, 1):
+        if z > 350:
+            sl = ndimage.find_objects((wl == i).astype(int))[0]
+            sl = tuple(slice(max(0, q.start - 4), q.stop + 4) for q in sl)
+            comp = wl[sl] == i
+            ring = ndimage.binary_dilation(comp, iterations=4) & ~comp
+            if warm[sl][ring].mean() < 0.05:                    # white inside skin (highlights) stays
+                keep_ids.append(i)
+    trapped = np.isin(wl, keep_ids)
     body = MD.cutout(src, crop=False)
     ba = np.asarray(body).copy()
+    ba[ndimage.binary_dilation(trapped, iterations=1), 3] = 0     # exact white areas only (her pale skin is warmer)
+    # loose bits (impact debris, sparks) are not part of her
+    bl, bn = ndimage.label(ba[..., 3] > 0)
+    if bn > 1:
+        bsz = ndimage.sum(ba[..., 3] > 0, bl, range(1, bn + 1))
+        ba[np.isin(bl, [i + 1 for i, z in enumerate(bsz) if z < 2500]), 3] = 0
     al = ba[..., 3] > 0
     ys, xs = np.nonzero(al & ~stick)
     centre = np.array([xs.mean(), ys.mean()])
@@ -154,8 +185,7 @@ def armed(name, length=LENGTH, src=None):
     pom = e1 + d * rear - head_dir * 0.05 * height              # pommel just past the rear fist
     neck = pom + head_dir * hl
     P = 500
-    out = Image.new("RGBA", (body.width + 2 * P, body.height + 2 * P), (0, 0, 0, 0))
-    out.alpha_composite(body, (P, P))
+    out = Image.new("RGBA", (body.width + 2 * P, body.height + 2 * P), (0, 0, 0, 0))     # the weapon layer
     # handle: rounded bar, light cyan with a white shine stripe, dark navy outline, a cobalt band at each end
     S2 = 3
     lay = Image.new("RGBA", (out.width * S2 // 2, out.height * S2 // 2), (0, 0, 0, 0))
@@ -180,11 +210,21 @@ def armed(name, length=LENGTH, src=None):
     piv = (pad + bottom[0] * k, pad + head_img.height - 2)
     rot = canvas.rotate(-ang, Image.Resampling.BICUBIC, center=piv)
     out.alpha_composite(rot, (int(round(neck[0] - piv[0])) + P, int(round(neck[1] - piv[1])) + P))
-    # her fists over the handle: everything of the original drawing (not the stick) around the hands
-    fist = ndimage.binary_dilation(hand, iterations=14) & al & ~st
-    top_layer = np.asarray(body).copy()
-    top_layer[~fist, 3] = 0
-    out.alpha_composite(Image.fromarray(top_layer, "RGBA"), (P, P))
+    # the weapon is drawn BEHIND her (owner: her face must always show; a mic head swung past her head goes behind
+    # it, as props held behind the body do in the benchmark); her hands are part of the body, so the fists close over
+    # the handle
+    weapon = out
+    # anything of the drawn stick left in the body (outline crumbs, pale pixels) inside the weapon's footprint goes
+    wa = np.asarray(weapon.getchannel("A"))[P:P + body.height, P:P + body.width] > 0
+    bb = np.asarray(body).copy()
+    ci = bb[..., :3].astype(int)
+    pale = (ci.mean(-1) > 140) & (ci[..., 2] > ci[..., 0] + 15)          # stick-coloured (her skin / face is warm)
+    bb[wa & ndimage.binary_dilation(pale, iterations=2) & ~ndimage.binary_dilation(hand, iterations=6)
+       & ~ndimage.binary_dilation(skin_mask(ci), iterations=3), 3] = 0
+    body = Image.fromarray(bb, "RGBA")
+    out = Image.new("RGBA", weapon.size, (0, 0, 0, 0))
+    out.alpha_composite(weapon)
+    out.alpha_composite(body, (P, P))
     return out
 
 
