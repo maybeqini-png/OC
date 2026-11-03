@@ -17,7 +17,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from scipy import ndimage
 
 import mdsprites as MD
@@ -25,6 +25,7 @@ import mdsprites as MD
 SRC = Path(__file__).parent.parent / "art/generated/md_style"
 WEAPON = "w_pawmic_49502"
 HEAD_DIR = {"v3_upper_49702": (0, -1)}         # v3_windup_49702 rejected (stick across her face)
+HEAD_CUT = 500          # sprite rows above this are the mic head (ball, ears, collar)
 LENGTH = 0.46          # weapon length / character height (head of ears to soles)
 
 
@@ -105,40 +106,83 @@ def armed(name, length=LENGTH):
     ys, xs = np.nonzero(al & ~stick)
     centre = np.array([xs.mean(), ys.mean()])
     height = ys.max() - ys.min()
-    # head = the stick end farther from her body centre, unless the pose says otherwise (HEAD_DIR: a direction the
-    # weapon head points to, for poses where the stick crosses her body, e.g. a wind-up behind her back)
-    head, grip = (e1, e2) if np.linalg.norm(e1 - centre) > np.linalg.norm(e2 - centre) else (e2, e1)
+    # grip = where her hands are on the stick: skin pixels hugging the stick axis, projected onto it.
+    # The weapon head goes toward the longer side of the stick from the grip (the swing end), and the handle runs
+    # through her fists with a short pommel showing past them, as in the benchmark (the character's fist wraps the
+    # prop's handle, prop drawn behind the fingers).
+    d = (e2 - e1) / max(1e-6, np.linalg.norm(e2 - e1))
+    nrm = np.array([-d[1], d[0]])
+    yy, xx = np.mgrid[0:a.shape[0], 0:a.shape[1]]
+    rel = np.stack([xx - e1[0], yy - e1[1]], -1).astype(np.float32)
+    t_all, dist = rel @ d, np.abs(rel @ nrm)
+    L = float(np.linalg.norm(e2 - e1))
+    hand = skin_mask(a) & al & (dist < 0.045 * height) & (t_all > -0.1 * L) & (t_all < 1.1 * L)
+    lab, n = ndimage.label(hand)
+    if n:
+        sizes = ndimage.sum(hand, lab, range(1, n + 1))
+        hand = np.isin(lab, [i + 1 for i, z in enumerate(sizes) if z > 60])
+    if hand.any():
+        th = t_all[hand]
+        tg = float(np.clip(th.mean(), 0, L))
+        span = (float(th.min()), float(th.max()))
+    else:
+        tg, span = 0.0, (0.0, 0.0)
+    head_dir = d if (L - tg) >= tg else -d
     if name in HEAD_DIR:
         v = np.array(HEAD_DIR[name], np.float32)
-        head, grip = (e1, e2) if (e1 - e2) @ v > 0 else (e2, e1)
-    # erase the drawn stick
-    st = ndimage.binary_dilation(stick, iterations=3)
+        head_dir = d if d @ v > 0 else -d
+    # stick width including its outline (handle drawn at exactly this width so her fingers fit around it)
+    st = ndimage.binary_dilation(stick, iterations=2)
+    sw = float(np.clip(st.sum() / max(1.0, L), 0.018 * height, 0.05 * height))
     ba[st, 3] = 0
+    # the stick's own outline survives outside the body as thin lines: along the stick line, keep only pixels that
+    # survive a 3 px opening of the alpha (thin lines vanish, body areas stay)
+    strip = (dist < sw / 2 + 8) & (t_all > -0.3 * L) & (t_all < 1.3 * L)
+    opened = ndimage.binary_opening(ba[..., 3] > 0, iterations=3)
+    ba[strip & ~opened, 3] = 0
     body = Image.fromarray(ba, "RGBA")
-    # canonical weapon along grip -> head
+    # weapon = canonical head (sprite above its collar) + handle drawn here at the stick's width
     w, bottom, top = weapon_sprite()
     wl = math.hypot(top[0] - bottom[0], top[1] - bottom[1])
     k = length * height / wl
-    wsc = w.resize((max(1, round(w.width * k)), max(1, round(w.height * k))), Image.Resampling.LANCZOS)
-    bx, by = bottom[0] * k, bottom[1] * k
-    d = head - grip
-    ang = math.degrees(math.atan2(d[0], -d[1]))                # 0 = pointing up
-    pad = int(max(wsc.size) * 1.2)
-    canvas = Image.new("RGBA", (wsc.width + 2 * pad, wsc.height + 2 * pad), (0, 0, 0, 0))
-    canvas.paste(wsc, (pad, pad))
-    piv = (pad + bx, pad + by)
-    rot = canvas.rotate(-ang, Image.Resampling.BICUBIC, center=piv)
-    gx, gy = grip - d / np.linalg.norm(d) * 0.04 * height        # handle end a little past her hand
-    P = 500                                                       # room for the weapon outside the drawing
+    head_img = w.crop((0, 0, w.width, HEAD_CUT))
+    head_img = head_img.resize((max(1, round(head_img.width * k)), max(1, round(head_img.height * k))),
+                               Image.Resampling.LANCZOS)
+    hl = (wl - HEAD_CUT) * k                                    # handle length
+    rear = min(span, key=lambda v: (v - tg) * (1 if head_dir @ d > 0 else -1)) if hand.any() else tg
+    pom = e1 + d * rear - head_dir * 0.05 * height              # pommel just past the rear fist
+    neck = pom + head_dir * hl
+    P = 500
     out = Image.new("RGBA", (body.width + 2 * P, body.height + 2 * P), (0, 0, 0, 0))
     out.alpha_composite(body, (P, P))
-    out.alpha_composite(rot, (int(round(gx - piv[0])) + P, int(round(gy - piv[1])) + P))
-    # fingers back on top (skin near the grip)
-    yy, xx = np.mgrid[0:a.shape[0], 0:a.shape[1]]
-    near = np.hypot(xx - grip[0], yy - grip[1]) < 0.09 * height
-    fing = ndimage.binary_dilation(skin_mask(a) & near & al, iterations=2) & al & ~st
+    # handle: rounded bar, light cyan with a white shine stripe, dark navy outline, a cobalt band at each end
+    S2 = 3
+    lay = Image.new("RGBA", (out.width * S2 // 2, out.height * S2 // 2), (0, 0, 0, 0))
+    dl = ImageDraw.Draw(lay)
+    q = lambda p_: ((p_[0] + P) * S2 / 2, (p_[1] + P) * S2 / 2)
+    nn = np.array([-head_dir[1], head_dir[0]])
+    def bar(p0, p1, half, col):
+        pts = [p0 + nn * half, p1 + nn * half, p1 - nn * half, p0 - nn * half]
+        dl.polygon([q(v) for v in pts], fill=col)
+    hw = sw / 2
+    bar(pom - head_dir * 3, neck, hw, (16, 24, 84, 255))
+    bar(pom - head_dir * 0.5, neck, hw - 3.5, (196, 238, 250, 255))
+    bar(pom - head_dir * 0.5, neck, hw * 0.25, (240, 252, 255, 255))
+    for c0 in (0.0, 0.86):
+        bar(pom + head_dir * hl * c0, pom + head_dir * hl * (c0 + 0.1), hw - 3.5, (70, 110, 200, 255))
+    out.alpha_composite(lay.resize(out.size, Image.Resampling.LANCZOS))
+    # head on top of the neck
+    ang = math.degrees(math.atan2(head_dir[0], -head_dir[1]))
+    pad = int(max(head_img.size) * 1.2)
+    canvas = Image.new("RGBA", (head_img.width + 2 * pad, head_img.height + 2 * pad), (0, 0, 0, 0))
+    canvas.paste(head_img, (pad, pad))
+    piv = (pad + bottom[0] * k, pad + head_img.height - 2)
+    rot = canvas.rotate(-ang, Image.Resampling.BICUBIC, center=piv)
+    out.alpha_composite(rot, (int(round(neck[0] - piv[0])) + P, int(round(neck[1] - piv[1])) + P))
+    # her fists over the handle: everything of the original drawing (not the stick) around the hands
+    fist = ndimage.binary_dilation(hand, iterations=14) & al & ~st
     top_layer = np.asarray(body).copy()
-    top_layer[~fing, 3] = 0
+    top_layer[~fist, 3] = 0
     out.alpha_composite(Image.fromarray(top_layer, "RGBA"), (P, P))
     return out
 
