@@ -317,3 +317,13 @@ for the sprites; the sprite list is set after the pixel test.
    sleeping-cat chest patch on the sprites; 2-3 frame idle and hit animations; then extend the stage to the whole
    song (0-178.6 s) with the remaining gags, and 9:16 versions for the 3 Shorts. Never send or write keys: the
    proxy injects auth headers for the allowed hosts.
+
+### XIYIN in-game look and loadout (2026-11-03)
+- One look in every game frame: sheet colours (`pixel/mdrecolor.py`), one canonical eye (`pixel/mdeyes.py`), faces
+  fitted to each head by a light V5 redraw with face-only transplant (`pixel/mdface.py`), clean dark outlines
+  (cut-out with a 1 px band). Eye height is the scale key, so her head is the same size in every frame.
+- Loadout changes through the PV, as in Muse Dash (`pixel/mdgame.LOADOUT`): unarmed sleeve punches and kicks in the
+  opening stages; the paw mic from the first chorus (55.61 s) through the night stage; put away for the screenshot
+  gag, the sulky twilight and the eerie climb (83.5-125.8 s); back for the Fever finale (125.8 s). The mic pops in /
+  out with a sparkle. Armed she carries the one canonical mic while running and jumping, and each hit cycles through
+  the armed pose drawings (`pixel/mdrunner.armed_strike`).

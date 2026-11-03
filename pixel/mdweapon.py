@@ -27,6 +27,7 @@ WEAPON = "w_pawmic_49502"
 HEAD_DIR = {"v3_upper_49702": (0, -1)}         # v3_windup_49702 rejected (stick across her face)
 HEAD_CUT = 500          # sprite rows above this are the mic head (ball, ears, collar)
 LENGTH = 0.46          # weapon length / character height (head of ears to soles)
+INFO = {}              # per armed drawing: feet row, body anchor x, body height (filled by armed())
 
 
 @lru_cache(None)
@@ -38,6 +39,36 @@ def weapon_sprite():
     bottom = (float(xs[ys > ys.max() - 6].mean()), float(ys.max()))
     top = (float(xs[ys < ys.min() + 6].mean()), float(ys.min()))
     return im, bottom, top
+
+
+@lru_cache(None)
+def mic_sprite(length, width):
+    """The paw mic exactly as the armed poses draw it (canonical head + handle bars), vertical, head up, `length` px
+    from pommel to head top, handle `width` px; returns (RGBA, pommel_xy)."""
+    w, bottom, top = weapon_sprite()
+    wl = math.hypot(top[0] - bottom[0], top[1] - bottom[1])
+    k = length / wl
+    head = w.crop((0, 0, w.width, HEAD_CUT))
+    head = head.resize((max(1, round(head.width * k)), max(1, round(head.height * k))), Image.Resampling.LANCZOS)
+    hl = (wl - HEAD_CUT) * k
+    W, H = head.width + 40, int(head.height + hl + 40)
+    cx = bottom[0] * k + 20
+    S2 = 3
+    lay = Image.new("RGBA", (W * S2, H * S2), (0, 0, 0, 0))
+    dl = ImageDraw.Draw(lay)
+    pom_y = H - 20
+    neck_y = pom_y - hl
+    def bar(y0, y1, half, col):
+        dl.rectangle(((cx - half) * S2, y1 * S2, (cx + half) * S2, y0 * S2), fill=col)
+    hw = width / 2
+    bar(pom_y + 3, neck_y, hw, (16, 24, 84, 255))
+    bar(pom_y + 0.5, neck_y, hw - 3.5 * width / 22, (196, 238, 250, 255))
+    bar(pom_y + 0.5, neck_y, hw * 0.25, (240, 252, 255, 255))
+    for c0 in (0.0, 0.86):
+        bar(pom_y - hl * c0, pom_y - hl * (c0 + 0.1), hw - 3.5 * width / 22, (70, 110, 200, 255))
+    out = lay.resize((W, H), Image.Resampling.LANCZOS)
+    out.alpha_composite(head, (int(round(cx - bottom[0] * k)), int(round(neck_y - head.height + 2))))
+    return out, (cx, pom_y)
 
 
 def skin_mask(a):
@@ -98,6 +129,7 @@ def find_stick(a):
     return full, e1 + d * tt.min(), e1 + d * tt.max()
 
 
+@lru_cache(None)
 def armed(name, length=LENGTH, src=None):
     """RGBA drawing (drawing coordinates, cut out) with the canonical weapon in her hands. src: an already
     processed (e.g. recoloured) RGB version of the drawing, else the file."""
@@ -130,7 +162,7 @@ def armed(name, length=LENGTH, src=None):
             if warm[sl][ring].mean() < 0.05:                    # white inside skin (highlights) stays
                 keep_ids.append(i)
     trapped = np.isin(wl, keep_ids)
-    body = MD.cutout(src, crop=False)
+    body = MD.cutout(src, crop=False, band_px=1)   # 1 px band: her dark outline (2-4 px) stays a dark line
     ba = np.asarray(body).copy()
     ba[ndimage.binary_dilation(trapped, iterations=1), 3] = 0     # exact white areas only (her pale skin is warmer)
     # loose bits (impact debris, sparks) are not part of her
@@ -138,6 +170,14 @@ def armed(name, length=LENGTH, src=None):
     if bn > 1:
         bsz = ndimage.sum(ba[..., 3] > 0, bl, range(1, bn + 1))
         ba[np.isin(bl, [i + 1 for i, z in enumerate(bsz) if z < 2500]), 3] = 0
+    # the drawn ground shadow (pale blue, flat, under her feet) goes: the game draws its own
+    pale = (ba[..., 3] > 0) & (ba[..., :3].astype(int).mean(-1) > 140) & \
+        (ba[..., 2].astype(int) > ba[..., 0].astype(int) + 15) & ~stick
+    pl, pn = ndimage.label(pale)
+    for i, sl in enumerate(ndimage.find_objects(pl), 1):
+        h_, w_ = sl[0].stop - sl[0].start, sl[1].stop - sl[1].start
+        if w_ > 3 * h_ and w_ > 80 and sl[0].start > 0.7 * ba.shape[0]:
+            ba[sl][pl[sl] == i, 3] = 0
     al = ba[..., 3] > 0
     ys, xs = np.nonzero(al & ~stick)
     centre = np.array([xs.mean(), ys.mean()])
@@ -229,6 +269,13 @@ def armed(name, length=LENGTH, src=None):
     out = Image.new("RGBA", weapon.size, (0, 0, 0, 0))
     out.alpha_composite(weapon)
     out.alpha_composite(body, (P, P))
+    # body-only measures in `out` coordinates: soles row and the anchor (mean x of her upper body) used by the game
+    bal = np.asarray(body.getchannel("A")) > 128
+    ys_, xs_ = np.nonzero(bal)
+    top = ys_.min()
+    upper = ys_ < top + 0.55 * (ys_.max() - top)
+    INFO[name] = dict(feet=float(ys_.max() + 1 + P), ax=float(xs_[upper].mean() + P), height=float(ys_.max() - top),
+                      length=float(length * height), width=float(sw))
     return out
 
 

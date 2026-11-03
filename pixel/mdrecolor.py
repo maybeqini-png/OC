@@ -46,6 +46,9 @@ SEEDS = {
 }
 
 
+LEGS_Y = {"z_run_49102": 860, "z_punch_49113": 830, "z_air_49123": 870}   # below: socks, soles (drawing px)
+
+
 def _colored(a):
     lum = a[..., :3].mean(-1)
     return (a[..., 2] > a[..., 0] + 30) & (lum >= 28)
@@ -110,7 +113,25 @@ def recolor(name):
     sweater = (region(s["sweater"]) | auto[lab]) & ~hair & ~streak & ~tie
     stripes = sweater & (sat > 120)                       # cuff / collar stripes share a region with the sweater
     sweater &= ~stripes
-    accent = (col & ~hair & ~streak & ~sweater & (sat > 120)) | stripes | tie
+    # every other large hair-blue region above the legs is hair too (the hand-picked seeds missed some bangs, which
+    # kept the take's darker blue): dark ones take the hair tones, big bright ones (cyan underlayer) the hair base,
+    # small bright ones (shine spots) the hair's light tone; below LEGS_Y blue regions are socks / soles
+    idx = np.arange(n + 1)
+    med_l = ndimage.median(a.mean(-1), lab, idx)
+    med_r = ndimage.median(a[..., 0], lab, idx)
+    med_s = ndimage.median(sat, lab, idx)
+    cy = ndimage.mean(yy, lab, idx)
+    thick = ndimage.sum(ndimage.binary_erosion(col, iterations=4), lab, idx)
+    taken = np.zeros(n + 1, bool)
+    taken[np.unique(lab[hair | streak | tie | sweater | stripes])] = True
+    cand = ~taken & (sizes > 300) & (thick > 0.25 * sizes) & (med_r < 90) & (med_s > 50) & (cy < LEGS_Y[name])
+    cand[0] = False
+    shine = cand & (med_l >= 110) & (sizes < 2500)
+    hair |= (cand & (med_l < 110))[lab]
+    streak |= (cand & (med_l >= 110) & (sizes >= 2500))[lab]
+    shine_m = shine[lab]
+    accent = (col & ~hair & ~streak & ~sweater & ~shine_m & (sat > 120)) | stripes | tie
+    _snap(a, shine_m, TONES["hair"][2:])
     _snap(a, hair, TONES["hair"])
     _snap(a, streak, TONES["hair"][:2])
     _snap(a, sweater, TONES["sweater"])

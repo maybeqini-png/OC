@@ -526,8 +526,31 @@ _SP = {}
 
 
 def _anchor(sp):
+    if id(sp) in RN.AX:                      # armed frames: anchor on her body, never on the mic
+        return RN.AX[id(sp)]
     _SP[id(sp)] = sp
     return anchor(id(sp))
+
+
+# ---------------------------------------------------------------- loadout
+# Like a Muse Dash character's loadout, hers changes through the PV and the weapon is not always there: she starts
+# with bare sleeve punches, picks up the paw mic for the first chorus (余裕だもん), puts it away for the screenshot gag
+# and the sulky / eerie stretches, and takes it back for the Fever finale. Stage index -> armed.
+LOADOUT = {0: False, 1: False, 2: True, 3: True, 4: False, 5: False, 6: False, 7: True}
+EQUIP_FX = 0.45                       # sparkle pop at her hand when the mic appears / vanishes (s)
+
+
+def armed_at(t):
+    return LOADOUT.get(ST().stage_at(t), False)
+
+
+def loadout_changes():
+    st = ST()
+    out = []
+    for i, (t0, *_rest) in enumerate(st.STAGES):
+        if i and LOADOUT.get(i) != LOADOUT.get(i - 1):
+            out.append((t0, LOADOUT.get(i)))
+    return out
 
 
 @lru_cache(None)
@@ -553,18 +576,26 @@ def avatar(t):
             return sp, feet, RUN_X - 28 * math.sin(min(1, (g - m) / 0.4) * math.pi), \
                 FLOOR - st.avatar_height(g) * K * 0.5
     h = st.avatar_height(g) * K
+    armed = armed_at(t)
     if st.HOLD[0] <= g < st.HOLD[1] + 0.2:
-        return (*RN.run_at(g), RUN_X, FLOOR)
+        return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
+    ng = na = 0
     for tt, kind in st.chart():
-        if kind == "g" and 0 <= g - tt < 0.13:
+        if kind == "g" and 0 <= g - tt < (0.16 if armed else 0.13):
+            if armed:                     # a different attack drawing on each hit, as in Muse Dash
+                return (*RN.armed_strike(RN.ARMED_GROUND[ng % len(RN.ARMED_GROUND)]), RUN_X + 16, FLOOR)
             return (*RN.strike_frame("punch"), RUN_X + 16, FLOOR)
-        if kind == "a" and 0 <= g - tt < 0.15:
+        if kind == "a" and 0 <= g - tt < (0.18 if armed else 0.15):
+            if armed:
+                return (*RN.armed_strike(RN.ARMED_AIR[na % len(RN.ARMED_AIR)]), RUN_X + 12, FLOOR - h)
             return (*RN.strike_frame("air"), RUN_X + 12, FLOOR - h)
+        ng += kind == "g"
+        na += kind == "a"
     if h > 1:
         rising = any(a <= g < ts[0] for a, b, ts in st.air_runs()) or any(
             k == "gear" and -0.24 < g - tt < 0 for tt, k in st.chart())
-        return (*RN.jump_frame("up" if rising or h > 120 else "down"), RUN_X, FLOOR - h)
-    return (*RN.run_at(g), RUN_X, FLOOR)
+        return (*RN.jump_frame("up" if rising or h > 120 else "down", armed), RUN_X, FLOOR - h)
+    return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
 
 
 @lru_cache(None)
@@ -583,6 +614,9 @@ def draw_avatar(img, t, fever=False):
     if fever:
         FX.afterimages(img, sp, x0, y0, ST().game_time(t))
     img.alpha_composite(sp, (x0, y0))
+    for tc, on in loadout_changes():          # the mic pops into / out of her hand with a sparkle
+        if 0 <= t - tc < EQUIP_FX:
+            burst(img, int(cx + 70), int(fy - 160), t - tc)
 
 
 def fever_trail(img, g):

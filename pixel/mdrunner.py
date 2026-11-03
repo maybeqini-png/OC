@@ -51,10 +51,36 @@ SHIN_D = math.atan2(1046 - 955, 600 - 555)   # shin direction in the drawing
 SX, SY = 6.2, 4.2                 # legs.PATH (pixel avatar units) -> drawing px
 
 
+BACK_HAND = (150, 640, 201, 722)   # hand bounds; edits run in a padded window around it
+   # the run drawing's back hand: a ragged pale smudge past the cuff; the sheet has
+                                   # sleeves past the wrists, so the back sleeve simply ends at its cuff
+
+
 @lru_cache(None)
 def full_rgba(name):
     """Cut-out drawing on its original canvas (drawing coordinates kept)."""
-    return MD.cutout(FC.fix(name), holes=HOLES if name == BODY else (), crop=False)
+    im = MD.cutout(FC.fix(name), holes=HOLES if name == BODY else (), crop=False, band_px=1)
+    if name == BODY:
+        a = np.asarray(im).copy()
+        x0, y0, x1, y1 = BACK_HAND
+        win = (slice(y0 - 30, y1 + 30), slice(x0 - 30, x1 + 30))
+        sub = a[win].astype(int)
+        inbox = np.zeros(sub.shape[:2], bool)
+        inbox[30:-30, 30:-30] = True
+        was = sub[..., 3] > 0
+        sleeve = (sub[..., 2] > sub[..., 0] + 20) & (sub[..., :3].mean(-1) > 60) & was
+        hand = inbox & was & ~ndimage.binary_dilation(sleeve, iterations=2)      # skin, its line art, white cuff
+        keep = was & ~hand
+        keep = ndimage.binary_opening(keep, iterations=1) | (was & ~inbox)
+        # a 3 px dark outline where the hand was cut away, so the cuff end is closed like the rest of her
+        edge = keep & ~ndimage.binary_erosion(keep, iterations=3, border_value=1) & \
+            ndimage.binary_dilation(was & ~keep, iterations=4) & inbox
+        patch = a[win].copy()
+        patch[edge, :3] = LINE
+        patch[..., 3] = np.where(keep, patch[..., 3], 0)
+        a[win] = patch
+        im = Image.fromarray(a, "RGBA")
+    return im
 
 
 @lru_cache(None)
@@ -191,8 +217,78 @@ def _finish(canvas, feet_y):
     return small, feet_y * s - bb[1]
 
 
+# ---------------------------------------------------------------- loadout
+# Like Muse Dash, her loadout changes through the PV (mdgame.LOADOUT): unarmed she fights with sleeve punches and
+# kicks; armed she carries the one canonical paw mic (pixel/mdweapon.py) while running and jumping and every hit is
+# one of the armed pose drawings. Sizes: the eye (pixel/mdeyes.py) is the scale key, so her head is the same size in
+# every frame and the mic has one fixed length on screen.
+HAND = (689.0, 752.0)          # run drawing: front fist (the body layer's arms do not move)
+MIC_DEG = -38                  # carried mic: tilted forward, head up and ahead of her
+AX = {}                        # id(sprite) -> anchor x (body only), read by mdgame so the mic never shifts her
+
+
+def _scale():
+    return HEIGHT / (GROUND - 18)
+
+
+def eye_px():
+    """Her eye height on screen (px) = the scale key for every drawing."""
+    import mdeyes
+    return mdeyes.eye_height(BODY) * _scale()
+
+
 @lru_cache(None)
-def run_frame(i, stride=1.0):
+def mic_len():
+    """Mic length on screen (px), from the armed pose drawings."""
+    import mdeyes
+    import mdweapon as WP
+    WP.armed("v3_windup_49701")
+    h = WP.INFO["v3_windup_49701"]["height"]
+    return WP.LENGTH * h * eye_px() / mdeyes.eye_height("v3_windup_49701")
+
+
+@lru_cache(None)
+def carried_mic():
+    """The paw mic as the armed poses draw it, sized for the run drawing (drawing px), rotated; (img, grip_xy)."""
+    import mdeyes
+    import mdweapon as WP
+    WP.armed("v3_windup_49701")
+    info = WP.INFO["v3_windup_49701"]
+    k = eye_px() / mdeyes.eye_height("v3_windup_49701") / _scale()        # pose drawing px -> run drawing px
+    im, pom = WP.mic_sprite(round(info["length"] * k), round(info["width"] * k))
+    grip = (pom[0], pom[1] - 0.10 * info["length"] * k)                    # fist a little above the pommel
+    pad = int(info["length"] * k)
+    cv = Image.new("RGBA", (im.width + 2 * pad, im.height + 2 * pad), (0, 0, 0, 0))
+    cv.alpha_composite(im, (pad, pad))
+    piv = (grip[0] + pad, grip[1] + pad)
+    return cv.rotate(MIC_DEG, Image.Resampling.BICUBIC, center=piv), piv
+
+
+def _with_mic(canvas, dy):
+    """Wider canvas with the mic in her front fist (drawn under the body layer: her fist wraps the handle)."""
+    mic, piv = carried_mic()
+    extra = 420
+    cv = Image.new("RGBA", (canvas.width + extra, canvas.height), (0, 0, 0, 0))
+    cv.alpha_composite(canvas)
+    cv.alpha_composite(mic, (int(round(HAND[0] - piv[0])), int(round(HAND[1] + dy - piv[1]))))
+    return cv
+
+
+def _body_anchor(canvas):
+    a = np.asarray(canvas.getchannel("A"))
+    rows = np.nonzero(a.any(1))[0]
+    top, bot = rows.min(), rows.max()
+    xs = np.nonzero(a[top: int(top + 0.55 * (bot - top))] > 128)[1]
+    return float(xs.mean())
+
+
+def _register(sprite, ax):
+    AX[id(sprite)] = ax
+    return sprite
+
+
+@lru_cache(None)
+def run_frame(i, stride=1.0, armed=False):
     phase = i / N_PHASE
     bob = 9.0 * math.cos(4 * math.pi * (phase - 0.25))     # lowest at mid-stance, highest in flight
     W, H = 832, 1300
@@ -209,17 +305,24 @@ def run_frame(i, stride=1.0):
         draw_leg(canvas, h, k, a, far)
         place_boot(canvas, a, math.atan2(a[1] - k[1], a[0] - k[0]), far)
     body = warp_hair(body_layer(), phase)
+    if armed:
+        plain = canvas.copy()
+        plain.alpha_composite(body, (0, int(round(bob))))
+        canvas = _with_mic(canvas, int(round(bob)))
     canvas.alpha_composite(body, (0, int(round(bob))))
-    return _finish(canvas, GROUND)
+    sp, feet = _finish(canvas, GROUND)
+    if armed:
+        _register(sp, _body_anchor(plain) * _scale())
+    return sp, feet
 
 
-def run_at(t, speed_scale=1.0):
+def run_at(t, speed_scale=1.0, armed=False):
     i = int((t / BEAT) * N_PHASE) % N_PHASE      # one stride per beat
-    return run_frame(i, round(speed_scale, 1))
+    return run_frame(i, round(speed_scale, 1), armed)
 
 
 @lru_cache(None)
-def jump_frame(kind="up"):
+def jump_frame(kind="up", armed=False):
     """Knees tucked (rising) or legs reaching down (falling)."""
     W, H = 832, 1300
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -233,8 +336,16 @@ def jump_frame(kind="up"):
         kx, ky, ank = legs.ik(hip, ank, L1, L2)
         draw_leg(canvas, hip, (kx, ky), ank, far)
         place_boot(canvas, ank, math.atan2(ank[1] - ky, ank[0] - kx), far)
-    canvas.alpha_composite(warp_hair(body_layer(), 0.3 if kind == "up" else 0.8))
-    return _finish(canvas, GROUND)
+    body = warp_hair(body_layer(), 0.3 if kind == "up" else 0.8)
+    if armed:
+        plain = canvas.copy()
+        plain.alpha_composite(body)
+        canvas = _with_mic(canvas, 0)
+    canvas.alpha_composite(body)
+    sp, feet = _finish(canvas, GROUND)
+    if armed:
+        _register(sp, _body_anchor(plain) * _scale())
+    return sp, feet
 
 
 # strike / air drawings: (take, head height in drawing px measured ear tip to chin, ground shadow colour or None)
@@ -260,12 +371,32 @@ def strike_frame(kind):
     src = FC.fix(name)      # sheet colours + canonical eye + N5-fitted face (pixel/mdface.py)
     if shadow:
         src = _drop_shadow(src, shadow)
-    cut = MD.cutout(src, crop=False)
+    cut = MD.cutout(src, crop=False, band_px=1)
     a = np.asarray(cut.getchannel("A"))
     ground = float(np.nonzero(a.any(1))[0].max()) + 1
     scale = HEAD_RUN / head
     big = cut.resize((round(cut.width * scale), round(cut.height * scale)), Image.Resampling.LANCZOS)
     return _finish(big, ground * scale)
+
+
+ARMED_GROUND = ("v3_smash_49702", "v3_upper_49701", "v3_upper_49702")   # armed hits cycle through these
+ARMED_AIR = ("v3_airslam_49701", "v3_airslam_49702")
+# measured ear-tip-to-chin on screen after the eye scale: these three came out ~10% larger than the run frame
+HEAD_FIX = {"v3_upper_49702": 0.9, "v3_airslam_49701": 0.9, "v3_airslam_49702": 0.9}
+
+
+@lru_cache(None)
+def armed_strike(name):
+    """(sprite, feet row): an armed pose drawing at the runner's scale (same eye = same head size)."""
+    import mdeyes
+    import mdweapon as WP
+    im = WP.armed(name)
+    info = WP.INFO[name]
+    s = eye_px() / mdeyes.eye_height(name) * HEAD_FIX.get(name, 1.0)
+    big = im.resize((round(im.width * s), round(im.height * s)), Image.Resampling.LANCZOS)
+    bb = big.getbbox()
+    sp = big.crop(bb)
+    return _register(sp, info["ax"] * s - bb[0]), info["feet"] * s - bb[1]
 
 
 if __name__ == "__main__" and sys.argv[1] == "sheet":
