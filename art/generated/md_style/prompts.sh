@@ -258,3 +258,39 @@ done
 # keeps the pose; colour harmony NOT solved yet - separately generated frames differ in hair / sweater tone, and
 # neither the colour-only snap nor the colour transfer from the approved run frame makes them match (hair turns
 # near-black or blotchy). h*_ and c_gf* takes kept as a record.
+# ---- on-model pack (2026-11-03). Owner: "keep everything consistent with the original look of my OC; the character
+# consistency is really poor". Research (NovelAI docs, Precise Reference): a full-body neutral standing reference on a
+# plain background at 1024x1536 works best; strength trades likeness against pose freedom. So every frame now uses
+# the OWNER'S SHEET (art/reference/oc_reference_sheet.webp) as Precise Reference (character & style), with tags
+# rewritten from the sheet itself: one flat royal blue hair colour (no cyan underlayer), half-closed smug blue eyes,
+# navy-black sweater with a cobalt diagonal side panel, sailor collar with a cobalt stripe, navy tie with a black cat
+# emblem, light blue sleeping-cat chest patch, striped cuffs with a paw print, dark grey shorts with a cobalt side
+# stripe, black knee socks with a cobalt band and paw print, chunky black boots with blue trim, blue cat ears with
+# white fluff, blue cat tail.
+OC="1girl, solo, chibi, cat girl, blue cat ears, white inner ear fluff, long straight hair, royal blue hair, ahoge, blue cat hairclip, blue eyes, half-closed eyes, smug, oversized navy blue sweater, black sweater, blue side panel, navy sailor collar, blue stripe, navy necktie, cat emblem, light blue cat patch on chest, sleeves past wrists, striped sleeve cuffs, paw print, dark grey shorts, blue side stripe, black kneehighs, blue band, black boots, blue cat tail"
+OCSTY="full body, from side, facing right, clean lineart, cel shading, anime, official art, flat color, white background, simple background"
+OCNEG="cyan hair, light blue hair, gradient hair, two-tone hair, multicolored hair, streaked hair, black hair, purple hair, wide-eyed, thighhighs, pantyhose, skirt, face hidden, hair over face, from behind, back view, text, watermark, signature, multiple views, lowres, blurry, jpeg artifacts, mature, nsfw, motion lines, speed lines, effects, microphone, hammer, thick stick"
+gom() {  # name seed strength tags
+  nai_guard generate --model nai-diffusion-4-5-full --charref art/reference/oc_reference_sheet.webp --charref-mode "character&style" --charref-strength $3 --charref-fidelity 1.0 --prompt "$OC, $STK, $DYN, $FACE, $4, $OCSTY" --negative "$OCNEG" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"
+}
+for st in 0.6 0.85; do
+  gom om${st/./}_run 50001 $st "running, mid stride, holding the stick at her side with one hand, determined smug grin"
+  gom om${st/./}_smash 50001 $st "smashing the stick down onto the ground in front of her, bent forward, head up looking ahead, fierce grin"
+  gom om${st/./}_airslam 50001 $st "jumping, mid-air, stick raised high overhead about to slam down, knees tucked, fierce grin"
+  gom om${st/./}_swing 50001 $st "follow-through of a big horizontal swing, stick swung across in front of her, spinning on one foot, smug"
+done
+# om* result: outfit now on-model (cobalt side panel, sock bands, shorts) but each frame still picks its own
+# proportions and hair saturation. Fix: draw the WHOLE action set in ONE image (a character sheet), so every pose
+# shares one face, one set of proportions and one palette; hair tagged muted blue as on the sheet.
+OC2="${OC/royal blue hair/blue hair, muted dark blue hair, solid color hair}"
+gsheet2() {  # name seed strength tags
+  nai_guard generate --model nai-diffusion-4-5-full --charref art/reference/oc_reference_sheet.webp --charref-mode "character&style" --charref-strength $3 --charref-fidelity 1.0 --prompt "$OC2, character sheet, multiple views, same character, 4 action poses in a row, evenly spaced, each holding a plain straight light blue stick, $4, from side, facing right, face visible, chibi, full body, clean lineart, cel shading, anime, official art, flat color, white background, simple background, no text" --negative "${OCNEG/multiple views, /}, different characters, different outfits, text, letters" --w 1536 --h 1024 --seed $2 --out "$OUT/$1_$2.png"
+}
+for seed in 50101 50102 50103; do
+  gsheet2 sheetA $seed 0.7 "pose 1 running, pose 2 smashing the stick down onto the ground, pose 3 jumping with the stick raised overhead, pose 4 swinging the stick across in front of her"
+done
+# sheetA_50101 = on-model chibi (muted blue hair, cobalt panel, half-closed eyes) but front-facing, weak poses;
+# 50102 / 50103 broken. Step 1: a side-view chibi model of her (neutral standing, plain background) from the owner's
+# sheet; step 2: every action frame from that one chibi model as the Precise Reference.
+gchibi() { nai_guard generate --model nai-diffusion-4-5-full --charref art/reference/oc_reference_sheet.webp --charref-mode "character&style" --charref-strength 0.85 --charref-fidelity 1.0 --prompt "$OC2, chibi, 2.5 heads tall, standing, neutral pose, arms at sides, from side, profile, facing right, face visible, full body, clean lineart, cel shading, anime, official art, flat color, white background, simple background" --negative "$OCNEG" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 50201 50202 50203 50204; do gchibi chibi_model $seed; done
