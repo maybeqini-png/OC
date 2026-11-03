@@ -6,7 +6,7 @@ close-up shoots in with speed lines and rings: fast in, a short slow drift, fast
 same way, rolling back to level. Here, per transition (window p = 0..1):
   0.00-0.30  the old game picture zooms to 1.22 and rolls -7 deg with growing blur; the band sweeps in from the right
   0.22-0.80  band across the screen (tilted -12 deg, stage colour, dots, speed lines, white edges), rings pulse,
-             XIYIN's approved bust (art/generated/vtuber3/final) zips in, drifts, zips out; the scene swaps at 0.5
+             the in-game XIYIN's close-up (closeup()) zips in, drifts, zips out; the scene swaps at 0.5
   0.70-1.00  band exits left; the new picture rolls back from +7 deg and zooms 1.22 -> 1 as the blur clears.
 The game HUD stays steady on top (it is drawn after the whip).
 """
@@ -123,6 +123,70 @@ def _rings(img, cx, cy, u, cols):
         d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=(*c, 220), width=w)
 
 
+CLOSEUPS = Path(__file__).parent.parent / "art/generated/md_style/closeup"
+
+
+def build_guides():
+    """Write the close-up guides (upper-body crops of the game drawings, scaled into 832x1216 on white) and each
+    one's face height in guide px (closeup/faces.json). The V5 sharpening is in closeup/prompts.sh."""
+    import json
+    import mdface as F
+    import mdrunner as MR
+    import mdweapon as WP
+    faces = {}
+    for name in ("z_run_49102", "z_punch_49113", "z_air_49123", "v3_upper_49702", "v3_airslam_49702",
+                 "v3_airslam_49701"):
+        armed = name.startswith("v3_")
+        im, off = (WP.armed(name), 500) if armed else (MR.full_rgba(name), 0)
+        x0, y0, x1, y1 = F.FACES[name]
+        fh, cy = y1 - y0, (y0 + y1) / 2 + off
+        bb = im.getbbox()
+        c = im.crop((bb[0], bb[1], bb[2], int(cy + 1.9 * fh)))
+        c = c.crop(c.getbbox())
+        k = min(780 / c.width, 1160 / c.height)
+        c = c.resize((int(c.width * k), int(c.height * k)), Image.Resampling.LANCZOS)
+        bg = Image.new("RGBA", (832, 1216), (255, 255, 255, 255))
+        top = 1216 - c.height - 8
+        bg.alpha_composite(c, ((832 - c.width) // 2, top))
+        bg.convert("RGB").save(CLOSEUPS / f"guide_{name}.png")
+        cb = im.crop((bb[0], bb[1], bb[2], int(cy + 1.9 * fh))).getbbox()          # crop offset inside c
+        faces[name] = [fh * k, top + (cy - bb[1] - cb[1]) * k]                       # face height, face centre y
+    (CLOSEUPS / "faces.json").write_text(json.dumps(faces, indent=1))
+
+
+@lru_cache(None)
+def closeup(name, face_px):
+    """The in-game XIYIN close-up (closeup/<name>_0.30_63001.png: an upper-body crop of her game drawing in the sheet
+    colours with the canonical eye and, when armed, the one paw mic; sharpened by a light V5 img2img), cut out
+    (including background trapped between hair strands), scaled so her face is face_px tall - the same size in every
+    cut-in. Owner 2026-11-03: the cut-in must show the game character, never the streamer's cam art."""
+    import json
+    src = Image.open(CLOSEUPS / f"{name}_0.30_63001.png").convert("RGB")
+    a = np.asarray(src).astype(int)
+    white = (a.mean(-1) > 246) & (a.max(-1) - a.min(-1) < 12)
+    warm = a[..., 0] > a[..., 2] + 15
+    lab, n = ndimage.label(white)
+    drop = []
+    for i, sl in enumerate(ndimage.find_objects(lab), 1):
+        comp = lab[sl] == i
+        if comp.sum() < 300:
+            continue
+        sl2 = tuple(slice(max(0, q.start - 4), q.stop + 4) for q in sl)
+        comp2 = lab[sl2] == i
+        ring = ndimage.binary_dilation(comp2, iterations=4) & ~comp2
+        if warm[sl2][ring].mean() < 0.05:
+            drop.append(i)
+    im = MD.cutout(src, crop=False, band_px=1)
+    al = np.asarray(im).copy()
+    al[ndimage.binary_dilation(np.isin(lab, drop), iterations=1), 3] = 0
+    im = Image.fromarray(al, "RGBA")
+    bb = im.getbbox()
+    im = im.crop(bb)
+    fh, fcy = json.loads((CLOSEUPS / "faces.json").read_text())[name]
+    k = face_px / fh
+    return im.resize((round(im.width * k), round(im.height * k)), Image.Resampling.LANCZOS), (fcy - bb[1]) * k
+
+
 def cutin(old, new, p, portrait, col, armed=False):
     """Full game picture for transition progress p (old / new = finished game pictures without the HUD)."""
     W, H = old.size
@@ -145,7 +209,12 @@ def cutin(old, new, p, portrait, col, armed=False):
         _rings(layer, W * 0.62 + x_off, H * 0.5, p, [(255, 255, 255), (255, 214, 74), (156, 196, 255)])
         # her close-up: zips in, drifts, zips out (slightly behind the band's motion so it reads as parallax)
         if 0.18 <= p < 0.84:
-            b = bust(portrait, int(H * 0.86), armed)
+            # face 21 % of the screen height; an armed close-up is shrunk just enough that the whole paw mic (her
+            # loadout for the next section) stays on screen, and its face moves down a little
+            b0, f0 = closeup(portrait, 200)
+            fy_ = 0.45 if f0 / 200 * H * 0.21 < H * 0.42 else 0.52
+            face = min(0.21 * H, (fy_ * H - 0.03 * H) / (f0 / 200))
+            b, fcy = closeup(portrait, int(face))
             if p < 0.34:
                 bx = W * 1.05 - (W * 1.05 - W * 0.40) * ease_out((p - 0.18) / 0.16)
             elif p < 0.66:
@@ -154,10 +223,20 @@ def cutin(old, new, p, portrait, col, armed=False):
                 bx = W * 0.34 - (W * 0.34 + b.width) * ease_in((p - 0.66) / 0.18)
             br = b.rotate(-6, Image.Resampling.BICUBIC, expand=True)
             if p < 0.34 or p >= 0.66:                          # smeared while zipping
+                al = ndimage.uniform_filter1d(np.asarray(br.getchannel("A")).astype(np.float32), 37, axis=1)
                 br = whip(br, 1.0, 0, 18).convert("RGBA")
-                br.putalpha(Image.fromarray(ndimage.uniform_filter1d(
-                    np.asarray(b.rotate(-6, Image.Resampling.BICUBIC, expand=True).getchannel("A")).astype(np.float32),
-                    37, axis=1).astype(np.uint8)))
-            layer.alpha_composite(br, (int(bx), int(H - br.height + H * 0.08)))
+                br.putalpha(Image.fromarray(al.astype(np.uint8)))
+            # her face sits at 45 % of the screen height in every cut-in (same face size, same place)
+            by = H * fy_ - (fcy + (br.height - b.height) / 2)
+            # clipped along the band's lower edge like a comic panel (her head may break out over the top edge)
+            cl = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            cl.alpha_composite(br, (int(bx), int(by)))
+            xs = np.arange(W, dtype=np.float32)
+            edge = H / 2 + (H * 0.56 / 2 + 16) / math.cos(math.radians(12)) + (W / 2 + x_off - xs) * \
+                math.tan(math.radians(12))
+            keep = (np.arange(H, dtype=np.float32)[:, None] < edge[None, :]).astype(np.float32)
+            ca = np.asarray(cl).copy()
+            ca[..., 3] = (ca[..., 3] * keep).astype(np.uint8)
+            layer.alpha_composite(Image.fromarray(ca, "RGBA"))
         pic.alpha_composite(layer)
     return pic

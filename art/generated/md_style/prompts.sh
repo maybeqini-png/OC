@@ -301,3 +301,19 @@ for seed in 50201 50202 50203 50204; do gchibi chibi_model $seed; done
 # fixed in code, no new generations: pixel/mdrecolor.recolor_pose snaps hair / sweater / socks / accents to the sheet's
 # measured colours (one flat hair colour, no cyan underlayer; near-black navy sweater and socks; cobalt tie, stripes,
 # soles), pixel/mdweapon.armed lays the one canonical paw mic BEHIND her so her face always shows.
+# ---- bosses v2 (2026-11-03). Owner: "don't forget the main boss and mini-boss; they should match the oppressive vibe
+# of the lyrics, though the track is not heavy overall". The pressure in the lyrics is being laughed at after the
+# stumble (笑ったでしょ / 吹き出しちゃう / わらうな) and the tearful climb, so:
+# mini-boss "The Grinning Chat" (twilight verse): the mocking chat as one huge smirk made of speech bubbles;
+# main boss "Nanakorobi" (final chorus): a red daruma lucky-cat king - a daruma falls and gets back up (七転び八起き),
+# which is the song's 転んだあとが見せ場じゃん. Cute but imposing; darker palette, glowing eyes. Same SOLO style.
+for seed in 62001 62002 62003 62004; do
+  gsolo b2_mini $seed "giant floating boss monster, a huge grinning cat face made of puffy lavender and pink speech bubbles, enormous crescent grin with rows of tiny white fangs, half-closed mocking eyes glowing magenta, small cat ears, little stubby paws covering its mouth as if snickering, small speech bubble clusters orbiting it, dusk purple and peach palette, dark purple outline, cute but menacing, imposing, facing left"
+  gsolo b2_main $seed "giant final boss monster, enormous round red daruma doll shaped lucky cat king, golden crown, one paw raised beckoning, glowing yellow angry eyes with tiny pupils, wide smug fanged grin, black and gold patterns on its round body, paper lantern ornaments, festival rope belt, heavy and imposing, deep red and gold palette, dark maroon outline, cute but menacing, facing left"
+done
+# b2_mini rejected: a round purple grinning ghost with a jagged grin reads too close to an existing franchise
+# creature. Redesign: a tall stack of chat speech bubbles shaped like a smirking cat with a megaphone, warm palette.
+# b2_main pick: 62003 (crown, beckoning paw, glowing eyes, clean belly; 62004 has a glyph on its belly).
+for seed in 62011 62012 62013 62014; do
+  gsolo b3_mini $seed "giant floating boss monster, a tall cat-shaped cloud built from stacked puffy cream and pink chat speech bubbles, two pointed cat ears made of bubbles, sly smirking cat mouth :3 with one small fang, smug half-closed glowing pink eyes, blushing cheeks, holding a big pink megaphone in one stubby paw, tiny heart and dot bubbles floating around it, peach cream and hot pink palette, dark magenta outline, cute but mocking and imposing, facing left"
+done

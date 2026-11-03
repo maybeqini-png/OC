@@ -98,10 +98,13 @@ STAGE_END = [s[0] for s in STAGES[1:]] + [GAME_OUT]
 WIPES = [(26.6, 27.9, 0, 1, "cutin"), (55.17, 55.95, 1, 2, "cutin"), (68.3, 69.1, 2, 3, "cutin"),
          (82.9, 84.0, 3, 4, "cutin"), (96.9, 98.2, 4, 5, "cutin"), (115.9, 116.9, 5, 6, "up"),
          (125.0, 126.6, 6, 7, "cutin")]
-# Muse Dash-style character cut-ins (pixel/mdcutin.py): her approved bust for the lyric, the band in the new stage's
+# Muse Dash-style character cut-ins (pixel/mdcutin.py): her in-game close-up, the band in the new stage's
 # colour. The eerie climb keeps its slow rise ("up").
-CUTINS = {0: ("smug", (255, 150, 120)), 1: ("happy", (255, 110, 180)), 2: ("wink", (120, 110, 230)),
-          3: ("sing", (255, 130, 200)), 4: ("pout", (150, 120, 220)), 6: ("smug", (255, 160, 80))}
+CUTINS = {0: ("z_run_49102", (255, 150, 120)), 1: ("v3_upper_49702", (255, 110, 180)),
+          2: ("v3_airslam_49702", (120, 110, 230)), 3: ("z_punch_49113", (255, 130, 200)),
+          4: ("z_air_49123", (150, 120, 220)), 6: ("v3_airslam_49701", (255, 160, 80))}
+# The close-up is the in-game XIYIN (her game drawings, holding the paw mic when the next section is armed); the
+# streamer appears only in the cam box (owner 2026-11-03: the stream-cam bust inside the game mixed the two).
 # 6 -> 7 (climb -> festival) was a curtain; it is a cut-in now because she takes the mic back there and a loadout
 # change must happen behind a full-screen close-up (a curtain only covers the background, she ran in front of it).
 
