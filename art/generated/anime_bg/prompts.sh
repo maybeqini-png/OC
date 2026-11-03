@@ -112,3 +112,12 @@ for s in 9991 9992 9993 9994; do
   gv v_climb $s "a towering spiral staircase of black and white piano keys twisting up through a dark storm, a huge glowing cat-eye moon splitting the clouds at the top, lightning made of music notes, a navy ribbon whipping in the wind, deep indigo and crimson sky, golden light bursting from above"
   gv v_vortex $s "a vortex of falling piano keys and music notes spiraling into the sky, a giant cat silhouette made of stars watching from above with glowing eyes, a crescent moon, swirling dark violet and midnight blue clouds, shafts of golden light, a navy ribbon"
 done
+# 2026-11-03 OWNER: "I want the eyes to bleed tears, make it more exaggerated, but keep it from looking AI-generated."
+# Stylized (not gory) crimson tears; flatter, more graphic finish: few colours, hard-edged shapes, no gloss / texture.
+NEGT2="text, watermark, signature, logo, letters, words, numbers, humans, 1girl, 1boy, person, character, realistic, photo, 3d, render, neon, cyberpunk, sci-fi, technology, gore, guts, wounds, gradient, glossy, shiny, detailed texture, painterly, airbrush, soft shading, intricate, busy, cluttered, thick lineart, blurry, jpeg artifacts, lowres, nsfw"
+TST="no humans, scenery, 2d game stage background, surreal, eerie, climactic, flat vector graphic, bold flat shapes, hard edges, screen print style, limited palette of 4 colors, black, deep indigo, crimson and cream, strong silhouettes, graphic poster design, symmetrical, vertical, tall image"
+TEAR="a giant black moon with two huge cat eyes at the top of the sky, the eyes weep long streams of crimson tears that run down the whole sky in wavy ribbons, tears dripping onto a spiral staircase of black and white piano keys, crimson drops falling like rain, storm clouds as flat shapes"
+gt() { [ -f "$OUT/$1_$2.png" ] || $NAI generate --model $M --w 704 --h 1472 --seed $2 --prompt "$TEAR, $TST" --negative "$NEGT2" --out "$OUT/$1_$2.png"; }
+gti() { [ -f "$OUT/$1_$2.png" ] || $NAI img2img --model $M --image "$OUT/v_climb_9993.png" --strength $3 --w 704 --h 1472 --seed $2 --prompt "$TEAR, $TST" --negative "$NEGT2" --out "$OUT/$1_$2.png"; }
+for s in 9961 9962 9963; do gt t_climb $s; done
+for s in 9964 9965 9966; do gti t_climb $s 0.6; done
