@@ -817,56 +817,158 @@ def draw_results(hd, t):
 
 
 # ---------------------------------------------------------------- the room and the shutdown screen
-MON = (476, 300, 926, 533)       # the monitor screen on the room plate
+MON = (476, 300, 926, 533)       # bounding box of the drawn monitor screen on the room plate
+# The drawn screen is in slight perspective: corners TL, TR, BR, BL measured on the plate (white screen area).
+SCREEN_Q = ((476, 307), (924, 300), (925, 512), (503, 531))
+_INSET = 0.051                   # inset along the top / bottom edges so the picture is 16:9 (the screen is ~1.98:1)
+BLEED = round(OW / (1 - 2 * _INSET) - OW) // 2   # extra width on each side of a 'wide' monitor picture
+
+
+def _lerp(p, q, t):
+    return (p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t)
+
+
+def screen_inner():
+    tl, tr, br, bl = SCREEN_Q
+    return (_lerp(tl, tr, _INSET), _lerp(tr, tl, _INSET), _lerp(br, bl, _INSET), _lerp(bl, br, _INSET))
+
+
+def screen_view():
+    """16:9 rectangle inscribed in the inner screen (the push-in ends exactly on it)."""
+    tl, tr, br, bl = screen_inner()
+    x0, x1 = max(tl[0], bl[0]) + 1, min(tr[0], br[0]) - 1
+    y0, y1 = max(tl[1], tr[1]) + 1, min(bl[1], br[1]) - 1
+    w, h = x1 - x0, y1 - y0
+    if w / h > 16 / 9:
+        cx, w = (x0 + x1) / 2, h * 16 / 9
+        x0, x1 = cx - w / 2, cx + w / 2
+    else:
+        cy, h = (y0 + y1) / 2, w * 9 / 16
+        y0, y1 = cy - h / 2, cy + h / 2
+    return x0, y0, x1, y1
+
+
+@lru_cache(None)
+def room_base(strips=True):
+    """Room plate; with strips, the parts of the screen beside the 16:9 inner screen are painted in the bezel colour
+    (for 16:9 pictures); a 'wide' picture (BLEED px extra per side) fills the whole screen instead."""
+    room = S.plate("room").copy()
+    if not strips:
+        return room
+    a = np.asarray(room.convert("RGB")).astype(int)
+    bez = tuple(int(v) for v in np.median(a[340:500, 927:933].reshape(-1, 3), 0))
+    tl, tr, br, bl = SCREEN_Q
+    itl, itr, ibr, ibl = screen_inner()
+    big = Image.new("RGBA", (OW * 2, OH * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(big)
+    for poly in ((tl, itl, ibl, bl), (itr, tr, br, ibr)):
+        d.polygon([(2 * x, 2 * y) for x, y in poly], fill=(*bez, 255))
+    room.alpha_composite(big.resize((OW, OH), Image.Resampling.LANCZOS))
+    return room
+
+
+def _persp_coeffs(dst, src):
+    """Coefficients for Image.transform(PERSPECTIVE): maps output points dst[i] to input points src[i]."""
+    A, B = [], []
+    for (x, y), (u, v) in zip(dst, src):
+        A.append([x, y, 1, 0, 0, 0, -u * x, -u * y]); B.append(u)
+        A.append([0, 0, 0, x, y, 1, -v * x, -v * y]); B.append(v)
+    return np.linalg.solve(np.array(A, float), np.array(B, float)).tolist()
+
+
+@lru_cache(None)
+def _glare(w, h):
+    g = Image.new("RGBA", (w, h), (255, 255, 255, 0))
+    ImageDraw.Draw(g).polygon([(w * 0.55, 0), (w * 0.75, 0), (w * 0.45, h), (w * 0.25, h)], fill=(255, 255, 255, 26))
+    return g
 
 
 def room_frame(t, monitor_img, vt_visible=True, push=0.0):
-    """Her room; monitor_img is shown on the monitor; push (0-1) zooms the view into the monitor."""
-    room = S.plate("room").copy()
-    if monitor_img is not None:
-        mw, mh = MON[2] - MON[0], MON[3] - MON[1]
-        shot = monitor_img.resize((mw, int(mw * 9 / 16)), Image.Resampling.LANCZOS)
-        top = (shot.height - mh) // 2
-        room.paste(shot.crop((0, top, mw, top + mh)), MON[:2])
-        glare = Image.new("RGBA", (mw, mh), (255, 255, 255, 0))
-        ImageDraw.Draw(glare).polygon([(mw * 0.55, 0), (mw * 0.75, 0), (mw * 0.45, mh), (mw * 0.25, mh)],
-                                      fill=(255, 255, 255, 26))
-        room.alpha_composite(glare, MON[:2])
+    """Her room; monitor_img (1920x1080) is shown on the monitor; push (0-1) zooms the view into the monitor.
+    The room is cropped and scaled first; the monitor picture is warped once from full resolution onto the screen's
+    real (perspective) quad in output pixels, so it stays sharp; during the last part of the push the quad
+    straightens into the view rectangle, so push = 1 shows exactly the game frame."""
+    wide = monitor_img is not None and monitor_img.width > OW
+    room = room_base(not wide and monitor_img is not None).copy()
     if vt_visible:                                   # her model, waist up, in front of her chair; while the view
         im = vt_image(t, 960)                        # pushes into the monitor she slides out to the right
         slide = int(760 * ease(push)) if push > 0 else 0
         room.alpha_composite(im, (1390 - im.width // 2 + slide, OH - im.height + 70))
-    if push > 0:
-        e = ease(push)
-        x0 = MON[0] * e
-        y0 = MON[1] * e
-        x1 = OW + (MON[2] - OW) * e
-        y1 = y0 + (x1 - x0) * 9 / 16
-        room = room.crop((int(x0), int(y0), int(x1), int(y1))).resize((OW, OH), Image.Resampling.LANCZOS)
+    e = ease(push) if push > 0 else 0.0
+    vx0, vy0, vx1, vy1 = screen_view()
+    x0, y0 = vx0 * e, vy0 * e
+    x1 = OW + (vx1 - OW) * e
+    y1 = y0 + (x1 - x0) * 9 / 16
+    k = OW / (x1 - x0)
+    if e > 0:
+        room = room.crop((int(round(x0)), int(round(y0)), int(round(x1)), int(round(y1)))).resize(
+            (OW, OH), Image.Resampling.LANCZOS)
+    if monitor_img is not None:
+        s_ = ease(max(0.0, (e - 0.55) / 0.45))
+        if wide:                                     # fills the whole screen; its 16:9 middle = the view rect
+            ex = (vx1 - vx0) * BLEED / OW
+            rect = ((vx0 - ex, vy0), (vx1 + ex, vy0), (vx1 + ex, vy1), (vx0 - ex, vy1))
+            base_q = SCREEN_Q
+        else:
+            rect = ((vx0, vy0), (vx1, vy0), (vx1, vy1), (vx0, vy1))
+            base_q = screen_inner()
+        quad = [_lerp(q, r, s_) for q, r in zip(base_q, rect)]
+        cx_ = sum(q[0] for q in quad) / 4
+        cy_ = sum(q[1] for q in quad) / 4
+        quad = [(qx + 1.5 * np.sign(qx - cx_), qy + 1.5 * np.sign(qy - cy_)) for qx, qy in quad]   # close AA seam
+        dst = [((qx - x0) * k, (qy - y0) * k) for qx, qy in quad]
+        shot = monitor_img.convert("RGBA").copy()
+        a_ = np.asarray(shot.convert("RGB")).astype(np.float32)          # screen backing in the picture's edge
+        top, bot = a_[:24].mean((0, 1)), a_[-24:].mean((0, 1))           # colours, so no white shows mid-push
+        scr = [((qx - x0) * k, (qy - y0) * k) for qx, qy in (SCREEN_Q if wide else screen_inner())]
+        ys = [p_[1] for p_ in scr]
+        ya, yb = int(min(ys)) - 4, int(max(ys)) + 4
+        if yb > 0 and ya < OH:
+            ya, yb = max(0, ya), min(OH, yb)
+            u = np.linspace(0, 1, yb - ya)[:, None]
+            grad = (top * (1 - u) + bot * u)[:, None, :] * np.ones((1, OW, 1))
+            m = Image.new("L", (OW * 2, OH * 2), 0)
+            ImageDraw.Draw(m).polygon([(2 * x_, 2 * y_) for x_, y_ in scr], fill=255)
+            m = m.resize((OW, OH), Image.Resampling.LANCZOS).filter(ImageFilter.MaxFilter(5)).crop((0, ya, OW, yb))
+            back = Image.fromarray(grad.astype(np.uint8), "RGB").convert("RGBA")
+            back.putalpha(m)
+            room.alpha_composite(back, (0, ya))
+        shot.alpha_composite(_glare(shot.width, shot.height))
+        src = [(0, 0), (shot.width, 0), (shot.width, shot.height), (0, shot.height)]
+        warped = shot.transform((OW, OH), Image.Transform.PERSPECTIVE, _persp_coeffs(dst, src),
+                                Image.Resampling.BICUBIC, fillcolor=(0, 0, 0, 0))
+        room.alpha_composite(warped)
     return room
 
 
 @lru_cache(None)
 def title_screen():
-    """The game's title screen (as shown on her monitor before she starts)."""
-    hd = S.plate_view("sky", 0.06).copy()
-    px = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    B.draw_ground(px, lambda x: "roof", 0, GROUND)
-    B.draw_word(px, "PAW DASH!", W // 2, 170, 7, "white", 10, 0)
-    put_text(px, "~ RHYTHM RUNNER ~", "ps", (W // 2, 250), COBALT, outline=WHITE, scale=2, anchor="mt")
-    sp = AV.run_frame(0)
-    px.alpha_composite(sp, (RUN_X - sp.width // 2, GROUND - AV.feet_of(sp)))
-    hd.alpha_composite(px.resize((OW, OH), Image.Resampling.NEAREST))
+    """The game's title screen in the HD game style, rendered BLEED px wider on each side so it fills the monitor's
+    whole (wider than 16:9) screen; its middle 1920 px are framed exactly like the game."""
+    WT = OW + 2 * BLEED
+    p = MG.hazed("sky")
+    x = int(round((p.width - OW) * 0.06)) - BLEED
+    x = max(0, min(p.width - WT, x))
+    hd = p.crop((x, p.height - OH, x + WT, p.height)).copy()
+    for off in (0, WT - OW):                         # floor in two passes; stripe phase continues across them
+        lay = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
+        MG.draw_floor(lay, lambda x_: "roof", off / MG.K)
+        hd.alpha_composite(lay, (off, 0))
+    sp, feet = MG.RN.run_frame(0)
+    hd.alpha_composite(sp, (BLEED + MG.RUN_X - sp.width // 2, int(MG.FLOOR - feet)))
+    title = MG.FX.banded_text("PAW DASH!", 150, "blue")
+    hd.alpha_composite(title, ((WT - title.width) // 2, 150))
+    sub = MG.text_img("~ RHYTHM RUNNER ~", 40, (60, 109, 240), WHITE, 7)
+    hd.alpha_composite(sub, ((WT - sub.width) // 2, 150 + title.height - 10))
     return hd
 
 
 def title_frame(t):
     hd = title_screen().copy()
     if int(t * 2) % 2 == 0 or t > 9.98:
-        px = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        put_text(px, "PRESS START" if t < 9.98 else "START!", "ps", (W // 2, 330), LEMON if t > 9.98 else WHITE,
-                 outline=INK, scale=3, anchor="mt")
-        hd.alpha_composite(px.resize((OW, OH), Image.Resampling.NEAREST))
+        txt = "PRESS START" if t < 9.98 else "START!"
+        im = MG.text_img(txt, 56, LEMON if t > 9.98 else WHITE, (40, 50, 110), 8)
+        hd.alpha_composite(im, ((hd.width - im.width) // 2, 640))
     return hd
 
 
