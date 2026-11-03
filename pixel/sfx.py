@@ -275,6 +275,27 @@ def build(t0, t1, ST):
     tr.add(ST.CLEAR_T, ting(0.75), 0.3)
     tr.add(ST.CLEAR_T + 0.09, ting(1.0), 0.3)
     tr.add(ST.CLEAR_T + 0.18, ting(1.335), 0.3)
+    # bosses (pixel/mdboss.py): riser under WARNING, low drone while it is up, heavy thuds for the daruma's landing
+    # and its last fall, whoosh + burst on each defeat; whooshes on the stage cut-ins (pixel/mdcutin.py)
+    import mdboss
+    for key, b in mdboss.BOSSES.items():
+        hits, throws, dead = mdboss.timeline(key)
+        tr.add(b["warn"], riser(b["enter"] - b["warn"] + 0.2, 21), 0.18)
+        tr.add(b["enter"], drone(dead - b["enter"] + 0.8, 22), 0.10)
+        if b["ground"]:
+            tr.add(b["enter"] + 0.32, drum_hit("forte", 0.5, 4), 0.7)
+            tr.add(b["enter"] + 0.32, clip("oga/squishsplat_impact.mp3"), 0.2, 0.6)
+            tr.add(dead + 0.75, drum_hit("forte", 0.55, 5), 0.6)
+        else:
+            tr.add(b["enter"], whoosh(0.5, 400, 5000, 23), 0.16)
+            tr.add(dead, whoosh(0.5, 3000, 400, 24), 0.16)
+        tr.add(dead + (0.95 if b["ground"] else 0.5), drum_hit("forte", 0.7, 2), 0.6)
+        for k in range(3):
+            tr.add(dead + (0.95 if b["ground"] else 0.5) + 0.08 * k, ting(1.0 + 0.25 * k), 0.16)
+    for t0, t1, i, j, kind in ST.WIPES:
+        if kind == "cutin":
+            tr.add(t0 + 0.12 * (t1 - t0), whoosh(0.35, 600, 7000, 25), 0.16)
+            tr.add(t0 + 0.66 * (t1 - t0), whoosh(0.35, 6000, 600, 26), 0.12)
     # monitor push-in / pull-out, PC shutdown
     tr.add(10.6, whoosh(1.3, 200, 3000, 12), 0.16)
     tr.add(ST.GAME_OUT, whoosh(0.9, 3000, 300, 13)[::-1].copy(), 0.14)

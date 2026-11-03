@@ -327,3 +327,12 @@ for the sprites; the sprite list is set after the pixel test.
   gag, the sulky twilight and the eerie climb (83.5-125.8 s); back for the Fever finale (125.8 s). The mic pops in /
   out with a sparkle. Armed she carries the one canonical mic while running and jumping, and each hit cycles through
   the armed pose drawings (`pixel/mdrunner.armed_strike`).
+- Stage cut-ins (`pixel/mdcutin.py`, Muse Dash-style whip: zoom, roll, motion blur, a tilted polka-dot band, rings,
+  speed lines) show the **in-game** XIYIN close-up (her game drawings, paw mic when the next section is armed); the
+  streamer appears only in the cam box. Her body always runs off the bottom of the screen. Loadout swaps happen only
+  behind a cut-in (Muse Dash never swaps a weapon mid-run).
+- Bosses (`pixel/mdboss.py`): mini-boss ニヤニヤチャット "THE GRINNING CHAT" in the twilight verse (101.5-115.8 s),
+  main boss ナナコロビ大王 "NANAKOROBI THE DARUMA KING" in the final chorus (126.6-146 s). WARNING band, entrance,
+  enemies thrown out of the boss, flinch on hits, name plate + HP bar, dimmed stage with a vignette breathing on the
+  beat, stronger shake; the chat deflates in a spin, the daruma topples, bounces upright once (七転び八起き) and
+  bursts. Boss sounds (riser, drone, thuds) sit under the song (`pixel/sfx.py`).
