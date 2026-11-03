@@ -1,6 +1,7 @@
 """XIYIN's HD in-game runner (Muse Dash-like game layer at 1080p), facing right.
 
-Colours are snapped to the owner's sheet first (pixel/mdrecolor.py).
+Colours are snapped to the owner's sheet first (pixel/mdrecolor.py), then the eyes are replaced by the one canonical
+eye matching the sheet and the stream-cam portrait (pixel/mdeyes.py).
 Run cycle = one V5 body drawing (art/generated/md_style/z_run_49102) on rigged legs, like the approved pixel avatar
 (pixel/avatar.py + legs.py), so every frame is the same drawing and nothing flickers between frames:
 - the drawing is cut out of its white background (pixel/mdsprites.cutout, plus the background trapped between two
@@ -24,6 +25,7 @@ from PIL import Image
 from scipy import ndimage
 
 import legs
+import mdeyes as EY
 import mdrecolor as RC
 import mdsprites as MD
 
@@ -52,7 +54,7 @@ SX, SY = 6.2, 4.2                 # legs.PATH (pixel avatar units) -> drawing px
 @lru_cache(None)
 def full_rgba(name):
     """Cut-out drawing on its original canvas (drawing coordinates kept)."""
-    return MD.cutout(RC.recolor(name), holes=HOLES if name == BODY else (), crop=False)
+    return MD.cutout(EY.fix(name, RC.recolor(name)), holes=HOLES if name == BODY else (), crop=False)
 
 
 @lru_cache(None)
@@ -255,7 +257,7 @@ def _drop_shadow(im, col):
 def strike_frame(kind):
     """(sprite, feet row): a whole strike drawing at the run body's head size."""
     name, head, shadow = STRIKES[kind]
-    src = RC.recolor(name)
+    src = EY.fix(name, RC.recolor(name))      # canonical eyes (pixel/mdeyes.py)
     if shadow:
         src = _drop_shadow(src, shadow)
     cut = MD.cutout(src, crop=False)
