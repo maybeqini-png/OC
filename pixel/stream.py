@@ -95,9 +95,13 @@ def cam_x(t):
 STAGES = [(GAME_IN, "sky", "roof"), (27.38, "sunset", "street"), (55.61, "pop", "checker"), (68.7, "night", "night"),
           (83.5, "pinkpop", "pink"), (97.6, "twilight", "stone"), (116.55, "climb", "blood"), (125.8, "festival", "wood")]
 STAGE_END = [s[0] for s in STAGES[1:]] + [GAME_OUT]
-WIPES = [(26.6, 27.9, 0, 1, "diag"), (55.17, 55.95, 1, 2, "center"), (68.3, 69.1, 2, 3, "center"),
-         (82.9, 84.0, 3, 4, "diag"), (96.9, 98.2, 4, 5, "diag"), (115.9, 116.9, 5, 6, "up"),
+WIPES = [(26.6, 27.9, 0, 1, "cutin"), (55.17, 55.95, 1, 2, "cutin"), (68.3, 69.1, 2, 3, "cutin"),
+         (82.9, 84.0, 3, 4, "cutin"), (96.9, 98.2, 4, 5, "cutin"), (115.9, 116.9, 5, 6, "up"),
          (125.0, 126.6, 6, 7, "curtain")]
+# Muse Dash-style character cut-ins (pixel/mdcutin.py): her approved bust for the lyric, the band in the new stage's
+# colour. The eerie climb keeps its slow rise ("up") and the festival its curtain.
+CUTINS = {0: ("smug", (255, 150, 120)), 1: ("happy", (255, 110, 180)), 2: ("wink", (120, 110, 230)),
+          3: ("sing", (255, 130, 200)), 4: ("pout", (150, 120, 220))}
 
 
 def stage_at(t):
@@ -123,6 +127,8 @@ def stage_plate(i, t):
 
 def game_background(t):
     for t0, t1, i, j, kind in WIPES:
+        if t0 <= t < t1 and kind == "cutin":          # the cut-in swaps the stage behind its band (game_frame)
+            return stage_plate(i if (t - t0) / (t1 - t0) < 0.5 else j, t)
         if t0 <= t < t1:
             p = (t - t0) / (t1 - t0)
             a, b = stage_plate(i, t), stage_plate(j, t)
@@ -135,6 +141,9 @@ def game_background(t):
 
 def ground_style_at(t):
     for t0, t1, i, j, kind in WIPES:
+        if t0 <= t < t1 and kind == "cutin":
+            st_ = STAGES[i if (t - t0) / (t1 - t0) < 0.5 else j][2]
+            return lambda x, st_=st_: st_
         if t0 <= t < t1 and kind != "curtain":
             p = (t - t0) / (t1 - t0)
             a, b = STAGES[i][2], STAGES[j][2]
@@ -253,24 +262,39 @@ def air_runs():
         cur.append(t)
     if cur:
         runs.append(cur)
-    return tuple((r[0] - 0.14, r[-1] + 0.42, tuple(r)) for r in runs)
+    grounds = [t for t, k in chart() if k in ("g", "gear", "gear_miss")]
+    out = []
+    for r in runs:
+        end = r[-1] + AIR_HANG + AIR_DROP
+        nxt = [t for t in grounds if t > r[-1]]
+        if nxt and nxt[0] < end:                     # a ground note right after: drop so she lands on it
+            end = max(r[-1] + 0.05 + AIR_DROP, nxt[0])
+        out.append((r[0] - AIR_UP - 0.02, end, tuple(r)))
+    return tuple(out)
+
+
+# Muse Dash timing (official trailer, 30 fps, studied frame by frame): she snaps to the air lane in 2-3 frames,
+# hangs there with a slight bob while the air notes come, and drops back in 2-3 frames right after the last one,
+# landing in a dust puff; no slow parabolic float.
+AIR_UP, AIR_HANG, AIR_DROP, AIR_TOP = 0.08, 0.16, 0.09, 120
 
 
 def avatar_height(t):
     """Height above the ground: air-lane hops and gear jumps."""
     for a, b, ts in air_runs():
         if a <= t < b:
-            up, top = 0.14, 120
-            if t < ts[0]:
-                return top * ease((t - a) / up)
-            if t > ts[-1] + 0.12:
-                u = (t - ts[-1] - 0.12) / (b - ts[-1] - 0.12)
-                return top * (1 - u * u)
-            return top
+            if t < a + AIR_UP:
+                u = (t - a) / AIR_UP
+                return AIR_TOP * (1 - (1 - u) ** 3)                       # snap up, ease out
+            bob = lambda x: 5 * math.sin(2 * math.pi * (x - a - AIR_UP) / BEAT)   # 0 when she arrives
+            if t > b - AIR_DROP:
+                u = min(1.0, (t - (b - AIR_DROP)) / AIR_DROP)
+                return (AIR_TOP + bob(b - AIR_DROP)) * (1 - u * u)        # drop, ease in
+            return AIR_TOP + bob(t)                                      # hover bob
     for tg, k in chart():
         if k == "gear" and abs(t - tg) < 0.24:
             u = (t - tg + 0.24) / 0.48
-            return 105 * 4 * u * (1 - u)          # clears the HD saws (about 150 px) with room to spare
+            return 112 * (1 - abs(2 * u - 1) ** 2.6)  # quick rise, hang over the saw, quick drop
     return 0.0
 
 
@@ -1050,8 +1074,27 @@ def shutdown_frame(t):
 
 
 # ---------------------------------------------------------------- frame
+def cutin_at(t):
+    g = game_time(t)
+    for k, (t0, t1, i, j, kind) in enumerate(WIPES):
+        if kind == "cutin" and t0 <= g < t1:
+            return (g - t0) / (t1 - t0), i, j, CUTINS[i]
+    return None
+
+
 def game_frame(t):
     """The game picture (HD): hazed stage plate + the HD game layer (pixel/mdgame.py)."""
+    ci = cutin_at(t)
+    if ci and not PAUSE[0] <= t < PAUSE[1]:            # whip cut-in: both pictures whip, the HUD stays steady
+        import mdcutin
+        p, i, j, (portrait, col) = ci
+        layer = MG.game_layer(t, hud=False)
+        old, new = stage_plate(i, game_time(t)).copy(), stage_plate(j, game_time(t)).copy()
+        old.alpha_composite(layer)
+        new.alpha_composite(layer)
+        hd = mdcutin.cutin(old, new, p, portrait, col)
+        MG.draw_hud(hd, game_time(t))
+        return hd
     hd = game_background(game_time(t)).copy()
     layer = frozen_game() if PAUSE[0] <= t < PAUSE[1] else MG.game_layer(t)
     fade = 1 - ease((t - CLEAR_T - 0.4) / 0.5)          # the result screen replaces the game

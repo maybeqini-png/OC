@@ -140,3 +140,18 @@ floats behind her shoulder and only adds a passive effect. XIYIN takes (N5, 0 An
 mic used as a hammer, paw-print grille, cat ears), w_pawhammer (squeaky paw hammer), w_cattail (cat-tail star wand);
 companions c_sleepcat (sleepy cat spirit on a cloud, wings, nightcap - echoes her sleeping-cat chest patch) and
 c_catdrone (cat-head drone; more techy); wx_swing = XIYIN holding the paw mic, to test drawing her with the weapon.
+
+## Motion and transitions (2026-11-03)
+Owner: "the transitions and movements feel a bit stiff". Official trailer studied frame by frame at 30 fps
+(11.5-14.5 s, 60-61.6 s): poses snap instead of floating; she reaches the air lane and drops back in 2-3 frames and
+hangs in the lane with a slight bob; a ground note right after air notes pulls her straight down onto it; landings
+kick up dust puffs; each hit lunges toward the enemy with a 1-2 frame smear and she is straight back to running;
+scene changes whip (zoom, roll, motion blur) behind a tilted band with the character's big close-up, rings and
+speed lines (fast in, short drift, fast out). Game-feel guides (smear / squash-stretch / hit-stop articles): smear
+1-2 frames, squash-stretch 2-4 frames, hits settle within about 5 frames.
+PV (`pixel/stream.py` avatar_height / air_runs, `pixel/mdgame.py` motion / draw_avatar, `pixel/mdcutin.py`):
+air lane up 0.08 s / drop 0.09 s with a 5 px hover bob; drop lands exactly on a following ground note; saw jumps
+rise fast, hang, drop fast; take-off stretch, landing squash with ring and dust; hits lunge 38 px with a 7 deg lean
+and a stretch that settle in 0.12 s, two smear ghosts for 2 frames; the first five stage changes are character
+cut-ins with her approved busts (smug, happy, wink, sing, pout), the HUD steady on top; the climb keeps its slow
+rise and the festival its curtain.

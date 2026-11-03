@@ -581,11 +581,11 @@ def avatar(t):
         return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
     ng = na = 0
     for tt, kind in st.chart():
-        if kind == "g" and 0 <= g - tt < (0.16 if armed else 0.13):
+        if kind == "g" and 0 <= g - tt < STRIKE_HOLD["g"][armed]:
             if armed:                     # a different attack drawing on each hit, as in Muse Dash
                 return (*RN.armed_strike(RN.ARMED_GROUND[ng % len(RN.ARMED_GROUND)]), RUN_X + 16, FLOOR)
             return (*RN.strike_frame("punch"), RUN_X + 16, FLOOR)
-        if kind == "a" and 0 <= g - tt < (0.18 if armed else 0.15):
+        if kind == "a" and 0 <= g - tt < STRIKE_HOLD["a"][armed]:
             if armed:
                 return (*RN.armed_strike(RN.ARMED_AIR[na % len(RN.ARMED_AIR)]), RUN_X + 12, FLOOR - h)
             return (*RN.strike_frame("air"), RUN_X + 12, FLOOR - h)
@@ -605,15 +605,106 @@ def shadow_img(w):
     return _ss(w, 18, dr)
 
 
+# ---------------------------------------------------------------- motion (Muse Dash feel)
+# Studied frame by frame on the official trailer (30 fps): poses snap rather than float; every hit lunges toward the
+# enemy with a lean and a stretch, smeared for 1-2 frames, then she is straight back to running; she snaps to the
+# air lane and back in 2-3 frames; landings squash and kick up dust puffs. Timings from game-feel guides: squash /
+# stretch 2-4 frames, smear 1-2 frames, hit lunge settles within about 5 frames.
+STRIKE_HOLD = {"g": (0.13, 0.16), "a": (0.15, 0.18)}     # (unarmed, armed) seconds
+
+
+def strike_at(t):
+    """(kind, age) of the hit pose showing at song time t, or (None, 0)."""
+    st = ST()
+    g = st.game_time(t)
+    armed = armed_at(t)
+    for tt, kind in st.chart():
+        if kind in STRIKE_HOLD and 0 <= g - tt < STRIKE_HOLD[kind][armed]:
+            return kind, g - tt
+    return None, 0.0
+
+
+def edge_age(g, up):
+    """Seconds since she left the ground (up) / touched down (not up), if within 0.4 s."""
+    st = ST()
+    step = 1 / 120
+    h1 = st.avatar_height(g)
+    for k in range(1, 49):
+        h0 = st.avatar_height(g - k * step)
+        if up and h0 <= 0.5 < h1:
+            return (k - 1) * step
+        if not up and h0 > 0.5 >= h1:
+            return (k - 1) * step
+        h1 = h0
+    return None
+
+
+def _xform(sp, piv, sx, sy, rot):
+    """Scale about the pivot (her feet / anchor) and rotate about it; returns (image, pivot in it)."""
+    w, h = sp.size
+    im = sp.resize((max(1, round(w * sx)), max(1, round(h * sy))), Image.Resampling.BICUBIC)
+    pad = int(max(im.size) * 0.25) + 4
+    cv = Image.new("RGBA", (im.width + 2 * pad, im.height + 2 * pad), (0, 0, 0, 0))
+    cv.alpha_composite(im, (pad, pad))
+    c = (piv[0] * sx + pad, piv[1] * sy + pad)
+    if rot:
+        cv = cv.rotate(rot, Image.Resampling.BICUBIC, center=c)
+    return cv, c
+
+
+def _ghost(sp, col, alpha):
+    a = np.asarray(sp).copy()
+    a[..., :3] = col
+    a[..., 3] = (a[..., 3] * alpha).astype(np.uint8)
+    return Image.fromarray(a, "RGBA")
+
+
+def motion(t):
+    """(sx, sy, rot_deg, dx) for her sprite at song time t."""
+    g = ST().game_time(t)
+    kind, age = strike_at(t)
+    if kind:
+        u = min(1.0, age / 0.12)
+        k = (1 - u) ** 2
+        sx, sy = (1.07, 0.95) if age < 0.034 else (1.0 + 0.02 * k, 1.0)
+        return sx, sy, (-7 if kind == "g" else -4) * k, 38 * k
+    land = edge_age(g, False)
+    if land is not None and land < 0.15:
+        q = 0.15 * (1 - land / 0.15) ** 2 * (1 if land > 0.017 else 0.6)
+        return 1 + 0.8 * q, 1 - q, 0.0, 0.0
+    take = edge_age(g, True)
+    if take is not None and take < 0.09:
+        q = 0.12 * (1 - take / 0.09)
+        return 1 - 0.55 * q, 1 + q, 0.0, 0.0
+    return 1.0, 1.0, 0.0, 0.0
+
+
 def draw_avatar(img, t, fever=False):
+    st = ST()
+    g = st.game_time(t)
     sp, feet, cx, fy = avatar(t)
     air = FLOOR - fy
     put(img, shadow_img(max(60, int(150 - air * 0.3))), cx, FLOOR + 4)
     ax = _anchor(sp)
-    x0, y0 = int(round(cx - ax)), int(round(fy - feet))
+    sx, sy, rot, dx = motion(t)
+    if (sx, sy, rot) != (1.0, 1.0, 0.0):
+        sp, (ax, feet) = _xform(sp, (ax, feet), sx, sy, rot)
+    x0, y0 = int(round(cx + dx - ax)), int(round(fy - feet))
+    kind, age = strike_at(t)
+    if kind and age < 0.07:                                 # 1-2 frame smear behind the lunge
+        for k, (off, col, al) in enumerate(((-30, (255, 255, 255), 0.42), (-62, (200, 236, 255), 0.24))):
+            img.alpha_composite(_ghost(sp, col, al), (x0 + off, y0))
     if fever:
-        FX.afterimages(img, sp, x0, y0, ST().game_time(t))
+        FX.afterimages(img, sp, x0, y0, g)
     img.alpha_composite(sp, (x0, y0))
+    gear_near = any(k_ == "gear" and abs(g - tt) < 0.6 for tt, k_ in st.chart())
+    if not gear_near:                                       # air lane: take-off and landing dust (saws have their own)
+        land, take = edge_age(g, False), edge_age(g, True)
+        if land is not None:
+            FX.ring_flash(img, cx, FLOOR, land)
+            FX.puffs(img, cx - 30, FLOOR - 16, land, int(g * 10), 3, 66)
+        if take is not None:
+            FX.puffs(img, cx - 50, FLOOR - 12, take, int(g * 10) + 1, 2, 54)
     for tc, on in loadout_changes():          # the mic pops into / out of her hand with a sparkle
         if 0 <= t - tc < EQUIP_FX:
             burst(img, int(cx + 70), int(fy - 160), t - tc)
@@ -725,7 +816,7 @@ def hit_shake(g):
     return 0
 
 
-def game_layer(t):
+def game_layer(t, hud=True):
     st = ST()
     g = st.game_time(t)
     img = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
@@ -757,5 +848,6 @@ def game_layer(t):
     if fever and g - st.FEVER_T < 0.6:
         sp, feet, cx, fy = avatar(t)
         FX.radial_burst(img, cx, fy - 140, g - st.FEVER_T)
-    draw_hud(img, g)
+    if hud:
+        draw_hud(img, g)
     return img
