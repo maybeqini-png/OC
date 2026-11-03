@@ -108,3 +108,9 @@ a bell and shimmer on the hold note, a riser + bell on Fever, and in the climb a
 on every beat rising into Fever. Kenney CC0 samples; synthesized whooshes / riser / drone / heartbeat. Pixabay
 answered with a bot check (not bypassed); Mixkit's licence terms could not be read, so it was not used. Mix: the
 song untouched; effects 3-9 dB under it (climb ambience 6.5 dB under); master -14 LUFS.
+Revision (owner: the cute pops / boings "sound like Mario"): Muse Dash's own hit-sound keys (documented by the
+MDMods CustomHitSound mod) are named by musical dynamics - sfx_piano_2, sfx_mezzo_1 (small / medium enemies),
+sfx_forte_2 / sfx_forte_3 (large, hammer) - plus sfx_score (note), sfx_hp (heart), sfx_press_top / sfx_press (hold)
+and char_common_empty_jump: hits are percussion that plays along with the song, not cartoon effects. The PV now
+synthesizes a tight drum-like strike (pitch-dropping body, 1.5-6 kHz crack, click, a trace of a crunch recording)
+at mezzo, forte in Fever; swishes for jumps; short chimes for notes / hearts; hits about 9 dB under the song.

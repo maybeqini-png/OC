@@ -1,10 +1,13 @@
 """Sound-effect and ambience track for the stream PV, mixed UNDER the song (the song itself is never altered).
 
-Benchmark: the official Muse Dash trailer's audio, measured at hits (docs/rhythm_game_style_reference.md): a hit
+Benchmark: Muse Dash names its hit sounds by musical dynamics (sfx_piano_2 / sfx_mezzo_1 / sfx_forte_2/3 for enemy
+sizes, sfx_score for notes, sfx_hp for hearts, sfx_press_top / sfx_press for holds; key list documented by the
+MDMods CustomHitSound mod): hits are percussion that plays along with the music. The official trailer's audio, measured at hits (docs/rhythm_game_style_reference.md): a hit
 adds a sharp mid "snap" (500-2000 Hz rises x2-2.6) plus some top sparkle, sometimes a low thump. So every strike
 here is a short punch body + a bright tick + a glass sparkle on PERFECT, with +-5 % pitch variation per hit.
 
-Sources: Kenney "Impact Sounds" and "Interface Sounds" (CC0, audio/sfx/kenney/, licence files alongside); whooshes,
+Sources: crunch / squish recordings from OpenGameArt (CC0, audio/sfx/oga/) as texture inside the synthesized hits;
+Kenney "Interface Sounds" (CC0, audio/sfx/kenney/) for the pause menu and the PC; whooshes,
 risers, the climb drone and heartbeat are synthesized here (no samples).
 
 Cues (song time, from pixel/stream.py): ground / air strikes, saw jumps (whoosh + PASS chime), misses, note and
@@ -44,19 +47,37 @@ def clip(rel, start=0.0, dur=None):
 
 
 @lru_cache(None)
-def gaji(variant):
-    """The cute crunchy-squishy strike ("gaji"): a crunch transient (bite), a squish-pop body and a high poyon tail,
-    stacked a few ms apart. variant 0-2 use different crunch takes."""
-    crunch = clip(["oga/crunch.1.ogg", "oga/crunch.2.ogg", "oga/crunchybite.ogg"][variant % 3], 0, 0.09)
-    body = clip("oga/squishpop.mp3", 0, 0.16)
-    tail = pitched(clip("jp/pico_poyon.mp3"), 1.35)
-    n = int(0.42 * SR)
-    out = np.zeros(n, np.float32)
-    for snd, at, g in ((crunch, 0.0, 0.85), (body, 0.004, 0.7), (tail, 0.018, 0.45)):
-        i = int(at * SR)
-        m = min(len(snd), n - i)
-        out[i:i + m] += snd[:m] * g
-    return out / max(1e-6, np.abs(out).max())
+def drum_hit(level="mezzo", pitch=1.0, seed=0):
+    """Rhythm-game strike, as Muse Dash's sfx_piano / sfx_mezzo / sfx_forte: a tight percussive hit that sits in
+    the music like a drum - a short tuned body (tom/kick-like pitch drop), a snare-like noise crack (1.5-6 kHz) and a
+    1 ms click; louder levels get more body and a longer crack. A trace of a real crunch recording on top gives the
+    crisp 'gaji' texture without any cartoon boing."""
+    rng = np.random.default_rng(seed)
+    L = {"piano": (0.55, 0.035, 0.6), "mezzo": (0.8, 0.05, 0.8), "forte": (1.0, 0.075, 1.0)}[level]
+    body_g, crack_tau, crunch_g = L
+    n = int(0.22 * SR)
+    t = np.arange(n) / SR
+    f = (190 + 260 * np.exp(-t / 0.012)) * pitch
+    body = np.sin(2 * math.pi * np.cumsum(f) / SR) * np.exp(-t / 0.045) * body_g
+    noise = rng.standard_normal(n).astype(np.float32)
+    crack = _bp(noise, 1500 * pitch, min(SR / 2 - 200, 6000 * pitch)) * np.exp(-t / crack_tau)
+    crack /= max(1e-6, np.abs(crack).max())
+    click = np.zeros(n, np.float32)
+    click[:48] = np.hanning(96)[48:] * (1 if seed % 2 else -1)
+    out = body + 0.75 * crack + 0.5 * click
+    cr = clip(["oga/crunch.1.ogg", "oga/crunch.2.ogg", "oga/crunchybite.ogg"][seed % 3], 0, 0.06)
+    out[:len(cr)] += cr[:n] * 0.35 * crunch_g
+    return (out / max(1e-6, np.abs(out).max())).astype(np.float32)
+
+
+@lru_cache(None)
+def ting(pitch=1.0):
+    """sfx_score-like pickup: a short bright two-partial chime."""
+    n = int(0.35 * SR)
+    t = np.arange(n) / SR
+    s = (np.sin(2 * math.pi * 2093 * pitch * t) + 0.5 * np.sin(2 * math.pi * 3136 * pitch * t)) * np.exp(-t / 0.09)
+    s[:96] *= np.linspace(0, 1, 96)
+    return (s / np.abs(s).max()).astype(np.float32)
 
 
 @lru_cache(None)
@@ -208,37 +229,34 @@ def build(t0, t1, ST):
     hit_n = 0
     for tt, kind in ST.chart():
         st = song_t(tt)
-        if kind in ("g", "a"):                                          # cute crunchy-squishy "gaji" strike
-            tr.add(st, gaji(hit_n), 0.62, jit() * (1.0 if kind == "g" else 1.22))
-            tr.add(st + 0.01, clip("jp/pico_sparkle.mp3"), 0.10, jit() * 1.1)
+        if kind in ("g", "a"):                                          # strike: tight percussive hit (mezzo)
+            lvl = "forte" if st >= ST.FEVER_T else "mezzo"
+            tr.add(st, drum_hit(lvl, 1.0 if kind == "g" else 1.25, hit_n % 6), 0.9, jit())
             if kind == "a":
-                tr.add(st - 0.1, clip("jp/pico_jump.mp3"), 0.22, jit() * 1.2)
+                tr.add(st - 0.1, whoosh(0.16, 1200, 7000, 7), 0.09)      # empty_jump-like swish up
             hit_n += 1
-        elif kind == "gear":                                            # hop over the saw: boing up, PASS twinkle
-            tr.add(st - 0.24, clip("jp/pico_jump.mp3"), 0.32, jit())
-            tr.add(st + 0.03, clip("jp/pico_coin.mp3"), 0.30, jit() * 1.1)
-            tr.add(st + 0.24, clip("jp/pico_poyon.mp3"), 0.30, jit() * 0.9)
-        elif kind in ("gear_miss", "a_miss"):                           # bonk + deflating squish
-            tr.add(st, clip("oga/squishsplat_impact.mp3"), 0.5, 0.9)
-            tr.add(st + 0.03, pitched(clip("jp/pico_poyon.mp3"), 0.6), 0.45)
-        elif kind == "note":
-            tr.add(st, clip("jp/pico_item.mp3"), 0.32, jit() * 1.1)
-        elif kind == "heart":
-            tr.add(st, clip("jp/pico_powerup.mp3"), 0.32)
+        elif kind == "gear":                                            # jump over the saw: swish, soft landing
+            tr.add(st - 0.24, whoosh(0.3, 800, 6000, 3), 0.16)
+            tr.add(st + 0.24, drum_hit("piano", 0.8, 3), 0.18)
+        elif kind in ("gear_miss", "a_miss"):                           # dull thud
+            tr.add(st, drum_hit("forte", 0.55, 5), 0.55)
+            tr.add(st, clip("oga/squishsplat_impact.mp3"), 0.25, 0.8)
+        elif kind == "note":                                            # sfx_score
+            tr.add(st, ting(jit()), 0.20)
+        elif kind == "heart":                                           # sfx_hp
+            tr.add(st, ting(0.8), 0.22)
+            tr.add(st + 0.07, ting(1.0), 0.18)
     h0, h1 = song_t(ST.HOLD[0]), song_t(ST.HOLD[1])                 # hold note
-    tr.add(h0, clip("jp/pico_sparkle.mp3"), 0.28)
-    tr.add(h0, shimmer(h1 - h0), 0.08)
-    k = h0 + 0.25
-    while k < h1:                                                       # little ticks while she holds
-        tr.add(k, clip("jp/pico_tap.mp3"), 0.12, 1.3)
-        k += 0.25
-    tr.add(h1, clip("jp/pico_levelup.mp3"), 0.30)
+    tr.add(h0, drum_hit("mezzo", 1.3, 1), 0.45)                       # sfx_press_top (hold start)
+    tr.add(h0, shimmer(h1 - h0), 0.07)                                  # sfx_press (holding)
+    tr.add(h1, drum_hit("forte", 1.3, 2), 0.5)                          # sfx_press_top (hold end)
+    tr.add(h1, ting(1.0), 0.2)
     # pause menu, ノーカン paw wipes
     tr.add(ST.PAUSE[0], sample("open_001"), 0.35)
     tr.add(ST.PAUSE[1] - 0.15, sample("close_001"), 0.35)
     for a in (46.66, 62.6):
         tr.add(a - 0.4, whoosh(0.3, 700, 5000, 9), 0.14)
-        tr.add(a, clip("jp/pico_popup.mp3"), 0.3)
+        tr.add(a, drum_hit("piano", 1.4, 2), 0.3)
     # climb: drone + heartbeat on every beat + riser into Fever
     c0, c1 = 116.55, ST.FEVER_T
     tr.add(c0, drone(c1 - c0 + 0.3), 0.14)
@@ -250,11 +268,13 @@ def build(t0, t1, ST):
         tr.add(tb + 0.18 * ST.BEAT, heart_thump(0.6), 0.22 + 0.16 * u)
     tr.add(c1 - 2.4, riser(2.4), 0.22)
     # Fever start
-    tr.add(ST.FEVER_T, clip("jp/pico_powerup.mp3"), 0.40)
-    tr.add(ST.FEVER_T, gaji(1), 0.5, 0.8)
+    tr.add(ST.FEVER_T, drum_hit("forte", 0.8, 4), 0.55)
+    tr.add(ST.FEVER_T, whoosh(0.5, 300, 8000, 11), 0.22)
     tr.add(ST.FEVER_T, whoosh(0.5, 300, 8000, 11), 0.22)
     # stage clear
-    tr.add(ST.CLEAR_T, clip("jp/pico_levelup.mp3"), 0.40)
+    tr.add(ST.CLEAR_T, ting(0.75), 0.3)
+    tr.add(ST.CLEAR_T + 0.09, ting(1.0), 0.3)
+    tr.add(ST.CLEAR_T + 0.18, ting(1.335), 0.3)
     # monitor push-in / pull-out, PC shutdown
     tr.add(10.6, whoosh(1.3, 200, 3000, 12), 0.16)
     tr.add(ST.GAME_OUT, whoosh(0.9, 3000, 300, 13)[::-1].copy(), 0.14)
