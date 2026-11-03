@@ -36,7 +36,7 @@ AIR_Y = 560
 GROUND_LANE = FLOOR - 82
 V_E = 1040.0
 
-FAMILY = {"sky": "k", "sunset": "u", "pop": "p", "night": "n", "pinkpop": "p", "twilight": "u", "climb": "k",
+FAMILY = {"sky": "k", "sunset": "u", "pop": "p", "night": "n", "pinkpop": "p", "twilight": "u", "climb": "n",
           "festival": "f"}
 HUB = {"k": 0.52, "u": 0.80, "p": 0.60, "n": 0.36, "f": 0.30}       # saw hub radius (fraction): stays upright
 HAZE = {"sky": ((228, 238, 255), 0.30), "sunset": ((255, 228, 220), 0.28), "pop": ((255, 240, 250), 0.30),
@@ -51,6 +51,7 @@ FLOOR_COL = {   # style: (band, top edge, stripe)
     "pink": ((255, 172, 214), (255, 236, 246), (240, 146, 196)),
     "stone": ((150, 130, 192), (226, 212, 246), (130, 110, 172)),
     "wood": ((190, 122, 92), (252, 216, 172), (166, 102, 76)),
+    "blood": ((40, 6, 16), (150, 20, 36), (64, 10, 24)),
 }
 PINK, PINK_D, LEMON, CYAN, WHITE = (255, 96, 170), (214, 52, 128), (255, 226, 70), (80, 220, 255), (255, 255, 255)
 NOTE_BLUE, HEART_PINK = (72, 140, 255), (255, 92, 142)

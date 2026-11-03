@@ -36,6 +36,7 @@ import avatar as AV
 import vtmotion as VMO
 import blocks as B
 import mdbg as BG
+import mdblood as BLD
 import mdgame as MG
 import scene as S
 from stage import lyrics, put_text, text_mask
@@ -92,7 +93,7 @@ def cam_x(t):
 
 # ---------------------------------------------------------------- stages
 STAGES = [(GAME_IN, "sky", "roof"), (27.38, "sunset", "street"), (55.61, "pop", "checker"), (68.7, "night", "night"),
-          (83.5, "pinkpop", "pink"), (97.6, "twilight", "stone"), (116.55, "climb", "roof"), (125.8, "festival", "wood")]
+          (83.5, "pinkpop", "pink"), (97.6, "twilight", "stone"), (116.55, "climb", "blood"), (125.8, "festival", "wood")]
 STAGE_END = [s[0] for s in STAGES[1:]] + [GAME_OUT]
 WIPES = [(26.6, 27.9, 0, 1, "diag"), (55.17, 55.95, 1, 2, "center"), (68.3, 69.1, 2, 3, "center"),
          (82.9, 84.0, 3, 4, "diag"), (96.9, 98.2, 4, 5, "diag"), (115.9, 116.9, 5, 6, "up"),
@@ -112,7 +113,9 @@ def stage_plate(i, t):
     a, b = STAGES[i][0], STAGE_END[i]
     u = min(1, max(0, (game_time(t) - a) / (b - a)))
     if name == "climb":
-        return MG.plate_view("climb", 0.5, ease(min(1.0, u / 0.72)))   # reach the weeping eyes, then hold
+        v = ease(min(1.0, u / 0.72))                 # reach the weeping eyes, then hold
+        y0 = int(round((MG.hazed("climb").height - OH) * (1 - v)))
+        return BLD.overlay(MG.plate_view("climb", 0.5, v), t, y0, BEAT, PH0)
     if name in BG.THEMES:                            # hand-made abstract stages scroll in parallax with the run
         return BG.view(name, cam_x(game_time(t)) * 2, (game_time(t) - PH0) / BEAT % 1)
     return MG.plate_view(name, 0.06 + 0.88 * u)
@@ -138,7 +141,7 @@ def ground_style_at(t):
             return lambda x, a=a, b=b, p=p, kind=kind: b if bool(S.wipe_reached(kind, p, x * 2 + 30, OH - 90)) else a
     st = STAGES[stage_at(t)][2]
     if 125.0 <= t < 126.6:
-        st = "wood" if t >= 125.8 else "roof"
+        st = "wood" if t >= 125.8 else "blood"
     return lambda x: st
 
 

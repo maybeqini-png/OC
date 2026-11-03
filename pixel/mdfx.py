@@ -42,7 +42,7 @@ PALETTES = {   # per stage: impact core, impact rim, confetti colours, PERFECT b
 PALETTES["pass"] = dict(core=(255, 150, 30), rim=(255, 236, 170), conf=[(255, 170, 40), (255, 210, 80), (255, 120, 60)],
                         bands=[(255, 226, 120), (255, 170, 40), (255, 110, 20)], ext=(120, 50, 40), edge=(255, 255, 255))
 STAGE_PAL = {"sky": "pink", "sunset": "pink", "pop": "pink", "night": "gold", "pinkpop": "pink",
-             "twilight": "gold", "climb": "pink", "festival": "gold"}
+             "twilight": "gold", "climb": "gold", "festival": "gold"}
 
 
 def _ss(w, h, draw, k=3):
