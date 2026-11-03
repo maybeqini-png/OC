@@ -9,6 +9,7 @@ P="1girl, solo, chibi, cat girl, navy blue cat ears, pink inner ear, very long h
 N="half-closed eyes, narrow eyes, cyan hair, purple hair, gradient hair, mature, adult, text, watermark, signature, lowres, blurry, bad anatomy, extra fingers, nsfw, suggestive"
 for f in $OUT/guide_*.png; do
   n=$(basename $f .png); n=${n#guide_}
-  o="$OUT/${n}_${S:-0.30}_63001.png"
-  [ -f "$o" ] || python3 .claude/skills/oc-gen/scripts/nai.py img2img --model $M --image "$f" --strength ${S:-0.30} --seed 63001 --w 832 --h 1216 --prompt "$P" --negative "$N" --out "$o"
+  o="$OUT/${n}_${S:-0.30}_${SEED:-63002}.png"
+  [ -f "$o" ] || python3 .claude/skills/oc-gen/scripts/nai.py img2img --model $M --image "$f" --strength ${S:-0.30} --seed ${SEED:-63002} --w 832 --h 1216 --prompt "$P" --negative "$N" --out "$o"
 done
+# v2 (2026-11-03): crops run 3.4 face heights below the face (owner: the chest-level crop read as an incomplete body); seed 63002; the v1 sharpened files were replaced.

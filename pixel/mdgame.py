@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+import mdboss as BOSS
 import mdfx as FX
 import mdrunner as RN
 import mdsprites as MD
@@ -807,7 +808,11 @@ def draw_combo(img, combo, g):
 
 # ---------------------------------------------------------------- layer
 def hit_shake(g):
-    """Short vertical shake on each strike (4 frames, 7 px, alternating), inside the play area."""
+    """Short vertical shake on each strike (4 frames, 7 px, alternating), inside the play area; the bosses' big
+    moments (landing, throws, defeat) shake harder."""
+    b = BOSS.shake(g)
+    if b:
+        return b
     st = ST()
     for tt, kind in st.chart():
         a = g - tt
@@ -827,12 +832,14 @@ def game_layer(t, hud=True):
         FX.speed_streaks(sky, g)
         img.alpha_composite(sky.crop((0, 0, OW, FLOOR)), (0, 0))
     draw_floor(img, st.ground_style_at(g), st.cam_x(g))
+    BOSS.draw_atmosphere(img, g)                             # boss: oppressive vignette breathing on the beat
     world = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
     rs = int(g * 30) % 30
     put(world, ring(rs), HIT_X + 40, AIR_Y)
     put(world, ring(rs), HIT_X + 40, GROUND_LANE)
     late, texts = [], []
     draw_world(world, g, late, texts)
+    BOSS.draw_boss(world, g)                                 # over the enemies it throws, under her
     if any(k == "gear" and abs(g - tt) < 0.24 for tt, k in st.chart()):          # jump smear over a saw
         ghosts = []
         for k in (3, 2, 1):
@@ -850,4 +857,5 @@ def game_layer(t, hud=True):
         FX.radial_burst(img, cx, fy - 140, g - st.FEVER_T)
     if hud:
         draw_hud(img, g)
+        BOSS.draw_ui(img, g)
     return img

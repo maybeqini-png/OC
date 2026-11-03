@@ -126,6 +126,13 @@ def _rings(img, cx, cy, u, cols):
 CLOSEUPS = Path(__file__).parent.parent / "art/generated/md_style/closeup"
 
 
+DOWN = 3.4      # crop runs this many face heights below the face centre: past the screen bottom in the cut-in
+# framing (face size, face centre y) as fractions of the screen height. Unarmed: big face at 45 %; armed: the face a
+# little smaller and lower so the whole paw mic (3.3-3.7 face heights above her face) stays on screen. Either way her
+# body runs off the bottom of the screen - never cut mid-screen (owner 2026-11-03: "incomplete body").
+FRAME = {False: (0.21, 0.45), True: (0.16, 0.57)}
+
+
 def build_guides():
     """Write the close-up guides (upper-body crops of the game drawings, scaled into 832x1216 on white) and each
     one's face height in guide px (closeup/faces.json). The V5 sharpening is in closeup/prompts.sh."""
@@ -141,7 +148,7 @@ def build_guides():
         x0, y0, x1, y1 = F.FACES[name]
         fh, cy = y1 - y0, (y0 + y1) / 2 + off
         bb = im.getbbox()
-        c = im.crop((bb[0], bb[1], bb[2], int(cy + 1.9 * fh)))
+        c = im.crop((bb[0], bb[1], bb[2], int(cy + DOWN * fh)))
         c = c.crop(c.getbbox())
         k = min(780 / c.width, 1160 / c.height)
         c = c.resize((int(c.width * k), int(c.height * k)), Image.Resampling.LANCZOS)
@@ -149,19 +156,19 @@ def build_guides():
         top = 1216 - c.height - 8
         bg.alpha_composite(c, ((832 - c.width) // 2, top))
         bg.convert("RGB").save(CLOSEUPS / f"guide_{name}.png")
-        cb = im.crop((bb[0], bb[1], bb[2], int(cy + 1.9 * fh))).getbbox()          # crop offset inside c
+        cb = im.crop((bb[0], bb[1], bb[2], int(cy + DOWN * fh))).getbbox()          # crop offset inside c
         faces[name] = [fh * k, top + (cy - bb[1] - cb[1]) * k]                       # face height, face centre y
     (CLOSEUPS / "faces.json").write_text(json.dumps(faces, indent=1))
 
 
 @lru_cache(None)
 def closeup(name, face_px):
-    """The in-game XIYIN close-up (closeup/<name>_0.30_63001.png: an upper-body crop of her game drawing in the sheet
+    """The in-game XIYIN close-up (closeup/<name>_0.30_63002.png: an upper-body crop of her game drawing in the sheet
     colours with the canonical eye and, when armed, the one paw mic; sharpened by a light V5 img2img), cut out
     (including background trapped between hair strands), scaled so her face is face_px tall - the same size in every
     cut-in. Owner 2026-11-03: the cut-in must show the game character, never the streamer's cam art."""
     import json
-    src = Image.open(CLOSEUPS / f"{name}_0.30_63001.png").convert("RGB")
+    src = Image.open(CLOSEUPS / f"{name}_0.30_63002.png").convert("RGB")
     a = np.asarray(src).astype(int)
     white = (a.mean(-1) > 246) & (a.max(-1) - a.min(-1) < 12)
     warm = a[..., 0] > a[..., 2] + 15
@@ -209,12 +216,8 @@ def cutin(old, new, p, portrait, col, armed=False):
         _rings(layer, W * 0.62 + x_off, H * 0.5, p, [(255, 255, 255), (255, 214, 74), (156, 196, 255)])
         # her close-up: zips in, drifts, zips out (slightly behind the band's motion so it reads as parallax)
         if 0.18 <= p < 0.84:
-            # face 21 % of the screen height; an armed close-up is shrunk just enough that the whole paw mic (her
-            # loadout for the next section) stays on screen, and its face moves down a little
-            b0, f0 = closeup(portrait, 200)
-            fy_ = 0.45 if f0 / 200 * H * 0.21 < H * 0.42 else 0.52
-            face = min(0.21 * H, (fy_ * H - 0.03 * H) / (f0 / 200))
-            b, fcy = closeup(portrait, int(face))
+            face, fy_ = FRAME[portrait.startswith("v3_")]
+            b, fcy = closeup(portrait, int(face * H))
             if p < 0.34:
                 bx = W * 1.05 - (W * 1.05 - W * 0.40) * ease_out((p - 0.18) / 0.16)
             elif p < 0.66:
@@ -228,15 +231,6 @@ def cutin(old, new, p, portrait, col, armed=False):
                 br.putalpha(Image.fromarray(al.astype(np.uint8)))
             # her face sits at 45 % of the screen height in every cut-in (same face size, same place)
             by = H * fy_ - (fcy + (br.height - b.height) / 2)
-            # clipped along the band's lower edge like a comic panel (her head may break out over the top edge)
-            cl = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-            cl.alpha_composite(br, (int(bx), int(by)))
-            xs = np.arange(W, dtype=np.float32)
-            edge = H / 2 + (H * 0.56 / 2 + 16) / math.cos(math.radians(12)) + (W / 2 + x_off - xs) * \
-                math.tan(math.radians(12))
-            keep = (np.arange(H, dtype=np.float32)[:, None] < edge[None, :]).astype(np.float32)
-            ca = np.asarray(cl).copy()
-            ca[..., 3] = (ca[..., 3] * keep).astype(np.uint8)
-            layer.alpha_composite(Image.fromarray(ca, "RGBA"))
+            layer.alpha_composite(br, (int(bx), int(by)))
         pic.alpha_composite(layer)
     return pic

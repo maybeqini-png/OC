@@ -317,3 +317,5 @@ done
 for seed in 62011 62012 62013 62014; do
   gsolo b3_mini $seed "giant floating boss monster, a tall cat-shaped cloud built from stacked puffy cream and pink chat speech bubbles, two pointed cat ears made of bubbles, sly smirking cat mouth :3 with one small fang, smug half-closed glowing pink eyes, blushing cheeks, holding a big pink megaphone in one stubby paw, tiny heart and dot bubbles floating around it, peach cream and hot pink palette, dark magenta outline, cute but mocking and imposing, facing left"
 done
+# picks (2026-11-03): mini-boss b3_mini_62011 (smug chat-bubble cloud cat with a megaphone, swirl tail - floats),
+# main boss b2_main_62003. Used by pixel/mdboss.py.
