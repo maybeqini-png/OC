@@ -99,3 +99,8 @@ for s in 9971 9972; do
 done
 # z_* picks shown to the owner (not yet wired into plates/build.sh): sky 9972, sunset 9972, pop 9971, night 9971,
 # pinkpop 9971, twilight 9972, festival 9971 (9972 has lettering on stalls), climb 9972.
+# 2026-11-03 OWNER: y_climb_9951 / 9952 (piano-key staircase to a cat-face moon) "I think this design is great. Do you
+# have anything even better?" -> variations on that design in the same ABS style.
+for s in 9981 9982 9983 9984 9985 9986; do
+  ga w_climb $s 704 1472 "vertical, tall image, a winding staircase of white piano keys spiraling up into a violet starry sky, a giant smiling cat face moon wearing a blue ribbon at the top, falling music notes and little stars, a navy blue ribbon twisting around the stairs, golden and orange clouds at the bottom, magical and grand"
+done
