@@ -25,7 +25,7 @@ from PIL import Image
 from scipy import ndimage
 
 import legs
-import mdeyes as EY
+import mdface as FC
 import mdrecolor as RC
 import mdsprites as MD
 
@@ -54,7 +54,7 @@ SX, SY = 6.2, 4.2                 # legs.PATH (pixel avatar units) -> drawing px
 @lru_cache(None)
 def full_rgba(name):
     """Cut-out drawing on its original canvas (drawing coordinates kept)."""
-    return MD.cutout(EY.fix(name, RC.recolor(name)), holes=HOLES if name == BODY else (), crop=False)
+    return MD.cutout(FC.fix(name), holes=HOLES if name == BODY else (), crop=False)
 
 
 @lru_cache(None)
@@ -257,7 +257,7 @@ def _drop_shadow(im, col):
 def strike_frame(kind):
     """(sprite, feet row): a whole strike drawing at the run body's head size."""
     name, head, shadow = STRIKES[kind]
-    src = EY.fix(name, RC.recolor(name))      # canonical eyes (pixel/mdeyes.py)
+    src = FC.fix(name)      # sheet colours + canonical eye + N5-fitted face (pixel/mdface.py)
     if shadow:
         src = _drop_shadow(src, shadow)
     cut = MD.cutout(src, crop=False)

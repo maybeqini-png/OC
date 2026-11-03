@@ -103,9 +103,11 @@ def armed(name, length=LENGTH, src=None):
     processed (e.g. recoloured) RGB version of the drawing, else the file."""
     if src is None:
         import mdrecolor
-        import mdeyes
-        src = mdrecolor.recolor_pose(name) if name in mdrecolor.POSE_SEEDS else Image.open(SRC / f"{name}.png")
-        src = mdeyes.fix(name, src)                    # the one canonical eye (pixel/mdeyes.py)
+        import mdface
+        if name in mdface.FACES:
+            src = mdface.fix(name)                     # sheet colours + canonical eye + N5-fitted face (mdface.py)
+        else:
+            src = mdrecolor.recolor_pose(name) if name in mdrecolor.POSE_SEEDS else Image.open(SRC / f"{name}.png")
     src = src.convert("RGB")
     # the stick and her hands are found in the ORIGINAL drawing (the recolour turns boot soles / stripes into the
     # sheet's light cobalt, which is close to the stick's colour); the body itself comes from src
