@@ -98,3 +98,13 @@ the boss on the right edge. Text sources on near-miss or background build-up in 
 PV dodge (pixel/mdfx.py): take-off ring and dust, a 3-frame jump smear (pale silhouettes), sparks thrown back off
 the saw's teeth as it passes under her, orange banded PASS, landing ring and dust; jump over saws raised to 210 px.
 Stage tension: N5 redraws of the plates are pending (the NovelAI key returned HTTP 401 in this session).
+
+## Sound (2026-11-03)
+Owner: "I need hit impact sound effects and tense background ambience to match the lyrics. Do not remove the main
+song." Reference: the official trailer's audio (Steam), measured at the hit frames studied above: a hit adds a sharp
+mid snap (500-2000 Hz, x2-2.6) plus top sparkle, sometimes a low thump. The PV (`pixel/sfx.py`) layers per hit a
+punch body + a click snap + a glass sparkle (+-5 % pitch), a whoosh and PASS chime on saw jumps, plucks on notes,
+a bell and shimmer on the hold note, a riser + bell on Fever, and in the climb a low drone with a lub-dub heartbeat
+on every beat rising into Fever. Kenney CC0 samples; synthesized whooshes / riser / drone / heartbeat. Pixabay
+answered with a bot check (not bypassed); Mixkit's licence terms could not be read, so it was not used. Mix: the
+song untouched; effects 3-9 dB under it (climb ambience 6.5 dB under); master -14 LUFS.

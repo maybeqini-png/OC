@@ -1128,6 +1128,8 @@ def blips_wav(t0, t1, path, sr=48000):
                 tt = np.arange(L) / sr
                 w = np.sign(np.sin(2 * np.pi * 700 * tt)) * np.exp(-tt * 60) * 0.10
                 out[k:k + L] += w[:max(0, min(L, n - k))]
+    import sfx
+    out += sfx.build(t0, t1, __import__(__name__))[:n]                  # hits, whooshes, climb ambience
     with wave.open(str(path), "wb") as f:
         f.setnchannels(1)
         f.setsampwidth(2)
