@@ -533,11 +533,14 @@ def _anchor(sp):
 
 
 # ---------------------------------------------------------------- loadout
-# Like a Muse Dash character's loadout, hers changes through the PV and the weapon is not always there: she starts
-# with bare sleeve punches, picks up the paw mic for the first chorus (余裕だもん), puts it away for the screenshot gag
-# and the sulky / eerie stretches, and takes it back for the Fever finale. Stage index -> armed.
+# Her loadout changes through the PV and the weapon is not always there: bare sleeve punches first, the paw mic for
+# the first chorus (余裕だもん) and the night stage, put away for the screenshot gag and the sulky / eerie stretches,
+# back for the Fever finale. Stage index -> armed.
+# Checked against the official trailer: Muse Dash never makes a weapon appear or vanish mid-run - a gameplay clip keeps
+# one loadout from start to end, and a loadout change happens between clips behind a full-screen character close-up.
+# So the swap happens only while a cut-in band (stream.CUTINS, its close-up showing the new loadout) or the festival
+# curtain covers her: the stage switch times (55.61, 83.5, 125.8 s) all fall in those covered spans.
 LOADOUT = {0: False, 1: False, 2: True, 3: True, 4: False, 5: False, 6: False, 7: True}
-EQUIP_FX = 0.45                       # sparkle pop at her hand when the mic appears / vanishes (s)
 
 
 def armed_at(t):
@@ -705,9 +708,6 @@ def draw_avatar(img, t, fever=False):
             FX.puffs(img, cx - 30, FLOOR - 16, land, int(g * 10), 3, 66)
         if take is not None:
             FX.puffs(img, cx - 50, FLOOR - 12, take, int(g * 10) + 1, 2, 54)
-    for tc, on in loadout_changes():          # the mic pops into / out of her hand with a sparkle
-        if 0 <= t - tc < EQUIP_FX:
-            burst(img, int(cx + 70), int(fy - 160), t - tc)
 
 
 def fever_trail(img, g):

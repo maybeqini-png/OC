@@ -97,11 +97,13 @@ STAGES = [(GAME_IN, "sky", "roof"), (27.38, "sunset", "street"), (55.61, "pop", 
 STAGE_END = [s[0] for s in STAGES[1:]] + [GAME_OUT]
 WIPES = [(26.6, 27.9, 0, 1, "cutin"), (55.17, 55.95, 1, 2, "cutin"), (68.3, 69.1, 2, 3, "cutin"),
          (82.9, 84.0, 3, 4, "cutin"), (96.9, 98.2, 4, 5, "cutin"), (115.9, 116.9, 5, 6, "up"),
-         (125.0, 126.6, 6, 7, "curtain")]
+         (125.0, 126.6, 6, 7, "cutin")]
 # Muse Dash-style character cut-ins (pixel/mdcutin.py): her approved bust for the lyric, the band in the new stage's
-# colour. The eerie climb keeps its slow rise ("up") and the festival its curtain.
+# colour. The eerie climb keeps its slow rise ("up").
 CUTINS = {0: ("smug", (255, 150, 120)), 1: ("happy", (255, 110, 180)), 2: ("wink", (120, 110, 230)),
-          3: ("sing", (255, 130, 200)), 4: ("pout", (150, 120, 220))}
+          3: ("sing", (255, 130, 200)), 4: ("pout", (150, 120, 220)), 6: ("smug", (255, 160, 80))}
+# 6 -> 7 (climb -> festival) was a curtain; it is a cut-in now because she takes the mic back there and a loadout
+# change must happen behind a full-screen close-up (a curtain only covers the background, she ran in front of it).
 
 
 def stage_at(t):
@@ -1092,7 +1094,7 @@ def game_frame(t):
         old, new = stage_plate(i, game_time(t)).copy(), stage_plate(j, game_time(t)).copy()
         old.alpha_composite(layer)
         new.alpha_composite(layer)
-        hd = mdcutin.cutin(old, new, p, portrait, col)
+        hd = mdcutin.cutin(old, new, p, portrait, col, MG.LOADOUT.get(j, False))   # close-up shows the new loadout
         MG.draw_hud(hd, game_time(t))
         return hd
     hd = game_background(game_time(t)).copy()

@@ -32,9 +32,15 @@ def ease_out(u):
     return 1 - (1 - u) ** 3
 
 
+FIST = (1537, 1248)            # her raised fist in the bust drawings (2048 px); every bust shares the pose
+MIC_LEN, MIC_W, MIC_DEG = 980, 50, -22
+
+
 @lru_cache(None)
-def bust(name, h):
-    """The approved bust, cut out (its light grey background and the gaps between hair and arm), height h."""
+def bust(name, h, armed=False):
+    """The approved bust, cut out (its light grey background and the gaps between hair and arm), height h. armed:
+    the paw mic in her raised fist (the same mic as in the game), drawn behind her so her fist closes over it - the
+    close-up shows the loadout of the section that follows, as Muse Dash's character close-ups do."""
     src = Image.open(BUSTS / f"{name}.png").convert("RGB")
     a = np.asarray(src).astype(int)
     near = np.abs(a - np.array(BG)).sum(-1) < 14
@@ -44,6 +50,18 @@ def bust(name, h):
     al = np.asarray(im).copy()
     al[ndimage.binary_dilation(np.isin(lab, [i + 1 for i, z in enumerate(sizes) if z > 800]), iterations=1), 3] = 0
     im = Image.fromarray(al, "RGBA")
+    if armed:
+        import mdweapon as WP
+        mic, (px, py) = WP.mic_sprite(MIC_LEN, MIC_W)
+        gy = py - 0.12 * MIC_LEN
+        pad = MIC_LEN
+        cv = Image.new("RGBA", (mic.width + 2 * pad, mic.height + 2 * pad), (0, 0, 0, 0))
+        cv.alpha_composite(mic, (pad, pad))
+        cv = cv.rotate(MIC_DEG, Image.Resampling.BICUBIC, center=(px + pad, gy + pad))
+        big = Image.new("RGBA", (im.width + 2 * pad, im.height + 2 * pad), (0, 0, 0, 0))
+        big.alpha_composite(cv, (int(FIST[0] - px), int(FIST[1] - gy)))
+        big.alpha_composite(im, (pad, pad))
+        im = big
     im = im.crop(im.getbbox())
     return im.resize((round(im.width * h / im.height), h), Image.Resampling.LANCZOS)
 
@@ -105,7 +123,7 @@ def _rings(img, cx, cy, u, cols):
         d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=(*c, 220), width=w)
 
 
-def cutin(old, new, p, portrait, col):
+def cutin(old, new, p, portrait, col, armed=False):
     """Full game picture for transition progress p (old / new = finished game pictures without the HUD)."""
     W, H = old.size
     if p < 0.5:
@@ -127,7 +145,7 @@ def cutin(old, new, p, portrait, col):
         _rings(layer, W * 0.62 + x_off, H * 0.5, p, [(255, 255, 255), (255, 214, 74), (156, 196, 255)])
         # her close-up: zips in, drifts, zips out (slightly behind the band's motion so it reads as parallax)
         if 0.18 <= p < 0.84:
-            b = bust(portrait, int(H * 0.86))
+            b = bust(portrait, int(H * 0.86), armed)
             if p < 0.34:
                 bx = W * 1.05 - (W * 1.05 - W * 0.40) * ease_out((p - 0.18) / 0.16)
             elif p < 0.66:
