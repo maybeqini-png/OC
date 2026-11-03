@@ -52,3 +52,32 @@ gen2 k02_trophy 9622 1024 1024 "$STK, shiny gold trophy cup with a navy ribbon b
 # open stage v2 (2026-10-30): the first open-curtain take had a flat grey centre
 gen2 p02_stage_open 9531 1536 640 "no humans, theater stage seen from the audience, navy blue velvet curtains drawn open with gold trim, painted backdrop of a bright blue sky with big white clouds, warm spotlights, wooden stage floor, $ANIME"
 gen2 p02_stage_open 9532 1536 640 "no humans, small cute theater stage, navy blue velvet curtains drawn open, gold tassels, backdrop with stars and a crescent moon cutout, warm spotlights, footlights, wooden stage floor, $ANIME"
+# ---- tense plates (2026-11-03). Owner: "the background fails to create a tense atmosphere". Muse Dash boss / tense
+# sections: dark magenta-purple stages, bright neon accents, strong rim light. V5 img2img from the chosen plates
+# (same layout, so the camera pans stay valid), strength 0.62.
+NEGT="text, watermark, signature, logo, letters, words, numbers, humans, 1girl, 1boy, person, realistic, photo, 3d, render, blurry, jpeg artifacts, lowres, nsfw, pastel, washed out, calm, peaceful, daylight"
+TENSE="dramatic, intense atmosphere, high contrast, deep shadows, strong rim light, glowing magenta and cyan light, dark crimson and violet palette, dynamic, $ANIME"
+i2i() { [ -f "$OUT/$1_$2.png" ] || $NAI img2img --model $M --image "$OUT/$3.png" --strength 0.62 --w $4 --h $5 --seed $2 --prompt "$6" --negative "$NEGT" --out "$OUT/$1_$2.png"; }
+for s in 9901 9902; do
+  i2i x_festival $s p11_festival_9529 1536 640 "$BG, night summer festival climax, huge fireworks exploding across a dark crimson and violet sky, smoke lit magenta, rows of red paper lanterns glowing hot, festival stalls in silhouette, sparks raining down, $TENSE"
+  i2i x_twilight $s p09_twilight_9507 1536 640 "$BG, ominous dusk, blood red and deep purple sky, dark storm clouds rolling in, riverside embankment in shadow, small bridge silhouette, street lights glowing, wind, $TENSE"
+  i2i x_climb $s p10_climb_9508 704 1472 "$BG, vertical, tall image, racing upward through dark storm clouds, lightning glow inside the clouds, red full moon above, deep violet night sky with stars at the top, $TENSE"
+done
+# ---- absurd stages (2026-11-03). Owner: "Redo the backgrounds directly to match the benchmark game style; I want
+# them absurd." Benchmark look (official Muse Dash trailer / screenshots): flat vector shapes, bold limited palette
+# per stage, soft atmospheric haze for depth, almost no linework, surreal giant objects. Original XIYIN themes only.
+NEGA="text, watermark, signature, logo, letters, words, numbers, humans, 1girl, 1boy, person, character, realistic, photo, 3d, render, detailed texture, thick lineart, sketch, blurry, jpeg artifacts, lowres, nsfw"
+ABS="no humans, scenery, 2d side-scrolling game stage background, surreal, absurd, whimsical, giant objects, flat vector illustration, simple bold shapes, flat colors, limited palette, soft atmospheric haze, layered depth, no lineart, clean, vivid, wide shot"
+ga() { [ -f "$OUT/$1_$2.png" ] || $NAI generate --model $M --w $3 --h $4 --seed $2 --prompt "$5, $ABS" --negative "$NEGA" --out "$OUT/$1_$2.png"; }
+for s in 9951 9952; do
+  ga y_sky $s 1536 640 "pastel sky world, giant smiling cat-shaped clouds, floating whipped cream islands, a huge game controller drifting like a blimp, rainbow ribbons, sky blue, white, sunny yellow and pink"
+  ga y_sunset $s 1536 640 "sunset dessert land, gigantic pudding mountains with caramel tops, a river of syrup, the setting sun is a giant cat face wearing headphones, wafer towers, orange, peach and violet"
+  ga y_pop $s 1536 640 "candy factory, towering gumball machines, lollipop trees, conveyor belts carrying giant sweets, pipes, candy pink, mint green and lemon yellow"
+  ga y_night $s 1536 640 "neon night city made of giant speaker towers and streaming microphones, a huge cat head moon wearing headphones, glowing windows, deep purple and magenta with cyan and orange glows"
+  ga y_pinkpop $s 1536 640 "pink pop world, buildings shaped like hearts and cameras, giant cat paw prints stamped across the sky, camera flash bursts, ribbons, pink and white checkerboard hills, hot pink, white and baby blue"
+  ga y_twilight $s 1536 640 "dreamlike dusk, an upside-down town hanging from the sky, floating teacups and giant clocks, a mountain shaped like a sleeping cat, purple, pink and indigo"
+  ga y_festival $s 1536 640 "wild summer festival climax, giant daruma and lucky cat statues towering over the stalls, fireworks shaped like cat faces, swarms of paper lanterns, crimson, gold and violet, dramatic"
+  ga y_climb $s 704 1472 "vertical, tall image, an endless staircase of piano keys and game cartridges spiraling up into the sky, floating music notes, a giant cat face moon at the top, golden clouds at the bottom, violet night above"
+done
+# 2026-11-03 OWNER VERDICT: x_* (tense img2img) superseded before review; y_* (absurd stages) REJECTED: "It looks too
+# AI-generated, I don't like it. No cybernetic AI aesthetic." Kept as a record only; not used (plates/build.sh unchanged).
