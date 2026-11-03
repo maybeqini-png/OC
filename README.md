@@ -303,6 +303,12 @@ for the sprites; the sprite list is set after the pixel test.
   new `pixel/mdfx.py` (impact star sequence, confetti cone, sparks, puffs, swoosh, banded PERFECT with smear
   pop-in, hit-stop, shake, Fever bands / speed streaks / afterimages / radial burst).
   Render: 5360 frames, 0 decode errors, -14.1 LUFS; hits and the Fever start checked frame by frame on the file.
+- 2026-11-03: **stages redone** after the owner disliked the calm plates and then the first absurd redraws ("too
+  AI-generated, no cyber aesthetic"): N5 stages in XIYIN's palette (sky, sunset, night, twilight, festival), hand-made
+  abstract backdrops in code for pop / pinkpop (`pixel/mdbg.py`), and a weeping cat-eye climb (`t_climb_9962`, the
+  owner asked for "surreal, dark, thrilling" and bleeding tears, flat screen-print style); the climb pan holds on the
+  eyes for the build-up. Obstacle dodge effects (PASS, smear, sparks, rings) and a denser hit after more trailer
+  frames. 51 Anlas spent this round (free allowance ran out mid-batch); render QC as before (-14.1 LUFS, 0 errors).
 
 ## 8. Open items (2026-10-29)
 1. Owner: confirm SFX levels by ear (phone + headphones), and watch / listen to the pixel test.
