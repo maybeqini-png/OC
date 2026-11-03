@@ -571,8 +571,18 @@ def cam_box(t):
     return tuple(int(s + (g - s) * k) for s, g in zip(small, big)), k
 
 
+def cam_shown(t):
+    """0..1: the cam slides in from the right as the game starts and out as the view pulls back to her room."""
+    return ease((t - GAME_IN) / 0.4) * (1 - ease((t - GAME_OUT) / 0.4))
+
+
 def draw_cam(hd, t):
     box, k = cam_box(t)
+    f = cam_shown(t)
+    if f <= 0:
+        return
+    dx = int(round((1 - f) * (OW - box[0] + 60)))
+    box = (box[0] + dx, box[1], box[2] + dx, box[3])
     x0, y0, x1, y1 = box
     w, h = x1 - x0, y1 - y0
     d = ImageDraw.Draw(hd)
@@ -967,48 +977,71 @@ def title_frame(t):
 
 @lru_cache(None)
 def desktop():
-    """Her PC desktop (pastel, paw pattern) - an original look, no real OS branding."""
-    a = np.zeros((OH, OW, 3), np.uint8)
-    yy = np.linspace(0, 1, OH)[:, None]
-    a[:] = (np.array([200, 222, 255]) * (1 - yy) + np.array([255, 220, 236]) * yy)[:, None, :].astype(np.uint8)[:, 0][:, None]
-    im = Image.fromarray(a).convert("RGBA")
-    paw = B.icon("paw", 6)
-    for y in range(40, OH, 180):
-        for x in range((y // 180) % 2 * 90 + 40, OW, 180):
-            p = paw.copy()
-            p.putalpha(Image.fromarray((np.asarray(p)[..., 3] * 0.18).astype(np.uint8)))
-            im.alpha_composite(p, (x, y))
+    """Her PC desktop in the HD style: pastel gradient with soft cat-head and paw shapes (no OS branding)."""
+    import mdbg
+    y = np.linspace(0, 1, OH)[:, None, None]
+    a = (np.array([196, 220, 255]) * (1 - y) + np.array([255, 218, 236]) * y) * np.ones((1, OW, 1))
+    im = Image.fromarray(a.astype(np.uint8), "RGB").convert("RGBA")
+    lay = Image.new("RGBA", (OW * 2, OH * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    for row, yy in enumerate(range(90, OH + 90, 200)):
+        for xx in range((row % 2) * 120 + 60, OW + 120, 240):
+            kind = "cat" if (row + xx // 240) % 2 else "paw"
+            mdbg._shape(d, kind, 2 * xx, 2 * yy, 2 * 34, -0.25 if row % 2 else 0.25, (255, 255, 255, 70))
+    im.alpha_composite(lay.resize((OW, OH), Image.Resampling.LANCZOS))
     return im
 
 
+@lru_cache(None)
+def _shut_cat():
+    """Smooth cat head (navy with a white face shine and her blue eyes)."""
+    import mdbg
+    S_ = 3
+    big = Image.new("RGBA", (300 * S_, 300 * S_), (0, 0, 0, 0))
+    d = ImageDraw.Draw(big)
+    c, r = 150 * S_, 105 * S_
+    mdbg._shape(d, "cat", c, c + 20 * S_, r + 8 * S_, 0, (255, 255, 255, 255))
+    mdbg._shape(d, "cat", c, c + 20 * S_, r, 0, (40, 52, 110, 255))
+    for ex in (-38, 38):
+        d.ellipse([c + (ex - 14) * S_, c + 10 * S_, c + (ex + 14) * S_, c + 42 * S_], fill=(110, 170, 255, 255))
+        d.ellipse([c + (ex - 5) * S_, c + 16 * S_, c + (ex + 3) * S_, c + 26 * S_], fill=(255, 255, 255, 255))
+    d.polygon([(c - 7 * S_, c + 52 * S_), (c + 7 * S_, c + 52 * S_), (c, c + 60 * S_)], fill=(255, 150, 180, 255))
+    return big.resize((300, 300), Image.Resampling.LANCZOS)
+
+
 def shutdown_frame(t):
+    """Her PC shuts down: veil, cat, spinner, then the goodbye, then the screen switches off just before the end."""
     u = t - SHUT_T
     hd = desktop().copy()
+    veil = int(min(1.0, u / 0.6) * 160)
+    hd.alpha_composite(Image.new("RGBA", (OW, OH), (22, 28, 74, veil)))
+    bob = int(6 * math.sin(u * 3))
+    cat = _shut_cat()
+    hd.alpha_composite(cat, (OW // 2 - cat.width // 2, 250 + bob))
     d = ImageDraw.Draw(hd)
-    veil = int(min(1.0, u / 0.6) * 150)
-    hd.alpha_composite(Image.new("RGBA", (OW, OH), (20, 26, 70, veil)))
-    cat = B.icon("cat", 18)
-    hd.alpha_composite(cat, (OW // 2 - cat.width // 2, 300))
-    d = ImageDraw.Draw(hd)
-    msg = "シャットダウンしています…" if u < 3.6 else "おつかれさまでした"
-    d.text((OW // 2, 600), msg, font=ui_font(54), fill=(255, 255, 255), anchor="mm")
-    if u < 3.6:
+    msg = "シャットダウンしています…" if u < 3.0 else "おつかれさまでした"
+    d.text((OW // 2, 620), msg, font=ui_font(58), fill=(255, 255, 255), anchor="mm")
+    if u < 3.0:
+        lay = Image.new("RGBA", (360, 360), (0, 0, 0, 0))
+        dl = ImageDraw.Draw(lay)
         for k in range(8):
             ang = -math.pi / 2 + k * math.pi / 4 + u * 4.5
-            r = 6 + (k * 2) % 9
-            cx, cy = OW // 2 + int(44 * math.cos(ang)), 720 + int(44 * math.sin(ang))
-            d.ellipse([cx - r // 2 - 3, cy - r // 2 - 3, cx + r // 2 + 3, cy + r // 2 + 3], fill=(255, 255, 255, 255))
+            r = 7 + k * 1.6
+            cx, cy = 180 + 96 * math.cos(ang), 180 + 96 * math.sin(ang)
+            dl.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255, 120 + k * 16))
+        hd.alpha_composite(lay.resize((180, 180), Image.Resampling.LANCZOS), (OW // 2 - 90, 670))
     else:
-        d.text((OW // 2, 690), "また来てね", font=ui_font(36, False), fill=(220, 230, 255), anchor="mm")
+        d.text((OW // 2, 715), "また来てね", font=ui_font(40, False), fill=(220, 230, 255), anchor="mm")
     d.text((OW // 2, 1010), "XIYIN-PC", font=ui_font(24, False), fill=(200, 210, 240), anchor="mm")
-    off = u - 5.2                                             # the screen turns off
+    off = u - (DUR - SHUT_T - 1.3)                            # the screen turns off 1.3 s before the end
     if off > 0:
-        k = min(1.0, off / 0.5)
+        k = min(1.0, off / 0.45)
         black = Image.new("RGBA", (OW, OH), (0, 0, 0, 255))
         h = max(2, int(OH * (1 - k) ** 2))
         if k < 1:
             box = (0, (OH - h) // 2, OW, (OH + h) // 2)
             black.paste(hd.crop(box), box[:2])
+            ImageDraw.Draw(black).rectangle([0, OH // 2 - 1, OW, OH // 2 + 1], fill=(255, 255, 255, int(255 * k)))
         hd = black
     return hd
 
@@ -1045,7 +1078,7 @@ def stream_overlay(hd, t, game=True):
     draw_top_bar(hd, t)
     if t < SHUT_T - 0.8:
         draw_chat(hd, t)
-    if game:
+    if game or GAME_OUT <= t < GAME_OUT + 0.45:
         draw_cam(hd, t)
     draw_subtitle(hd, t)
     return hd
@@ -1059,7 +1092,7 @@ def compose(t):
         hd = room_frame(t, title_frame(t), push=push)
         if t < 0.8:
             hd = Image.blend(Image.new("RGBA", (OW, OH), (0, 0, 0, 255)), hd, max(0.0, t / 0.8))
-        return stream_overlay(hd, t, game=False) if push < 0.6 else hd
+        return stream_overlay(hd, t, game=False)       # the stream UI stays on screen through the push-in
     if t < GAME_OUT:
         hd = game_frame(t)
         if t >= CLEAR_T:
@@ -1072,7 +1105,7 @@ def compose(t):
         mon = Image.blend(mon, desktop(), min(1.0, (t - 169.9) / 0.3))
     push_in = max(0.0, (t - 169.6) / (SHUT_T - 169.6))
     hd = room_frame(t, mon, push=max(pull, push_in))
-    return stream_overlay(hd, t, game=False) if pull < 0.4 and push_in < 0.4 else hd
+    return stream_overlay(hd, t, game=False)
 
 
 def frame(t):
