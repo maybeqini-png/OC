@@ -26,6 +26,40 @@ SR = 48000
 
 
 @lru_cache(None)
+def clip(rel, start=0.0, dur=None):
+    """Any file under audio/sfx/ (oga: CC0, jp: ピコピコステーション), mono 48 kHz, peak-normalised, trimmed."""
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(ROOT / "audio" / "sfx" / rel), "-ac", "1", "-ar", str(SR),
+                          "-f", "f32le", "-"], capture_output=True, check=True).stdout
+    a = np.frombuffer(raw, np.float32).copy()
+    i = int(start * SR)
+    a = a[i:] if dur is None else a[i:i + int(dur * SR)]
+    nz = np.nonzero(np.abs(a) > 0.02 * np.abs(a).max())[0]           # trim leading silence
+    if len(nz):
+        a = a[nz[0]:]
+    n = len(a)
+    fade = min(n, int(0.012 * SR))
+    if fade:
+        a[-fade:] *= np.linspace(1, 0, fade)
+    return (a / max(1e-6, np.abs(a).max())).astype(np.float32)
+
+
+@lru_cache(None)
+def gaji(variant):
+    """The cute crunchy-squishy strike ("gaji"): a crunch transient (bite), a squish-pop body and a high poyon tail,
+    stacked a few ms apart. variant 0-2 use different crunch takes."""
+    crunch = clip(["oga/crunch.1.ogg", "oga/crunch.2.ogg", "oga/crunchybite.ogg"][variant % 3], 0, 0.09)
+    body = clip("oga/squishpop.mp3", 0, 0.16)
+    tail = pitched(clip("jp/pico_poyon.mp3"), 1.35)
+    n = int(0.42 * SR)
+    out = np.zeros(n, np.float32)
+    for snd, at, g in ((crunch, 0.0, 0.85), (body, 0.004, 0.7), (tail, 0.018, 0.45)):
+        i = int(at * SR)
+        m = min(len(snd), n - i)
+        out[i:i + m] += snd[:m] * g
+    return out / max(1e-6, np.abs(out).max())
+
+
+@lru_cache(None)
 def sample(name):
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(KEN / f"{name}.ogg"), "-ac", "1", "-ar", str(SR),
                           "-f", "f32le", "-"], capture_output=True, check=True).stdout
@@ -171,38 +205,40 @@ def build(t0, t1, ST):
     def jit():
         return 1 + rng.uniform(-0.05, 0.05)
 
+    hit_n = 0
     for tt, kind in ST.chart():
         st = song_t(tt)
-        if kind in ("g", "a"):
-            body = sample(rng.choice(["impactPunch_medium_000", "impactPunch_medium_001", "impactPunch_medium_002"]))
-            tr.add(st, body, 0.55, jit() * (1.0 if kind == "g" else 1.18))
-            tr.add(st, sample(rng.choice(["click_002", "click_003"])), 0.40, jit() * 1.25)    # mid snap
-            tr.add(st + 0.005, sample(rng.choice(["impactGlass_light_000", "impactGlass_light_001",
-                                                  "impactGlass_light_002"])), 0.16, jit() * 1.3)   # sparkle
+        if kind in ("g", "a"):                                          # cute crunchy-squishy "gaji" strike
+            tr.add(st, gaji(hit_n), 0.62, jit() * (1.0 if kind == "g" else 1.22))
+            tr.add(st + 0.01, clip("jp/pico_sparkle.mp3"), 0.10, jit() * 1.1)
             if kind == "a":
-                tr.add(st - 0.12, whoosh(0.18, 900, 6000, 7), 0.10)
-        elif kind == "gear":
-            tr.add(st - 0.24, whoosh(0.34, 400, 3500, 3), 0.20)                             # jump over the saw
-            tr.add(st + 0.03, sample("pluck_001"), 0.22, jit() * 1.5)                       # PASS chime
-            tr.add(st + 0.24, sample("impactSoft_heavy_000"), 0.16, jit() * 1.2)            # landing
-        elif kind in ("gear_miss", "a_miss"):
-            tr.add(st, sample("impactPunch_heavy_000"), 0.55, 0.85)
-            tr.add(st + 0.02, sample("error_004"), 0.30, 0.9)
+                tr.add(st - 0.1, clip("jp/pico_jump.mp3"), 0.22, jit() * 1.2)
+            hit_n += 1
+        elif kind == "gear":                                            # hop over the saw: boing up, PASS twinkle
+            tr.add(st - 0.24, clip("jp/pico_jump.mp3"), 0.32, jit())
+            tr.add(st + 0.03, clip("jp/pico_coin.mp3"), 0.30, jit() * 1.1)
+            tr.add(st + 0.24, clip("jp/pico_poyon.mp3"), 0.30, jit() * 0.9)
+        elif kind in ("gear_miss", "a_miss"):                           # bonk + deflating squish
+            tr.add(st, clip("oga/squishsplat_impact.mp3"), 0.5, 0.9)
+            tr.add(st + 0.03, pitched(clip("jp/pico_poyon.mp3"), 0.6), 0.45)
         elif kind == "note":
-            tr.add(st, sample("pluck_002"), 0.24, jit() * 1.6)
+            tr.add(st, clip("jp/pico_item.mp3"), 0.32, jit() * 1.1)
         elif kind == "heart":
-            tr.add(st, sample("confirmation_001"), 0.30)
+            tr.add(st, clip("jp/pico_powerup.mp3"), 0.32)
     h0, h1 = song_t(ST.HOLD[0]), song_t(ST.HOLD[1])                 # hold note
-    tr.add(h0, sample("impactBell_heavy_000"), 0.18, 1.5)
-    tr.add(h0, shimmer(h1 - h0), 0.10)
-    tr.add(h1, sample("impactBell_heavy_001"), 0.26, 1.3)
-    tr.add(h1, sample("impactGlass_light_001"), 0.2, 1.2)
+    tr.add(h0, clip("jp/pico_sparkle.mp3"), 0.28)
+    tr.add(h0, shimmer(h1 - h0), 0.08)
+    k = h0 + 0.25
+    while k < h1:                                                       # little ticks while she holds
+        tr.add(k, clip("jp/pico_tap.mp3"), 0.12, 1.3)
+        k += 0.25
+    tr.add(h1, clip("jp/pico_levelup.mp3"), 0.30)
     # pause menu, ノーカン paw wipes
     tr.add(ST.PAUSE[0], sample("open_001"), 0.35)
     tr.add(ST.PAUSE[1] - 0.15, sample("close_001"), 0.35)
     for a in (46.66, 62.6):
         tr.add(a - 0.4, whoosh(0.3, 700, 5000, 9), 0.14)
-        tr.add(a, sample("drop_001"), 0.3, 1.2)
+        tr.add(a, clip("jp/pico_popup.mp3"), 0.3)
     # climb: drone + heartbeat on every beat + riser into Fever
     c0, c1 = 116.55, ST.FEVER_T
     tr.add(c0, drone(c1 - c0 + 0.3), 0.14)
@@ -214,12 +250,11 @@ def build(t0, t1, ST):
         tr.add(tb + 0.18 * ST.BEAT, heart_thump(0.6), 0.22 + 0.16 * u)
     tr.add(c1 - 2.4, riser(2.4), 0.22)
     # Fever start
-    tr.add(ST.FEVER_T, sample("impactBell_heavy_000"), 0.30, 0.9)
-    tr.add(ST.FEVER_T, sample("impactPunch_heavy_001"), 0.30, 0.8)
+    tr.add(ST.FEVER_T, clip("jp/pico_powerup.mp3"), 0.40)
+    tr.add(ST.FEVER_T, gaji(1), 0.5, 0.8)
     tr.add(ST.FEVER_T, whoosh(0.5, 300, 8000, 11), 0.22)
     # stage clear
-    tr.add(ST.CLEAR_T, sample("confirmation_002"), 0.38)
-    tr.add(ST.CLEAR_T + 0.12, sample("impactBell_heavy_001"), 0.2, 1.6)
+    tr.add(ST.CLEAR_T, clip("jp/pico_levelup.mp3"), 0.40)
     # monitor push-in / pull-out, PC shutdown
     tr.add(10.6, whoosh(1.3, 200, 3000, 12), 0.16)
     tr.add(ST.GAME_OUT, whoosh(0.9, 3000, 300, 13)[::-1].copy(), 0.14)
