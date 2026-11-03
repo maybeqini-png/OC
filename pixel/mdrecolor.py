@@ -129,3 +129,38 @@ if __name__ == "__main__" and sys.argv[1] == "check":
         out.paste(im, (x, 0))
         x += im.width
     out.resize((out.width // 2, 608)).save(sys.argv[2])
+
+
+@lru_cache(1)
+def _transfer_table():
+    """Colour pairs (generated -> sheet) learned from the approved run drawing and its seeded recolour."""
+    src = np.asarray(Image.open(SRC / "z_run_49102.png").convert("RGB")).astype(np.float32).reshape(-1, 3)
+    dst = np.asarray(recolor("z_run_49102")).astype(np.float32).reshape(-1, 3)
+    keep = (src.mean(1) < 235) & (np.abs(dst - src).sum(1) > 6)          # only pixels the recolour changed
+    src, dst = src[keep], dst[keep]
+    q = np.round(src / 4).astype(np.int32)                                # dedupe by 4-level bins, average targets
+    key = q[:, 0] * 4096 + q[:, 1] * 64 + q[:, 2]
+    uniq, inv = np.unique(key, return_inverse=True)
+    s_mean = np.zeros((len(uniq), 3)); d_mean = np.zeros((len(uniq), 3)); cnt = np.zeros(len(uniq))
+    np.add.at(s_mean, inv, src); np.add.at(d_mean, inv, dst); np.add.at(cnt, inv, 1)
+    return s_mean / cnt[:, None], d_mean / cnt[:, None]
+
+
+def recolor_auto(img):
+    """Seed-free sheet colours for new poses: each pixel takes the correction (sheet - generated) of the most
+    similar colours in the approved run drawing (k-nearest, distance weighted), so hair, sweater, stripes and the
+    cyan underlayer move exactly as they did in the approved frame; colours far from anything in it (skin, white,
+    the pale prop stick) are left alone."""
+    from scipy.spatial import cKDTree
+    s_tab, d_tab = _transfer_table()
+    tree = cKDTree(s_tab)
+    a = np.asarray(img.convert("RGB")).astype(np.float32)
+    flat = a.reshape(-1, 3)
+    cand = flat.mean(1) < 235
+    dist, idx = tree.query(flat[cand], k=8)
+    w = 1 / (dist + 2.0)
+    corr = ((d_tab[idx] - s_tab[idx]) * w[..., None]).sum(1) / w.sum(1, keepdims=True)
+    fade = np.clip((40 - dist[:, 0]) / 25, 0, 1)[:, None]               # only where a close colour exists
+    out = flat.copy()
+    out[cand] = flat[cand] + corr * fade
+    return Image.fromarray(out.reshape(a.shape).clip(0, 255).astype(np.uint8), "RGB")

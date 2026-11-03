@@ -52,12 +52,12 @@ def find_stick(a):
     m = (b > r + 25) & (g > r + 10) & (lum > 150) & (lum < 245) & (sat < 110) & (r > 110)
     m = ndimage.binary_opening(m, iterations=1)
     lab, n = ndimage.label(m)
-    skin = ndimage.binary_dilation(skin_mask(a), iterations=12)
+    skin = ndimage.binary_dilation(skin_mask(a), iterations=30)
     best = None
     for i in range(1, n + 1):
         c = lab == i
         size = int(c.sum())
-        if size < 1500 or not (c & skin).any():
+        if size < 1500 or (not (c & skin).any() and size < 6000):
             continue
         ys, xs = np.nonzero(c)
         pts = np.stack([xs, ys], 1).astype(np.float32)
@@ -95,9 +95,10 @@ def find_stick(a):
     return full, e1 + d * tt.min(), e1 + d * tt.max()
 
 
-def armed(name, length=LENGTH):
-    """RGBA drawing (drawing coordinates, cut out) with the canonical weapon in her hands."""
-    src = Image.open(SRC / f"{name}.png").convert("RGB")
+def armed(name, length=LENGTH, src=None):
+    """RGBA drawing (drawing coordinates, cut out) with the canonical weapon in her hands. src: an already
+    processed (e.g. recoloured) RGB version of the drawing, else the file."""
+    src = (src or Image.open(SRC / f"{name}.png")).convert("RGB")
     a = np.asarray(src).astype(np.int16)
     stick, e1, e2 = find_stick(a)
     body = MD.cutout(src, crop=False)

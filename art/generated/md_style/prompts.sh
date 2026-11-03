@@ -228,3 +228,33 @@ for seed in 49701 49702; do
   ga3 v3_upper $seed "swinging the stick upward from low to high, jumping off one foot, stretched upward, facing right"
   ga3 v3_airslam $seed "jumping, mid-air, stick raised high overhead about to slam down, back arched, knees tucked, fierce grin, facing right"
 done
+# 2026-11-03 OWNER: "Don't forget character consistency and harmony. Some frames don't even show her face properly."
+# Rules for every action take: her face visible in profile or three-quarter (never hidden by hair or turned away),
+# same chibi proportions (2.5 heads), the sheet's colours. Test: V5 tags vs V4.5 Precise Reference with her approved
+# run drawing recoloured to the sheet (ref/xiyin_run_sheetcolours.png) as the identity reference.
+FACE="face visible, profile, looking ahead, clear face, eyes visible, 2.5 heads tall, same character"
+FNEG="face hidden, hair over face, from behind, back view, head down, looking down, covered eyes, black hair, dark hair, black sweater, motion lines, speed lines, effects, multiple views"
+gf5() { nai_guard generate --model $M --prompt "$XY3, $STK, $DYN, $FACE, $3, $XSTYLE3" --negative "$XNEG2, $FNEG, microphone, hammer" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"; }
+gf45() { nai_guard generate --model nai-diffusion-4-5-full --charref "$OUT/ref/xiyin_run_sheetcolours.png" --charref-mode "character&style" --prompt "$XY3, $STK, $DYN, $FACE, $3, $XSTYLE3" --negative "$XNEG2, $FNEG, microphone, hammer" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"; }
+for seed in 49801 49802; do
+  for f in gf5 gf45; do
+    $f c_${f}_smash $seed "smashing the stick down onto the ground in front of her, bent forward, head up looking at the enemy, fierce grin, facing right"
+    $f c_${f}_swing $seed "follow-through of a big horizontal swing, stick swung across her body, spinning on one foot, other leg kicked out, smug face visible, facing right"
+    $f c_${f}_airspin $seed "jumping, mid-air, spinning sideways with the stick held out at arm's length, face toward the viewer side, grin"
+    $f c_${f}_dive $seed "jumping, diving down diagonally, stick thrust forward and down ahead of her, determined face visible, facing right"
+  done
+done
+# test result: V5 + face tags = faces visible but stiffer poses; V4.5 Precise Reference = most consistent identity
+# (sheet colours, same face) but static poses. Hybrid: the dynamic V5 stick poses re-rendered by V4.5 img2img with the
+# same Precise Reference, so the pose stays and her identity locks.
+ghy() {  # name seed source strength
+  nai_guard img2img --model nai-diffusion-4-5-full --image "$OUT/$3.png" --strength $4 --charref "$OUT/ref/xiyin_run_sheetcolours.png" --charref-mode "character&style" --prompt "$XY3, $STK, $DYN, $FACE, $XSTYLE3" --negative "$XNEG2, $FNEG, microphone, hammer, thick stick" --w 832 --h 1216 --seed $2 --out "$OUT/$1_$2.png"
+}
+for src in v3_airslam_49702 v3_upper_49701 c_gf5_dive_49802 c_gf5_swing_49802 c_gf5_smash_49802; do
+  ghy h45_${src} 49901 $src 0.45
+  ghy h60_${src} 49901 $src 0.60
+done
+# consistency test result (2026-11-03): faces now visible (V5 face tags), V4.5 Precise Reference img2img at 0.45
+# keeps the pose; colour harmony NOT solved yet - separately generated frames differ in hair / sweater tone, and
+# neither the colour-only snap nor the colour transfer from the approved run frame makes them match (hair turns
+# near-black or blotchy). h*_ and c_gf* takes kept as a record.
