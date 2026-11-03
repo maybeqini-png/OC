@@ -35,6 +35,7 @@ from scipy import ndimage
 import avatar as AV
 import vtmotion as VMO
 import blocks as B
+import mdbg as BG
 import mdgame as MG
 import scene as S
 from stage import lyrics, put_text, text_mask
@@ -112,6 +113,8 @@ def stage_plate(i, t):
     u = min(1, max(0, (game_time(t) - a) / (b - a)))
     if name == "climb":
         return MG.plate_view("climb", 0.5, u)
+    if name in BG.THEMES:                            # hand-made abstract stages scroll in parallax with the run
+        return BG.view(name, cam_x(game_time(t)) * 2, (game_time(t) - PH0) / BEAT % 1)
     return MG.plate_view(name, 0.06 + 0.88 * u)
 
 

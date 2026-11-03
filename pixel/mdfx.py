@@ -81,7 +81,10 @@ def impact_star(size, seed, core, rim, white_core=False):
     def dr(d, k):
         c = size * k / 2
         d.polygon(_star_pts(c, c * 0.98, c * 0.42, 5, rot, spikes), fill=rim)
-        d.polygon(_star_pts(c, c * 0.80, c * 0.33, 5, rot, spikes), fill=WHITE if white_core else core)
+        d.polygon(_star_pts(c, c * 0.84, c * 0.35, 5, rot, spikes), fill=WHITE if white_core else core)
+        if not white_core:                               # layered as in play: hot core, lighter inner star
+            d.polygon(_star_pts(c, c * 0.5, c * 0.21, 5, rot + 0.2, spikes),
+                      fill=tuple(min(255, int(v * 0.55 + 255 * 0.45)) for v in core))
         if white_core:
             d.polygon(_star_pts(c, c * 0.52, c * 0.22, 5, rot, spikes), fill=(255, 255, 255))
     return _ss(size, size, dr)
@@ -142,26 +145,42 @@ def impact(img, x, y, age, seed, pal="pink", scale=1.0):
         img.alpha_composite(lay, (int(x - 260), int(y - 260)))
 
 
-def confetti(img, x, y, age, seed, pal="pink", n=18):
-    """Filled stars thrown in a forward-up cone (strike direction), with drag; fade over the last third."""
-    if age > 0.95:
+def confetti(img, x, y, age, seed, pal="pink", n=34):
+    """Dense star confetti as in play: dozens of filled stars burst forward and up, slow down quickly, then hang
+    and drift right for up to 1.6 s (on a fast run they pile up into a star field in front of her)."""
+    if age > 1.6:
         return
     P = PALETTES[pal]
     rng = random.Random(seed * 13 + 5)
     for i in range(n):
-        ang = math.radians(rng.uniform(-75, 40))                # 0 = forward (right), negative = up
-        v = rng.uniform(450, 1150)
-        life = rng.uniform(0.5, 0.95)
+        ang = math.radians(rng.uniform(-110, 50))               # 0 = forward (right), negative = up
+        v = rng.uniform(250, 950)
+        life = rng.uniform(0.8, 1.6)
         if age > life:
             continue
-        k = 3.2                                                 # drag: distance = v/k (1 - e^-kt)
+        k = 4.0                                                 # strong drag: burst, then hang
         dist = v / k * (1 - math.exp(-k * age))
-        px = x + dist * math.cos(ang)
-        py = y + dist * math.sin(ang) + 60 * age * age          # a little gravity
-        size = int(rng.uniform(20, 58))
-        rot = int(rng.uniform(0, 36) + age * rng.uniform(-60, 60)) % 36
-        alpha = 1.0 if age < life * 0.66 else 1 - (age - life * 0.66) / (life * 0.34)
+        px = x + dist * math.cos(ang) + 70 * age
+        py = y + dist * math.sin(ang) - 25 * age
+        size = int(rng.uniform(14, 62))
+        rot = int(rng.uniform(0, 36) + age * rng.uniform(-40, 40)) % 36
+        alpha = 1.0 if age < life * 0.6 else 1 - (age - life * 0.6) / (life * 0.4)
         put(img, solid_star(size, P["conf"][i % len(P["conf"])], rot), px, py, alpha)
+
+
+def grind(img, x, y, g, seed):
+    """A saw grinding along the floor: a few short sparks thrown back from the contact point every frame."""
+    rng = random.Random(int(g * 30) * 31 + seed)
+    lay = Image.new("RGBA", (300, 160), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    for i in range(5):
+        a = math.radians(rng.uniform(195, 245))
+        r0 = rng.uniform(4, 30)
+        ln = rng.uniform(20, 55)
+        col = (255, 236, 150, 230) if i % 2 else (255, 255, 255, 230)
+        taper_line(d, 200 + r0 * math.cos(a), 140 + r0 * math.sin(a), 200 + (r0 + ln) * math.cos(a),
+                   140 + (r0 + ln) * math.sin(a), 5, 1, col)
+    img.alpha_composite(lay, (int(x - 200), int(y - 140)))
 
 
 def puffs(img, x, y, age, seed, n=4, size=90):

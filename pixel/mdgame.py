@@ -292,6 +292,7 @@ def draw_world(img, g, late=None, texts=None):
                 sp = saw(fam, int((g * 30) % 24))
                 bob = 0
                 img.alpha_composite(sp, (int(x - sp.width / 2), FLOOR + 14 - sp.height + bob))
+                FX.grind(img, x - sp.width * 0.1, FLOOR + 6, g, int(tt * 100))
                 if kind == "gear_miss" and dt < 0:
                     miss_text(img, HIT_X, FLOOR - 200, -dt)
                 if kind == "gear" and -0.6 < dt < 0.3:               # dodge: take-off, sparks, PASS, landing
@@ -356,14 +357,17 @@ def draw_world(img, g, late=None, texts=None):
                         sp = monster_tilt(fam, lane, int(-a2 * 1100) % 360)
                         for k, al in ((2, 0.18), (1, 0.36), (0, 1.0)):       # smear ghosts along the flight
                             ak = max(0.0, a2 - k * 0.022)
-                            kx, ky = hx + ak * 1900, y0 - ak * 1100 + ak * ak * 1400
+                            kx, ky = hx + ak * 950, y0 - ak * 2300 + ak * ak * 700     # launched steeply up
                             put(img, sp, kx, ky, alpha=al * (1 - max(0, a2 - 0.22) / 0.1))
-                late.append(lambda im, a=age, s_=seed, p_=pal, y_=y0, ln=lane: (     # drawn over all objects
-                    FX.confetti(im, hx, y_, a, s_, p_), FX.impact(im, hx, y_, a, s_, p_, 1.25),
+                iy = AIR_Y if lane == "air" else FLOOR - 120               # impact at her strike point
+                ix = RUN_X + 150
+                late.append(lambda im, a=age, s_=seed, p_=pal, y_=iy, ln=lane: (     # drawn over all objects
+                    FX.confetti(im, ix + 60, y_, a, s_, p_), FX.impact(im, ix, y_, a, s_, p_, 1.3),
                     ln == "ground" and FX.puffs(im, hx + 30, FLOOR - 30, a, s_),
                     FX.swoosh(im, HIT_X + 50, (AIR_Y + 10 if ln == "air" else FLOOR - 120), a, up=(ln == "air"))))
-                texts.append(lambda im, a=age, p_=pal, ln=lane: FX.judgement(
-                    im, HIT_X + 170, (AIR_Y - 150) if ln == "air" else FLOOR - 330, a, p_))
+                jx, jy = 0, ((seed // 13) % 3 - 1) * 34      # rapid hits stack, offset
+                texts.append(lambda im, a=age, p_=pal, ln=lane, jx=jx, jy=jy: FX.judgement(
+                    im, HIT_X + 150 + jx, ((AIR_Y - 170) if ln == "air" else FLOOR - 340) + jy, a, p_))
     if st.HOLD[0] - 1.8 <= g < st.HOLD[1] + 0.3:
         draw_hold(img, g)
 
