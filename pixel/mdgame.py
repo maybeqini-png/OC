@@ -204,6 +204,8 @@ def family_at(g):
 
 @lru_cache(None)
 def monster(fam, role):
+    if fam == "chat":                         # the mini-boss's shots (pixel/mdboss.py)
+        return BOSS.bubble(role)
     return MD.sprite(f"{fam}_{role}")
 
 
@@ -321,6 +323,18 @@ def draw_world(img, g, late=None, texts=None):
             lane = "air" if kind.startswith("a") else "ground"
             fam = family_at(tt)
             x = HIT_X + 40 + dt * V_E
+            bk = BOSS.thrown(tt)                                     # fired by a boss: only after it leaves the muzzle
+            if bk == "mini":
+                fam = "chat"
+            if bk and dt >= 0:
+                tilt = round(4 * math.sin(g * 7 + tt))
+                sp = monster_tilt(fam, lane, tilt)
+                pos = BOSS.projectile(bk, tt, g, lane, x, monster(fam, lane).height)
+                if pos is not None:
+                    for k, al in ((2, 0.18), (1, 0.35)):             # speed smear behind the shot
+                        put(img, sp, pos[0] + k * 26, pos[1], alpha=al)
+                    put(img, sp, pos[0], pos[1])
+                continue
             if dt >= 0 or kind == "a_miss":
                 if kind == "a_miss" and dt < 0:
                     if int(-dt * 14) % 2:

@@ -319,3 +319,19 @@ for seed in 62011 62012 62013 62014; do
 done
 # picks (2026-11-03): mini-boss b3_mini_62011 (smug chat-bubble cloud cat with a megaphone, swirl tail - floats),
 # main boss b2_main_62003. Used by pixel/mdboss.py.
+# bosses v4 (2026-11-03). Owner: "the bosses lack menace; ranged attacks strike from thin air". Muse Dash boss fight
+# (official trailer 91.0-92.6 s, frame by frame): the boss is big at the right edge with visible cannons, every
+# bullet leaves a muzzle in a white smoke burst, the stage is dark. Mini-boss redrawn darker and meaner, the megaphone
+# pointing left as its cannon (the projectiles come out of it); main boss kept (b2_main_62003).
+for seed in 64001 64002 64003 64004; do
+  gsolo b4_mini $seed "giant floating boss monster, a huge dark violet storm cloud shaped like a cat, made of stacked dark purple speech bubbles, two sharp pointed cat ears, glowing hot pink slit eyes, enormous wide toothy grin full of sharp white fangs, mocking laugh, one big hot pink megaphone held out pointing left like a cannon, tiny speech bubbles swirling around it, dark purple and hot pink palette, black purple outline, menacing, imposing, facing left"
+done
+# b4_mini rejected: purple cat-ghost with a jagged grin is too close to an existing franchise creature (as b2_mini).
+# b5_mini: the chosen silhouette b3_mini_62011 (fluffy chat-bubble cloud cat with megaphone) redrawn by img2img to be
+# meaner - dusk shading, glowing eyes, fangs - so its shape stays original.
+for s in 0.45 0.55; do for seed in 64011 64012; do
+  o="$OUT/b5_mini_${s}_${seed}.png"
+  [ -f "$o" ] || python3 .claude/skills/oc-gen/scripts/nai.py img2img --model $M --image "$OUT/b3_mini_62011.png" --strength $s --seed $seed --w 1024 --h 1024 --prompt "giant floating boss monster, tall fluffy cloud cat made of stacked speech bubbles, dusk mauve and dark rose palette with deep purple shadows, glowing hot pink eyes, sly menacing smirk with sharp little fangs, holding a big hot pink megaphone, dark magenta outline, menacing, imposing, facing left, $SOLO" --negative "$SNEG2" --out "$o"
+done; done
+# b5_mini (img2img 0.45-0.55) barely changed the take; the menace is done in code instead (pixel/mdboss.py: dusk
+# shading, glowing eyes, aura). Picks unchanged: b3_mini_62011, b2_main_62003.

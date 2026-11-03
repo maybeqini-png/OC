@@ -21,7 +21,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 import mdfx as FX
 import mdsprites as MD
@@ -43,26 +43,105 @@ def ease_in(u):
 # mini-boss timing: after the streamer's big-cam reaction (stream.BIG_CAM 98.9-103.2 s), which would cover the
 # WARNING card; it then enters on 吹き出しちゃうな (about 104 s). Both bosses stay left of / below the stream's cam
 # box (top right, x 1478-1896, y 68-480 on the game picture) so their heads are never hidden behind it.
-BOSSES = {
+BOSSES = {   # sprite-px anchors: muzzle (where every shot leaves), eyes (glow); x, y = screen position at rest
     "mini": dict(take="b3_mini_62011", name="ニヤニヤチャット", title="THE GRINNING CHAT", warn=103.45, enter=104.4,
-                 last=115.5, h=400, x=1380, y=610, ground=False, col=(255, 110, 190), dark=(70, 20, 70)),
+                 last=115.5, h=560, x=1290, y=580, ground=False, col=(255, 110, 190), dark=(60, 14, 70),
+                 aura=(255, 40, 150), eyes=((474, 233, 46), (287, 257, 46)), eye_col=(255, 60, 170),
+                 muzzle=(5, 583)),
     "main": dict(take="b2_main_62003", name="ナナコロビ大王", title="NANAKOROBI THE DARUMA KING", warn=126.6,
-                 enter=127.15, last=146.3, h=540, x=1500, y=None, ground=True, col=(255, 180, 60), dark=(90, 10, 20)),
+                 enter=127.15, last=146.3, h=580, x=1340, y=None, ground=True, col=(255, 180, 60), dark=(80, 6, 16),
+                 aura=(255, 70, 20), eyes=((307, 410, 60), (525, 370, 64)), eye_col=(255, 230, 60),
+                 muzzle=(330, 545)),
 }
+FIRE_PRE, FIRE_POST = 0.12, 0.14          # anticipation before a shot, recoil after (s)
+SMOKE = 0.45                               # muzzle smoke life (s) - lingers 6-10 frames in the reference
+
+
+def _scale(key):
+    b = BOSSES[key]
+    return b["h"] / _raw(key).height
+
+
+@lru_cache(None)
+def _raw(key):
+    return MD.cutout(Image.open(SRC / f"{BOSSES[key]['take']}.png"))
 
 
 @lru_cache(None)
 def sprite(key):
+    """The boss sprite at its game size. The mini-boss (a cream cloud cat on white) is shaded to dusk mauve so it reads
+    as a threat on the darkened stage; its eyes and megaphone keep their hot pink."""
     b = BOSSES[key]
-    im = MD.cutout(Image.open(SRC / f"{b['take']}.png"))
+    im = _raw(key)
+    if key == "mini":
+        a = np.asarray(im).astype(np.float32)
+        rgb = a[..., :3]
+        sat = rgb.max(-1) - rgb.min(-1)
+        lum = rgb.mean(-1)
+        body = (sat < 90) & (lum > 120)
+        t = np.clip((lum - 120) / 135, 0, 1)[..., None]
+        yy = np.linspace(0, 1, a.shape[0])[:, None, None]
+        lo, hi = np.array((52, 24, 70), np.float32), np.array((176, 110, 168), np.float32)
+        shade = lo + (hi - lo) * t * (1 - 0.35 * yy)                  # darker toward its swirl tail
+        rgb[body] = shade[body]
+        im = Image.fromarray(np.dstack([rgb, a[..., 3]]).clip(0, 255).astype(np.uint8), "RGBA")
     return im.resize((round(im.width * b["h"] / im.height), b["h"]), Image.Resampling.LANCZOS)
+
+
+@lru_cache(None)
+def glowing(key, level):
+    """Sprite with glowing eyes (level 0..7 = beat pulse) and a pad for the aura."""
+    b = BOSSES[key]
+    sp = sprite(key)
+    k = _scale(key)
+    pad = 60
+    cv = Image.new("RGBA", (sp.width + 2 * pad, sp.height + 2 * pad), (0, 0, 0, 0))
+    # aura: blurred silhouette behind, pulsing
+    al = np.asarray(sp.getchannel("A")).astype(np.float32)
+    big = np.zeros((cv.height, cv.width), np.float32)
+    big[pad:pad + sp.height, pad:pad + sp.width] = al
+    big = np.asarray(Image.fromarray(big.astype(np.uint8)).filter(ImageFilter.GaussianBlur(26))).astype(np.float32)
+    aura = np.zeros((cv.height, cv.width, 4), np.uint8)
+    aura[..., :3] = b["aura"]
+    aura[..., 3] = np.clip(big * (0.55 + 0.35 * level / 7), 0, 255).astype(np.uint8)
+    cv.alpha_composite(Image.fromarray(aura, "RGBA"))
+    cv.alpha_composite(sp, (pad, pad))
+    # eyes: soft additive glow + hot core
+    g = Image.new("RGBA", cv.size, (0, 0, 0, 0))
+    dg = ImageDraw.Draw(g)
+    for ex, ey, r in b["eyes"]:
+        cx, cy, rr = pad + ex * k, pad + ey * k, r * k * (1.3 + 0.25 * level / 7)
+        dg.ellipse((cx - rr, cy - rr * 0.8, cx + rr, cy + rr * 0.8), fill=(*b["eye_col"], 255))
+    g = g.filter(ImageFilter.GaussianBlur(10 + 2 * level / 7))
+    ga = np.asarray(g).astype(np.float32)
+    base = np.asarray(cv).astype(np.float32)
+    add = ga[..., :3] * (ga[..., 3:] / 255) * (0.55 + 0.35 * level / 7)
+    base[..., :3] = np.minimum(255, base[..., :3] + add)
+    base[..., 3] = np.maximum(base[..., 3], ga[..., 3] * 0.6)
+    return Image.fromarray(base.astype(np.uint8), "RGBA"), pad
 
 
 @lru_cache(None)
 def flash(key):
     a = np.asarray(sprite(key)).copy()
-    a[..., :3] = (a[..., :3] * 0.25 + 255 * 0.75).astype(np.uint8)
+    a[..., :3] = (a[..., :3] * 0.6 + 255 * 0.4).astype(np.uint8)        # light flinch (shooting its shots)
     return Image.fromarray(a, "RGBA")
+
+
+def muzzle(key):
+    """Screen position of the muzzle at rest."""
+    b = BOSSES[key]
+    sp = sprite(key)
+    k = _scale(key)
+    mx, my = b["muzzle"]
+    left = b["x"] - sp.width / 2
+    top = (900 - sp.height) if b["ground"] else (b["y"] - sp.height / 2)
+    return left + mx * k, top + my * k
+
+
+def lead(key):
+    import mdgame as G
+    return (muzzle(key)[0] - (G.HIT_X + 40)) / G.V_E               # flight time from the muzzle to her
 
 
 def _chart():
@@ -75,10 +154,60 @@ def timeline(key):
     """Her hits during the fight (HP), the throws (when each enemy leaves the boss) and the defeat time."""
     import mdgame as G
     b = BOSSES[key]
-    hits = [t for t, k in _chart() if k in ("g", "a") and b["enter"] + 0.3 <= t <= b["last"]]
-    lead = (b["x"] - G.HIT_X - 40) / G.V_E                       # enemy flight time from the boss to her
-    throws = [t - lead for t, k in _chart() if k in ("g", "a", "a_miss") and b["enter"] <= t - lead < hits[-1]]
-    return tuple(hits), tuple(throws), hits[-1]
+    L = lead(key)
+    shots = [t for t, k in _chart() if k in ("g", "a", "a_miss") and b["enter"] + 0.35 <= t - L and t <= b["last"]]
+    hits = [t for t in shots if t >= b["enter"]]
+    return tuple(hits), tuple(t - L for t in shots), hits[-1]
+
+
+@lru_cache(None)
+def _shot_notes():
+    out = {}
+    for key in BOSSES:
+        hits, throws, dead = timeline(key)
+        L = lead(key)
+        for t in throws:
+            out[round(t + L, 4)] = key
+    return out
+
+
+def thrown(tt):
+    """The boss that fires the note at chart time tt (it then flies out of that boss's muzzle), or None."""
+    return _shot_notes().get(round(tt, 4))
+
+
+@lru_cache(None)
+def bubble(role):
+    """Mini-boss shot: a mocking speech bubble (ｗｗ) - pink on the ground lane, cyan in the air."""
+    W, H = 190, 150
+    S2 = 3
+    im = Image.new("RGBA", (W * S2, H * S2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    fill = (255, 120, 190) if role == "ground" else (120, 220, 255)
+    dark = (90, 20, 80) if role == "ground" else (20, 60, 120)
+    def blob(o, col):
+        d.rounded_rectangle((12 * S2 - o, 10 * S2 - o, 178 * S2 + o, 112 * S2 + o), 48 * S2, fill=col)
+        d.polygon([(132 * S2, 104 * S2), (176 * S2 + o, 140 * S2 + o), (112 * S2, 108 * S2)], fill=col)
+    blob(7 * S2, dark)
+    blob(0, fill)
+    d.rounded_rectangle((34 * S2, 22 * S2, 120 * S2, 38 * S2), 8 * S2, fill=(255, 255, 255, 120))
+    f = ImageFont.truetype(str(Path(__file__).parent.parent / "pv/fonts/MPLUSRounded1c-ExtraBold.ttf"), 78 * S2)
+    d.text((95 * S2, 64 * S2), "ｗｗ", font=f, fill=(255, 255, 255), anchor="mm", stroke_width=7 * S2,
+           stroke_fill=dark)
+    return im.resize((W, H), Image.Resampling.LANCZOS)
+
+
+def projectile(key, tt, g, lane, x, sp_h):
+    """(x, y_centre) of a fired shot, or None before it leaves the muzzle: it leaves the muzzle and settles into its
+    lane over its first 0.2 s, flying straight on from there."""
+    import mdgame as G
+    mx, my = muzzle(key)
+    t_fire = tt - lead(key)
+    if g < t_fire:
+        return None
+    lane_y = G.AIR_Y if lane == "air" else G.FLOOR + 6 - sp_h / 2
+    u = ease_out((g - t_fire) / 0.2)
+    return x, my + (lane_y - my) * u
 
 
 def active(g):
@@ -97,6 +226,9 @@ def shake(g):
     b = BOSSES[k]
     hits, throws, dead = timeline(k)
     a = g - b["enter"]
+    if not b["ground"] and 0.0 <= a < 0.45:                    # the chat bursts in laughing
+        u = a / 0.45
+        return int(round(13 * (1 - u) * (1 if int(a * 30) % 2 == 0 else -1)))
     if b["ground"] and 0.32 <= a < 0.32 + 0.4:                 # the daruma lands
         u = (a - 0.32) / 0.4
         return int(round(18 * (1 - u) * (1 if int(a * 30) % 2 == 0 else -1)))
@@ -104,9 +236,9 @@ def shake(g):
         if t0 is not None and 0 <= g - t0 < 0.35:
             u = (g - t0) / 0.35
             return int(round(14 * (1 - u) * (1 if int((g - t0) * 30) % 2 == 0 else -1)))
-    for tt in throws:                                           # small kick on each throw
+    for tt in throws:                                           # kick on each shot
         if 0 <= g - tt < 3 / 30:
-            return int(round(4 * (1 if int((g - tt) * 30) % 2 == 0 else -1)))
+            return int(round(6 * (1 if int((g - tt) * 30) % 2 == 0 else -1)))
     return 0
 
 
@@ -130,7 +262,7 @@ def draw_atmosphere(img, g):
     hits, throws, dead = timeline(k)
     fade = min(1.0, (g - b["warn"]) / 0.8) * (1 - min(1.0, max(0.0, (g - dead - 0.6) / 1.0)))
     beat = 0.5 + 0.5 * math.cos(2 * math.pi * (g - b["enter"]) / BEAT)
-    dim = Image.new("RGBA", img.size, (*b["dark"], int(255 * 0.30 * fade)))    # the whole stage dims around it
+    dim = Image.new("RGBA", img.size, (*b["dark"], int(255 * 0.46 * fade)))    # the whole stage dims around it
     img.alpha_composite(dim)
     v = vignette(b["dark"])
     a = np.asarray(v.getchannel("A")).astype(np.float32) * fade * (0.62 + 0.18 * beat)
@@ -165,13 +297,18 @@ def _state(key, g):
             x = b["x"] + 520 * (1 - ease_out(u)) - 30 * math.sin(math.pi * u)
         y = b["y"] + 22 * math.sin(2 * math.pi * (g - b["enter"]) / (2 * BEAT))
         rot = 4 * math.sin(2 * math.pi * (g - b["enter"]) / (4 * BEAT))
-    for tt in throws:                                           # leans in and flings / shouts each enemy out
+    for tt in throws:                                           # winds up, then recoils as it fires
         d = g - tt
-        if -0.08 <= d < 0.16:
-            k = math.sin(math.pi * (d + 0.08) / 0.24)
-            x -= 34 * k
-            sx, sy = sx * (1 + 0.07 * k), sy * (1 - 0.06 * k)
-            rot += (6 if b["ground"] else -5) * k
+        if -FIRE_PRE <= d < 0:                                  # anticipation: draws back, swells
+            k = math.sin(math.pi / 2 * (d + FIRE_PRE) / FIRE_PRE)
+            x += 22 * k
+            sx, sy = sx * (1 + 0.05 * k), sy * (1 + 0.05 * k)
+            rot += (-5 if b["ground"] else 4) * k
+        elif 0 <= d < FIRE_POST:                                # fire: snaps forward then kicks back
+            k = 1 - d / FIRE_POST
+            x += -30 * k * (1 if d < 0.04 else -0.6)
+            sx, sy = sx * (1 + 0.08 * k), sy * (1 - 0.07 * k)
+            rot += (7 if b["ground"] else -6) * k
     fl = any(0 <= g - tt < 2 / 30 for tt in hits)                # flinches white on her hits
     for tt in hits:
         if 0 <= g - tt < 0.12:
@@ -214,18 +351,44 @@ def draw_boss(img, g):
     sh = sh.resize((int(520 * sw), int(70 * sw)))
     if alpha > 0:
         img.alpha_composite(sh, (int(x - sh.width / 2), 900 - sh.height // 2 + 4))
-        sp = flash(key) if fl else sprite(key)
-        sp = sp.resize((max(1, int(sp.width * sx)), max(1, int(sp.height * sy))), Image.Resampling.BICUBIC)
+        beat = 0.5 + 0.5 * math.cos(2 * math.pi * (g - b["enter"]) / BEAT)
+        if fl:
+            src, gp = flash(key), 0
+        else:
+            src, gp = glowing(key, int(round(beat * 7)))
+        h0 = sprite(key).height
+        sp = src.resize((max(1, int(src.width * sx)), max(1, int(src.height * sy))), Image.Resampling.BICUBIC)
+        gpx, gpy = gp * sx, gp * sy
         if b["ground"]:                                         # pivot at its round base
             pad = sp.height
             cv = Image.new("RGBA", (sp.width + 2 * pad, sp.height + 2 * pad), (0, 0, 0, 0))
             cv.alpha_composite(sp, (pad, pad))
-            piv = (pad + sp.width * 0.5, pad + sp.height * 0.97)
+            piv = (pad + sp.width * 0.5, pad + gpy + h0 * sy * 0.97)
             cv = cv.rotate(rot, Image.Resampling.BICUBIC, center=piv)
             img.alpha_composite(cv, (int(x - piv[0]), int(y - piv[1])))
         else:
             rs = sp.rotate(rot, Image.Resampling.BICUBIC, expand=True)
             img.alpha_composite(rs, (int(x - rs.width / 2), int(y - rs.height / 2)))
+        mx, my = muzzle(key)
+        mx += x - b["x"]
+        my += (y - (b["y"] if not b["ground"] else 900.0))
+        for tt in throws:                                       # muzzle: charge glow, flash, lingering smoke
+            d = g - tt
+            if -FIRE_PRE <= d < 0:
+                r = 18 + 40 * (d + FIRE_PRE) / FIRE_PRE
+                lay = Image.new("RGBA", (int(4 * r), int(4 * r)), (0, 0, 0, 0))
+                ImageDraw.Draw(lay).ellipse((r, r, 3 * r, 3 * r), fill=(*b["eye_col"], 200))
+                lay = lay.filter(ImageFilter.GaussianBlur(r / 3))
+                img.alpha_composite(lay, (int(mx - 2 * r), int(my - 2 * r)))
+            elif 0 <= d < SMOKE:
+                if d < 2 / 30:
+                    FX.ring_flash(img, mx, my, d * 2)
+                    star = Image.new("RGBA", (220, 220), (0, 0, 0, 0))
+                    ds = ImageDraw.Draw(star)
+                    ds.polygon([(110, 0), (124, 96), (220, 110), (124, 124), (110, 220), (96, 124), (0, 110),
+                                (96, 96)], fill=(255, 255, 255, 240))
+                    img.alpha_composite(star, (int(mx - 110), int(my - 110)))
+                FX.puffs(img, mx + 10, my, d * 0.34 / SMOKE, int(tt * 100), 6, 120)
     if g >= dead:                                               # burst: confetti / fireworks
         t0 = dead + (0.95 if b["ground"] else 0.5)
         cy = (y - b["h"] * 0.5) if b["ground"] else y

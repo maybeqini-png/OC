@@ -155,3 +155,14 @@ rise fast, hang, drop fast; take-off stretch, landing squash with ring and dust;
 and a stretch that settle in 0.12 s, two smear ghosts for 2 frames; the first five stage changes are character
 cut-ins with her approved busts (smug, happy, wink, sing, pout), the HUD steady on top; the climb keeps its slow
 rise and the festival its curtain.
+
+## Boss fight (2026-11-03, frame by frame)
+Owner: "the bosses lack menace; the ranged attacks look like they strike from thin air". Official trailer 91.0-92.6 s
+at 30 fps: the boss is large at the right edge (about half the playfield height) with visible cannon arms; every
+bullet appears at a muzzle inside a big white smoke burst that lingers 6-10 frames, then flies straight along its
+lane (ground and air bullets in different colours); the boss recoils on each shot; the whole stage is dark.
+PV (`pixel/mdboss.py`): bosses 560-580 px; every note of the fight is fired from the boss's muzzle (megaphone /
+daruma mouth) - it does not exist before it leaves the muzzle, then settles into its lane in 0.2 s; 0.12 s
+anticipation (draws back, muzzle charges) and recoil; white star flash, ring and lingering smoke at the muzzle;
+the mini-boss shoots mocking ｗｗ speech bubbles, the daruma spits its mini-daruma minions; glowing eyes and a
+pulsing aura on the beat; stage dimmed 46 % with a breathing vignette; entrance shakes.
