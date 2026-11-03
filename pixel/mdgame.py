@@ -13,6 +13,7 @@ units there, x2 here); this module only draws:
 Everything is drawn anti-aliased (shapes 2x supersampled); nothing is drawn on white, so no white fringes.
 """
 import math
+import random
 from functools import lru_cache
 from pathlib import Path
 
@@ -372,35 +373,143 @@ def draw_world(img, g, late=None, texts=None):
         draw_hold(img, g)
 
 
+HOLD_Y = FLOOR - 150                    # ribbon centre (her mid height, as in the reference)
+
+
+@lru_cache(None)
+def staff_tile(w=1200, h=150):
+    """Glowing music-staff band (tileable, w px): five stripes cyan / violet / white over a soft glow, white note
+    glyphs and treble clefs riding on it (reference: Muse Dash hold note, official screenshot)."""
+    big = Image.new("RGBA", (w * 2, h * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(big)
+    d.rectangle([0, 2 * 18, 2 * w, 2 * (h - 18)], fill=(60, 30, 130, 170))          # dark violet backing
+    cols = [(110, 230, 255), (190, 140, 255), (245, 250, 255), (190, 140, 255), (110, 230, 255)]
+    for i, c in enumerate(cols):
+        yy = 2 * (24 + i * 24)
+        d.rectangle([0, yy, 2 * w, yy + 2 * (9 if i in (0, 4) else 6)], fill=(*c, 255))
+    glow = big.filter(ImageFilter.GaussianBlur(16))
+    out = Image.new("RGBA", big.size, (0, 0, 0, 0))
+    out.alpha_composite(glow)
+    out.alpha_composite(big)
+    out = out.resize((w, h), Image.Resampling.LANCZOS)
+    f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 92)
+    dd = ImageDraw.Draw(out)
+    glyphs = ["\u266C", "\u2669", "\u266B", "\u266A", "\u266C", "\u266B", "\u266A", "\u2669"]
+    for k, gl in enumerate(glyphs):
+        x = 40 + k * (w // len(glyphs))
+        yo = [-6, 6, -2, 8, 0, -4, 6, 2][k]
+        try:
+            dd.text((x, 18 + yo), gl, font=f, fill=(255, 255, 255, 255), stroke_width=5, stroke_fill=(110, 70, 220, 255))
+        except Exception:
+            pass
+    return out
+
+
+@lru_cache(None)
+def hold_star(size, step):
+    """Thick tilted cyan star with a white core and a glow (the hold's tail / head)."""
+    def dr(d, k):
+        c = size * k / 2
+        rot = 0.25 + step * 0.02
+
+        def pts(R, r):
+            out = []
+            for i in range(10):
+                rr = R if i % 2 == 0 else r
+                a = rot + i * math.pi / 5 - math.pi / 2
+                out.append((c + rr * math.cos(a), c + rr * math.sin(a)))
+            return out
+        d.polygon(pts(c * 0.92, c * 0.5), fill=(90, 210, 255, 255))
+        d.polygon(pts(c * 0.72, c * 0.38), fill=(230, 250, 255, 255))
+        d.polygon(pts(c * 0.5, c * 0.27), fill=(120, 225, 255, 255))
+    im = _ss(size, size, dr)
+    g = im.filter(ImageFilter.GaussianBlur(10))
+    out = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    out.alpha_composite(g)
+    out.alpha_composite(im)
+    return out
+
+
+@lru_cache(None)
+def hold_disc(r):
+    """Translucent pale-blue disc with a white ring (her held-note aura)."""
+    def dr(d, k):
+        c = r * k
+        d.ellipse([0, 0, 2 * c - 1, 2 * c - 1], fill=(150, 200, 255, 120))
+        rr = c * 0.62
+        d.ellipse([c - rr, c - rr, c + rr, c + rr], outline=(255, 255, 255, 235), width=int(9 * k))
+    return _ss(2 * r, 2 * r, dr)
+
+
+@lru_cache(None)
+def hold_burst(size, step):
+    """White star burst at the hit point (as in the reference): a big white star, white blobs around it, a cyan
+    inner star; spins a little each frame."""
+    rng = random.Random(step)
+
+    def dr(d, k):
+        c = size * k / 2
+        for i in range(7):
+            a = i * 2 * math.pi / 7 + step * 0.3
+            r = c * rng.uniform(0.18, 0.28)
+            x, y = c + c * 0.55 * math.cos(a), c + c * 0.55 * math.sin(a)
+            d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 255, 255, 255))
+
+        def star(R, rr, rot, col):
+            pts = []
+            for i in range(10):
+                q = R if i % 2 == 0 else rr
+                a = rot + i * math.pi / 5 - math.pi / 2
+                pts.append((c + q * math.cos(a), c + q * math.sin(a)))
+            d.polygon(pts, fill=col)
+        star(c * 0.95, c * 0.45, step * 0.12, (255, 255, 255, 255))
+        star(c * 0.5, c * 0.24, step * 0.12, (150, 235, 255, 255))
+    return _ss(size, size, dr)
+
+
 def draw_hold(img, g):
-    """Hold note: a music-staff ribbon from the hit point to its end star, sparkles while held."""
+    """Hold note (reference: official screenshot): glowing staff ribbon from the hit point to a big cyan star; while
+    held, a translucent blue disc with a white ring around her, a pulsing white burst and flying tick marks."""
     st = ST()
     x0 = HIT_X + max(0.0, st.HOLD[0] - g) * V_E
     x1 = HIT_X + max(0.0, st.HOLD[1] - g) * V_E
-    y = FLOOR - 130
+    holding = st.HOLD[0] <= g < st.HOLD[1]
+    if holding:
+        put(img, hold_disc(300), RUN_X + 40, HOLD_Y)
     if x1 > x0 + 2:
-        w = int(min(OW + 40, x1) - x0)
+        w = int(min(OW + 60, x1) - x0)
         if w > 0:
-            lay = Image.new("RGBA", (w, 76), (0, 0, 0, 0))
-            d = ImageDraw.Draw(lay)
-            d.rounded_rectangle([0, 0, w - 1, 75], radius=30, fill=(255, 255, 255, 215), outline=(150, 190, 255, 255),
-                                width=5)
-            for i in range(5):
-                d.line([(10, 16 + i * 11), (w - 10, 16 + i * 11)], fill=(120, 160, 240, 200), width=2)
-            off = (g * V_E) % 140
-            for k in range(-1, w // 140 + 2):
-                nx = k * 140 - off + 60
-                if 10 < nx < w - 30:
-                    lay.alpha_composite(note_icon().resize((34, 36), Image.Resampling.LANCZOS), (int(nx), 18))
-            img.alpha_composite(lay, (int(x0), y - 38))
-    if x1 < OW + 60:
-        put(img, star_icon(80), x1, y)
+            tile = staff_tile()
+            off = int((g * V_E) % tile.width)                   # glyphs ride with the ribbon
+            n = w // tile.width + 2
+            long = Image.new("RGBA", (n * tile.width, tile.height), (0, 0, 0, 0))
+            for k in range(n):
+                long.paste(tile, (k * tile.width, 0))
+            strip = long.crop((off, 0, off + w, tile.height))
+            a = np.asarray(strip).copy()                        # soft fade-in at the head
+            ramp = np.clip(np.arange(w) / 40.0, 0, 1)
+            a[..., 3] = (a[..., 3] * ramp[None, :]).astype(np.uint8)
+            img.alpha_composite(Image.fromarray(a, "RGBA"), (int(x0), int(HOLD_Y - tile.height / 2)))
+    step = int(g * 30)
+    if x1 < OW + 120:
+        put(img, hold_star(190, step % 30), x1, HOLD_Y)
     if g < st.HOLD[0]:
-        put(img, star_icon(80), x0, y)
-    if st.HOLD[0] <= g < st.HOLD[1]:
-        for k in range(5):
-            sx = HIT_X - 20 - ((g * 420 + k * 61) % 220)
-            put(img, star_icon(30, (255, 255, 255)), sx, y - 40 + (k * 23) % 80, alpha=0.9)
+        put(img, hold_star(150, step % 30), x0, HOLD_Y)
+    if holding:
+        pulse = 1 + 0.12 * math.sin(g * 2 * math.pi * 136 / 60 * 2)
+        put(img, hold_burst(int(260 * pulse), step % 12), HIT_X - 20, HOLD_Y)
+        lay = Image.new("RGBA", (700, 700), (0, 0, 0, 0))
+        d = ImageDraw.Draw(lay)
+        rng = random.Random(step)
+        for i in range(10):                                     # tick marks flying out of the disc
+            ang = rng.uniform(0, 2 * math.pi)
+            r0 = rng.uniform(150, 300)
+            FX.taper_line(d, 350 + r0 * math.cos(ang), 350 + r0 * math.sin(ang), 350 + (r0 + 30) * math.cos(ang),
+                          350 + (r0 + 30) * math.sin(ang), 6, 2, (255, 255, 255, 230))
+        img.alpha_composite(lay, (int(RUN_X + 40 - 350), int(HOLD_Y - 350)))
+    if st.HOLD[1] <= g < st.HOLD[1] + 0.4:                       # release: the tail star bursts
+        FX.impact(img, HIT_X, HOLD_Y, g - st.HOLD[1], 77, "blue", 1.2)
+        FX.confetti(img, HIT_X, HOLD_Y, g - st.HOLD[1], 77, "blue", 24)
 
 
 # ---------------------------------------------------------------- avatar
