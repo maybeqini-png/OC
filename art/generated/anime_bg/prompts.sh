@@ -104,3 +104,11 @@ done
 for s in 9981 9982 9983 9984 9985 9986; do
   ga w_climb $s 704 1472 "vertical, tall image, a winding staircase of white piano keys spiraling up into a violet starry sky, a giant smiling cat face moon wearing a blue ribbon at the top, falling music notes and little stars, a navy blue ribbon twisting around the stairs, golden and orange clouds at the bottom, magical and grand"
 done
+# 2026-11-03 OWNER: "more intensely surreal, dark, thrilling, and climactic to match the music" -> climax climb takes.
+NEGV="text, watermark, signature, logo, letters, words, numbers, humans, 1girl, 1boy, person, character, realistic, photo, 3d, render, neon, cyberpunk, sci-fi, futuristic, technology, machine, robot, screens, gore, blood, horror, scary, detailed texture, thick lineart, blurry, jpeg artifacts, lowres, nsfw"
+VST="no humans, scenery, 2d game stage background, surreal, dreamlike, epic, climactic, dramatic scale, flat vector illustration, simple bold shapes, flat colors, strong contrast, dark and vivid, soft haze, layered depth, no lineart, vertical, tall image"
+gv() { [ -f "$OUT/$1_$2.png" ] || $NAI generate --model $M --w 704 --h 1472 --seed $2 --prompt "$3, $VST" --negative "$NEGV" --out "$OUT/$1_$2.png"; }
+for s in 9991 9992 9993 9994; do
+  gv v_climb $s "a towering spiral staircase of black and white piano keys twisting up through a dark storm, a huge glowing cat-eye moon splitting the clouds at the top, lightning made of music notes, a navy ribbon whipping in the wind, deep indigo and crimson sky, golden light bursting from above"
+  gv v_vortex $s "a vortex of falling piano keys and music notes spiraling into the sky, a giant cat silhouette made of stars watching from above with glowing eyes, a crescent moon, swirling dark violet and midnight blue clouds, shafts of golden light, a navy ribbon"
+done
