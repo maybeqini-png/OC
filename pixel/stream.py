@@ -888,6 +888,14 @@ def room_frame(t, monitor_img, vt_visible=True, push=0.0):
     The room is cropped and scaled first; the monitor picture is warped once from full resolution onto the screen's
     real (perspective) quad in output pixels, so it stays sharp; during the last part of the push the quad
     straightens into the view rectangle, so push = 1 shows exactly the game frame."""
+    if monitor_img is not None and monitor_img.width == OW:          # 16:9 picture: extend to the full screen
+        src_ = monitor_img.convert("RGBA")                             # width with its own softened edge colours
+        ext = Image.new("RGBA", (OW + 2 * BLEED, OH))
+        ext.paste(src_.crop((0, 0, 8, OH)).resize((BLEED, OH)).filter(ImageFilter.GaussianBlur(6)), (0, 0))
+        ext.paste(src_.crop((OW - 8, 0, OW, OH)).resize((BLEED, OH)).filter(ImageFilter.GaussianBlur(6)),
+                  (OW + BLEED, 0))
+        ext.paste(src_, (BLEED, 0))
+        monitor_img = ext
     wide = monitor_img is not None and monitor_img.width > OW
     room = room_base(not wide and monitor_img is not None).copy()
     if vt_visible:                                   # her model, waist up, in front of her chair; while the view
