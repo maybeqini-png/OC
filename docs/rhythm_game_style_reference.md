@@ -202,3 +202,14 @@ Motion: her flight follows the air-lane target through second-order dynamics (f 
 and noses down falling, stretched along the motion; saw jumps are ballistic arcs. Bosses: every keyed pose (entrance,
 beat rock, wind-up / recoil, flinch, defeat) is a target followed through springs per channel, the body shears with
 its own velocity (top lags) and breathes on the beat with volume kept.
+
+## Hover board v2, hold ribbons, speed lines (2026-11-04)
+Owner: the board flickered and wobbled; more boost strips (the hold ribbons), more varied, N5 with code. Fixes:
+the board (new N5 design `hv2_board_67002`: chunky cat deck with a thruster ring) is locked under her feet while she
+rides (follows her lunge too), lands with a weighted dip, a shock ring and sparks, has a steady beat-pulsed jet and a
+cyan slipstream, tilts only with her smoothed vertical speed (max 6 deg), waits behind her between flights closer than
+1.5 s instead of flying in and out. Hold notes now sit on every long sung syllable (lyrics_timed: held 0.75 s or more)
+- ten ribbons in both lanes (air holds keep her up on the board), each stage with its own N5 ribbon skin (`rb_*`:
+cloud band, candy, sprinkle rope, starry music staff, festival rope), tiled seamlessly. Speed lines run all game long,
+their number following the song's energy; boost strips sweep on chorus starts, Gemini, mash and boss BREAKs. Her run
+leans into the stride and bounces on foot contacts. Music-note pickups use an N5 note (`note2_67103`).

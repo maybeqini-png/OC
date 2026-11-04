@@ -383,7 +383,7 @@ def draw_world(img, g, late=None, texts=None):
                     if dt < 0:
                         texts.append(lambda im, a=-dt: FX.judgement(im, HIT_X + 150, FLOOR - 360, a, "pass", "PASS"))
             elif dt >= 0:
-                ic = note_icon() if kind == "note" else heart_icon()
+                ic = MD.sprite("note2") if kind == "note" else heart_icon()
                 y = FLOOR - 250 if kind == "note" else FLOOR - 150
                 put(img, ic, x, y + 8 * math.sin(g * 6 + tt))
             elif dt > -0.95:
@@ -462,11 +462,40 @@ def draw_world(img, g, late=None, texts=None):
                 jx, jy = 0, ((seed // 13) % 3 - 1) * 34      # rapid hits stack, offset
                 texts.append(lambda im, a=age, p_=pal, ln=lane, jx=jx, jy=jy: FX.judgement(
                     im, HIT_X + 150 + jx, ((AIR_Y - 170) if ln == "air" else FLOOR - 340) + jy, a, p_))
-    if st.HOLD[0] - 1.8 <= g < st.HOLD[1] + 0.3:
-        draw_hold(img, g)
+    for hold in st.HOLDS:
+        if hold[0] - 1.9 <= g < hold[1] + 0.45:
+            draw_hold(img, g, hold)
 
 
-HOLD_Y = FLOOR - 150                    # ribbon centre (her mid height, as in the reference)
+HOLD_Y = FLOOR - 150                    # ground ribbon centre (her mid height, as in the reference)
+
+
+@lru_cache(None)
+def ribbon_tile(fam, h=150):
+    """Seamless ribbon tile from the family's N5 ribbon (rb_<fam>_6800x): cut out, scaled to height h, the right
+    third cross-faded into the left so it tiles, plus a soft glow behind."""
+    import mdsprites as MDs
+    name = {"k": "rb_k_68001", "u": "rb_u_68001", "p": "rb_p_68001", "n": "rb_n_68001", "f": "rb_f_68001"}.get(
+        fam, "rb_n_68001")
+    src = Image.open(MDs.SRC / f"{name}.png").convert("RGB")
+    src = src.crop((int(src.width * 0.12), 0, int(src.width * 0.88), src.height))   # no wrapper ends / knots
+    pale = fam == "k"                                     # the cream cloud band: only near-white is background
+    im = MDs.cutout(src, light=246 if pale else 200, sat_max=10 if pale else 60)
+    im = im.resize((round(im.width * (h - 30) / im.height), h - 30), Image.Resampling.LANCZOS)
+    a = np.asarray(im).astype(np.float32)
+    w = a.shape[1]
+    ov = w // 4
+    left, right = a[:, :ov], a[:, w - ov:]
+    t = np.linspace(0, 1, ov)[None, :, None]
+    a2 = a[:, : w - ov].copy()
+    a2[:, :ov] = right * (1 - t) + left * t
+    tile = Image.fromarray(a2.clip(0, 255).astype(np.uint8), "RGBA")
+    out = Image.new("RGBA", (tile.width, h), (0, 0, 0, 0))
+    glow = Image.new("RGBA", out.size, (0, 0, 0, 0))
+    ImageDraw.Draw(glow).rectangle((0, 22, tile.width, h - 22), fill=(255, 255, 255, 110))
+    out.alpha_composite(glow.filter(ImageFilter.GaussianBlur(10)))
+    out.alpha_composite(tile, (0, 15))
+    return out
 
 
 @lru_cache(None)
@@ -560,19 +589,22 @@ def hold_burst(size, step):
     return _ss(size, size, dr)
 
 
-def draw_hold(img, g):
-    """Hold note (reference: official screenshot): glowing staff ribbon from the hit point to a big cyan star; while
-    held, a translucent blue disc with a white ring around her, a pulsing white burst and flying tick marks."""
+def draw_hold(img, g, hold):
+    """Hold note (reference: official screenshot): a ribbon from the hit point to a big star in its lane; while held,
+    a translucent disc with a white ring around her, a pulsing white burst and flying tick marks. The ribbon skin is
+    the stage family's (art/generated/md_style/rb_*, N5), tiled seamlessly; the last hold keeps the music staff."""
     st = ST()
-    x0 = HIT_X + max(0.0, st.HOLD[0] - g) * V_E
-    x1 = HIT_X + max(0.0, st.HOLD[1] - g) * V_E
-    holding = st.HOLD[0] <= g < st.HOLD[1]
+    h0, h1, lane = hold
+    HOLD_Y = AIR_Y + 20 if lane == "a" else FLOOR - 150
+    x0 = HIT_X + max(0.0, h0 - g) * V_E
+    x1 = HIT_X + max(0.0, h1 - g) * V_E
+    holding = h0 <= g < h1
     if holding:
         put(img, hold_disc(300), RUN_X + 40, HOLD_Y)
     if x1 > x0 + 2:
         w = int(min(OW + 60, x1) - x0)
         if w > 0:
-            tile = staff_tile()
+            tile = ribbon_tile(family_at(h0)) if hold != st.HOLDS[-1] else staff_tile()
             off = int((g * V_E) % tile.width)                   # glyphs ride with the ribbon
             n = w // tile.width + 2
             long = Image.new("RGBA", (n * tile.width, tile.height), (0, 0, 0, 0))
@@ -586,7 +618,7 @@ def draw_hold(img, g):
     step = int(g * 30)
     if x1 < OW + 120:
         put(img, hold_star(190, step % 30), x1, HOLD_Y)
-    if g < st.HOLD[0]:
+    if g < h0:
         put(img, hold_star(150, step % 30), x0, HOLD_Y)
     if holding:
         pulse = 1 + 0.12 * math.sin(g * 2 * math.pi * 136 / 60 * 2)
@@ -600,9 +632,9 @@ def draw_hold(img, g):
             FX.taper_line(d, 350 + r0 * math.cos(ang), 350 + r0 * math.sin(ang), 350 + (r0 + 30) * math.cos(ang),
                           350 + (r0 + 30) * math.sin(ang), 6, 2, (255, 255, 255, 230))
         img.alpha_composite(lay, (int(RUN_X + 40 - 350), int(HOLD_Y - 350)))
-    if st.HOLD[1] <= g < st.HOLD[1] + 0.4:                       # release: the tail star bursts
-        FX.impact(img, HIT_X, HOLD_Y, g - st.HOLD[1], 77, "blue", 1.2)
-        FX.confetti(img, HIT_X, HOLD_Y, g - st.HOLD[1], 77, "blue", 24)
+    if h1 <= g < h1 + 0.4:                                      # release: the tail star bursts
+        FX.impact(img, HIT_X, HOLD_Y, g - h1, 77, "blue", 1.2)
+        FX.confetti(img, HIT_X, HOLD_Y, g - h1, 77, "blue", 24)
 
 
 # ---------------------------------------------------------------- avatar
@@ -673,7 +705,7 @@ TAUNT_LEN, BOOP_LEN = 0.55, 0.5
 def acts():
     st = ST()
     notes = [tt for tt, k in st.chart() if k in ("g", "a", "a_miss", "gear", "gear_miss")]
-    busy = [(a, b) for a, b, *_ in st.WIPES] + [(st.HOLD[0] - 0.3, st.HOLD[1] + 0.3)]
+    busy = [(a, b) for a, b, *_ in st.WIPES] + [(a - 0.3, b + 0.3) for a, b, ln in st.HOLDS]
 
     def free(t0, t1):
         if any(t0 - 0.06 <= n <= t1 + 0.06 for n in notes) or any(a < t1 and t0 < b for a, b in busy):
@@ -749,8 +781,9 @@ def avatar(t):
         sp, feet = act_sprite(key, armed)
         return sp, feet, RUN_X + (10 if key == "boop" else 0), FLOOR
     h = st.avatar_height(g) * K
-    if st.HOLD[0] <= g < st.HOLD[1] + 0.2:
-        return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
+    for h0_, h1_, ln_ in st.HOLDS:                 # holding a ribbon: running (ground) or riding the board (air)
+        if h0_ <= g < h1_ + 0.12:
+            return (*RN.run_at(g, armed=armed), RUN_X, FLOOR - h)
     ng = na = 0
     pick = None
     for tt, kind in st.chart():                      # the latest struck note (Hell chart: hits overlap)
@@ -820,7 +853,7 @@ def _board_track():
                 if g < a and a - prv < 0.6:                       # it was parked right behind her
                     mode[i] = 2
                 break
-            if b - st.AIR_DROP * 0.7 <= g < b + 0.6 and nxt - b < 0.6 and g < nxt - 0.24:
+            if b - st.AIR_DROP * 0.7 <= g < nxt and nxt - b < 1.5 and g < nxt - 0.24:
                 tx[i], ty[i] = RUN_X - 150, FLOOR - 250            # parked behind her, waiting
                 mode[i] = 3
                 break
@@ -866,53 +899,78 @@ def board_state(g):
 
 
 @lru_cache(None)
-def hover_board(flick, power):
-    """The cat-paw hover board (art/generated/md_style/hv_board_66103); jet flame length by power (0..4) and a
-    flicker phase (0..3)."""
-    bd = MD.sprite("hover")
-    W, H = bd.width + 40, bd.height + 90
+def hover_board(power):
+    """Hover board v2 (art/generated/md_style/hv2_board_*, N5): steady thruster jet (length by power 0..8) and a
+    soft cyan under-glow; no per-frame random flicker (owner: the board flickered)."""
+    bd = MD.sprite("hover2")
+    W, H = bd.width + 60, bd.height + 110
     out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    cx, top = W / 2, bd.height * 0.78
+    d.ellipse((cx - bd.width * 0.42, top - 10, cx + bd.width * 0.42, top + 26), fill=(120, 230, 255, 70 + 10 * power))
     if power:
-        jet = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        d = ImageDraw.Draw(jet)
-        L = (14 + 12 * power) * (1 + 0.18 * (flick % 2)) + 4 * flick
-        for k, (col, w) in enumerate((((120, 230, 255, 150), 30), ((230, 252, 255, 235), 13))):
-            for cxj in (W / 2 - bd.width * 0.22, W / 2 + bd.width * 0.18):     # two thrusters
-                d.polygon([(cxj - w / 2, bd.height - 10), (cxj + w / 2, bd.height - 10),
-                           (cxj, bd.height - 10 + L - k * 10)], fill=col)
-        out.alpha_composite(jet.filter(ImageFilter.GaussianBlur(3)))
-    out.alpha_composite(bd, (20, 0))
+        L = 26 + 7 * power
+        d.polygon([(cx - 26, top), (cx + 26, top), (cx, top + L)], fill=(120, 230, 255, 170))
+        d.polygon([(cx - 11, top), (cx + 11, top), (cx, top + L * 0.7)], fill=(235, 252, 255, 240))
+    out.alpha_composite(lay.filter(ImageFilter.GaussianBlur(4)))
+    out.alpha_composite(bd, (30, 0))
     return out
 
 
-def draw_board(img, g):
+def _mount_time(g):
+    """Start of the current ride (the moment she lands on the board), or None."""
+    st = ST()
+    for a, b, notes in st.air_runs():
+        if a - 0.05 <= g < b:
+            return a + 0.06
+    return None
+
+
+def draw_board(img, g, cx=None, fy=None, dx=0.0):
     sb = board_state(g)
     if sb is None:
         return
     x, y, vx, vy, mode = sb
-    if x < -260 or y < -200:
+    st = ST()
+    beat = 0.5 + 0.5 * math.cos(2 * math.pi * (g - st.PH0) / BEAT)
+    if mode == 1 and cx is not None:                       # riding: exactly under her feet, her weight on it
+        tm = _mount_time(g) or g
+        a_ = max(0.0, g - tm)
+        dip = 18 * math.exp(-a_ / 0.13) * math.cos(2 * math.pi * a_ / 0.26)   # lands on it: dips, springs back
+        x, y = cx + dx + 4, fy + 16 + dip
+        rot = max(-6.0, min(6.0, st.avatar_velocity(g) / 220))
+        power = int(round(4 + 3 * beat))
+    else:
+        rot = max(-12.0, min(12.0, -vy / 120 - vx / 220))
+        power = 3 if mode in (2, 3) else 2
+    if x < -300 or y < -260:
         return
-    flick = int(g * 30) % 4
-    power = {0: 1, 1: 3 + (1 if int(g * 30 / 2) % 2 else 0), 2: 4, 3: 2, 4: 2}[mode]
-    bd = hover_board(flick, power)
-    rot = max(-28.0, min(28.0, -vy / 60 + (-vx / 90 if mode != 1 else 0)))
-    if mode == 4:
-        rot += 25 * math.sin(min(1.0, abs(vx) / 1200) * math.pi)
-    bd = bd.rotate(rot, Image.Resampling.BICUBIC, expand=True)
+    bd = hover_board(power).rotate(rot, Image.Resampling.BICUBIC, expand=True)
     sp = math.hypot(vx, vy)
-    if sp > 500 and mode != 1:                                    # sparkle / smear trail while it flies
-        for k, al in ((1, 0.32), (2, 0.16)):
-            put(img, bd, x - vx * k / 45, y - vy * k / 45, alpha=al)
+    if sp > 700 and mode != 1:                             # streak behind it while it flies in / away
+        for k, al in ((1, 0.30), (2, 0.14)):
+            put(img, bd, x - vx * k / 40, y - vy * k / 40, alpha=al)
     put(img, bd, x, y)
-    ts, xs, ys, vxs, vys, modes = _board_track()
-    i = int((g - ts[0]) / BOARD_DT)
-    if mode in (1, 2) and i > 2 and modes[i - 1] not in (1, 2):   # ignition flash
-        FX.ring_flash(img, x, y + 20, 0.0, (150, 235, 255))
-    for k in range(3):                                            # tiny jet sparkles drifting back
-        u = ((g * 3 + k / 3) % 1)
-        if power >= 2:
-            put(img, star_icon(56, (190, 240, 255)), x - 40 - 90 * u, y + 34 + 10 * k, alpha=0.7 * (1 - u),
-                scale=0.25 * (1 - u) + 0.1)
+    if mode == 1:                                          # slipstream: soft cyan streaks trailing back
+        for k in range(4):
+            u = ((g * 2.2 + k / 4) % 1)
+            yy = y + 30 + (k % 2) * 10
+            put(img, streak_img(int(70 + 120 * u)), x - 80 - 200 * u, yy, alpha=0.55 * (1 - u))
+        tm = _mount_time(g)
+        if tm is not None and 0 <= g - tm < 0.3:          # landing on the board: shock ring + sparks + jet flash
+            FX.ring_flash(img, x, y + 30, g - tm, (150, 235, 255))
+            burst(img, int(x), int(y + 20), g - tm, cols=((150, 235, 255), WHITE, (120, 160, 255)))
+
+
+@lru_cache(None)
+def streak_img(w):
+    im = Image.new("RGBA", (w, 10), (0, 0, 0, 0))
+    a = np.zeros((10, w, 4), np.uint8)
+    a[..., :3] = (190, 245, 255)
+    xs = np.linspace(0, 1, w)
+    a[3:7, :, 3] = (255 * xs ** 1.5).astype(np.uint8)
+    return Image.fromarray(a, "RGBA")
 
 
 @lru_cache(None)
@@ -1023,11 +1081,82 @@ def motion(t):
     if take is not None and take < 0.09:
         q = 0.12 * (1 - take / 0.09)
         return 1 - 0.55 * q, 1 + q, 0.0, 0.0
+    if ST().avatar_height(g) <= 0.5 and not key:              # running: lean into the stride, bounce on contacts
+        ph = 2 * math.pi * (g - ST().PH0) / BEAT
+        return 1 - 0.018 * abs(math.cos(ph)), 1 + 0.025 * abs(math.cos(ph)), -2.0 - 1.5 * math.sin(ph), 0.0
     v = ST().avatar_velocity(g)                             # in flight: lean back rising, nose down falling,
     if abs(v) > 30:                                         # stretch along the motion (secondary motion)
         st_ = min(0.10, abs(v) / 9000)
         return 1 - 0.5 * st_, 1 + st_, max(-8.0, min(8.0, v / 160)), 0.0
     return 1.0, 1.0, 0.0, 0.0
+
+
+# ---------------------------------------------------------------- speed lines and boost strips
+# Owner 2026-11-04: "there aren't enough speed boost strips". Muse Dash keeps the playfield rushing: thin flickering
+# speed lines run all through a stage and thicken with the music; at each big moment a set of wide coloured boost
+# strips sweeps across the screen. Here: speed lines everywhere in the game, their number following the song's energy
+# (data/songmap.json RMS per sixteenth: 6 in the quietest bars up to 30 in the loudest), and boost strips - three wide
+# tapered bands in the stage palette sweeping right to left in 0.45 s - on every chorus start, every Gemini, after
+# each mash enemy and boss BREAK!!, and when she first takes the hover board up in a section.
+BOOST_COLS = {"pink": ((255, 60, 170), (90, 200, 255), (160, 80, 255)),
+              "gold": ((255, 170, 30), (255, 90, 120), (255, 220, 60))}
+
+
+@lru_cache(None)
+def _energy():
+    sm = ST().songmap()
+    return np.array([p["t"] for p in sm]), np.array([p["rms"] for p in sm])
+
+
+def speed_density(g):
+    st = ST()
+    if not st.GAME_IN + 0.6 <= g < st.CLEAR_T or st.PAUSE[0] <= g < st.PAUSE[1]:
+        return 0
+    ts, e = _energy()
+    v = float(np.interp(g, ts, np.convolve(e, np.ones(16) / 16, mode="same")))
+    return int(6 + 24 * min(1.0, max(0.0, (v - 0.35) / 0.55)))
+
+
+@lru_cache(None)
+def boost_times():
+    st = ST()
+    out = [a for a, b in st.CHORUSES] + sorted(st.gemini_times())
+    out += [t1 + 0.1 for t0, t1 in st.MASH.items()]
+    out += [BOSS.timeline(k)[2] + 0.5 for k in BOSS.BOSSES]
+    prev = -9
+    for a, b, notes in st.air_runs():
+        if a - prev > 4:
+            out.append(a)
+        prev = b
+    return tuple(sorted(out))
+
+
+@lru_cache(None)
+def boost_strip(w, h, col):
+    a = np.zeros((h, w, 4), np.uint8)
+    a[..., :3] = col
+    xs = np.linspace(0, 1, w)[None, :]
+    ys = np.abs(np.linspace(-1, 1, h))[:, None]
+    a[..., 3] = (255 * np.clip(xs * 1.4, 0, 1) * (1 - xs ** 6) * (1 - ys ** 2.5)).astype(np.uint8)
+    core = ys[:, 0] < 0.22                                   # bright white core along the strip
+    a[core, :, :3] = 255
+    return Image.fromarray(a, "RGBA")
+
+
+def draw_boost(img, g):
+    st = ST()
+    for t0 in boost_times():
+        a = g - t0
+        if not 0 <= a < 0.45:
+            continue
+        pal = BOOST_COLS.get(FX.STAGE_PAL.get(st.STAGES[st.stage_at(t0)][1], "pink"), BOOST_COLS["pink"])
+        for k, (y, h) in enumerate(((AIR_Y - 130, 96), (AIR_Y + 70, 60), (FLOOR - 160, 112))):
+            u = (a - 0.04 * k) / 0.38
+            if not 0 <= u < 1:
+                continue
+            w = 900 + 500 * (k % 2)
+            x = OW + 200 - (OW + w + 400) * (1 - (1 - u) ** 2)
+            put(img, boost_strip(w, h, pal[k]), x + w / 2, y, alpha=1 - u ** 3)
 
 
 def draw_avatar(img, t, fever=False):
@@ -1042,7 +1171,7 @@ def draw_avatar(img, t, fever=False):
     if (sx, sy, rot) != (1.0, 1.0, 0.0):
         sp, (ax, feet) = _xform(sp, (ax, feet), sx, sy, rot)
     x0, y0 = int(round(cx + dx - ax)), int(round(fy - feet))
-    draw_board(img, g)
+    draw_board(img, g, cx, fy, dx)
     kind, age = strike_at(t)
     if kind and age < 0.07:                                 # 1-2 frame smear behind the lunge
         for k, (off, col, al) in enumerate(((-30, (255, 255, 255), 0.42), (-62, (200, 236, 255), 0.24))):
@@ -1190,6 +1319,15 @@ def game_layer(t, hud=True):
         FX.fever_bands(sky, g)
         FX.speed_streaks(sky, g)
         img.alpha_composite(sky.crop((0, 0, OW, FLOOR)), (0, 0))
+    if not fever:                                            # speed lines follow the song's energy (all game long)
+        n = speed_density(g)
+        if n:
+            sky = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
+            FX.speed_streaks(sky, g, n=n, y0=150, y1=FLOOR - 40)
+            al = np.asarray(sky.getchannel("A")).astype(np.float32) * 0.9
+            sky.putalpha(Image.fromarray(al.astype(np.uint8)))
+            img.alpha_composite(sky)
+    draw_boost(img, g)
     draw_floor(img, st.ground_style_at(g), st.cam_x(g))
     BOSS.draw_atmosphere(img, g)                             # boss: oppressive vignette breathing on the beat
     BOSS.draw_omen(img, g)                                   # climb: the Daruma King looms and throws the saws

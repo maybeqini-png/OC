@@ -255,11 +255,11 @@ def build(t0, t1, ST):
             tr.add(st + 0.07, ting(1.0), 0.18)
     for k, (tt, t0) in enumerate(ST.mash_hits()):                       # mash: a rising drum roll
         tr.add(tt, drum_hit("mezzo", 1.0 + 0.02 * ((tt - t0) / (ST.BEAT / 4)), k % 6), 0.6)
-    h0, h1 = song_t(ST.HOLD[0]), song_t(ST.HOLD[1])                 # hold note
-    tr.add(h0, drum_hit("mezzo", 1.3, 1), 0.45)                       # sfx_press_top (hold start)
-    tr.add(h0, shimmer(h1 - h0), 0.07)                                  # sfx_press (holding)
-    tr.add(h1, drum_hit("forte", 1.3, 2), 0.5)                          # sfx_press_top (hold end)
-    tr.add(h1, ting(1.0), 0.2)
+    for h0, h1, ln in ST.HOLDS:                                        # hold notes
+        tr.add(h0, drum_hit("mezzo", 1.3, 1), 0.45)                   # sfx_press_top (hold start)
+        tr.add(h0, shimmer(h1 - h0), 0.07)                              # sfx_press (holding)
+        tr.add(h1, drum_hit("forte", 1.3, 2), 0.5)                      # sfx_press_top (hold end)
+        tr.add(h1, ting(1.0), 0.2)
     # pause menu, ノーカン paw wipes
     tr.add(ST.PAUSE[0], sample("open_001"), 0.35)
     tr.add(ST.PAUSE[1] - 0.15, sample("close_001"), 0.35)

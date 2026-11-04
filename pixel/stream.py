@@ -164,6 +164,11 @@ VERSES = [(13.2, 26.4), (28.2, 41.9), (69.6, 82.5), (84.5, 96.6), (98.3, 115.7)]
 CHORUSES = [(56.3, 66.5), (126.9, 146.2)]
 STEPS = (116.9, 124.2)           # 震えるつま先で ステップ踏んで: a gear on every beat, she hops them
 HOLD = (146.70, 150.90)          # 最後まで 歌いきるよ: a sheet-music hold note
+# Hold notes on the song's long sung syllables (pv3/lyrics_timed.json: a syllable held 0.75 s or more), in both lanes
+# as in Muse Dash; each stage draws its own ribbon skin (pixel/mdgame.draw_hold). Air holds keep her up on the board.
+HOLDS = [(16.17, 17.75, "g"), (30.14, 31.70, "a"), (39.06, 40.60, "g"), (72.70, 74.10, "a"), (76.70, 78.30, "g"),
+         (87.19, 88.30, "a"), (111.10, 112.70, "g"), (129.90, 132.00, "a"), (138.70, 140.30, "g"),
+         (HOLD[0], HOLD[1], "g")]
 MISS_GEAR, MISS_BIRD = 42.61, 61.01
 PATTERNS = [("g", "g", "a", "g"), ("g", "a", "a", "g"), ("a", "g", "g", "a"), ("g", "g", "g", "a")]
 # ---- Hell chart (owner 2026-11-04: "scale the difficulty up to roughly Hell"). One bar = 16 sixteenths:
@@ -261,7 +266,7 @@ def chart():
         out.append((beat_t(k), "gear"))
     for t0, t1 in MASH.items():
         out.append((t0, "mash"))
-    busy = [(t0 - 0.2, t1 + 0.12) for t0, t1 in MASH.items()] + REST
+    busy = [(t0 - 0.2, t1 + 0.12) for t0, t1 in MASH.items()] + REST + [(a - 0.18, b + 0.12) for a, b, ln in HOLDS]
     out = [(t, k) for t, k in out if k == "mash" or not any(a <= t <= b for a, b in busy)]
     out = [(t, k) for t, k in out if not (abs(t - MISS_BIRD) < 0.3 or 41.9 < t < 56.0)]
     out += [(MISS_GEAR, "gear_miss"), (MISS_BIRD, "a_miss"), (57.3, "heart"), (105.2, "heart"), (131.4, "heart")]
@@ -321,7 +326,8 @@ def score_events():
     ev += [(t, "note") for t, k in chart() if k == "note"]
     ev += [(t, "heart") for t, k in chart() if k == "heart"]
     ev += [(46.66, "nocount"), (62.6, "nocount")]
-    ev += [(HOLD[0] + i * 0.25, "hit") for i in range(int((HOLD[1] - HOLD[0]) / 0.25))]
+    for h0, h1, ln in HOLDS:
+        ev += [(h0 + i * 0.25, "hit") for i in range(int((h1 - h0) / 0.25))]
     ev += [(t, "hit") for t, t0 in mash_hits()]
     return tuple(sorted(ev))
 
@@ -376,6 +382,10 @@ def air_runs():
         cur.append(t)
     if cur:
         runs.append(cur)
+    for h0, h1, ln in HOLDS:                          # air holds: she stays up for the whole ribbon
+        if ln == "a":
+            runs.append([h0, h1 - AIR_HANG + 0.02])
+    runs.sort(key=lambda r: r[0])
     grounds = [t for t, k in chart() if k in ("g", "gear", "gear_miss", "mash")]
     out = []
     for r in runs:

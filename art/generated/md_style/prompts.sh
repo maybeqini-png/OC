@@ -367,3 +367,22 @@ done
 for seed in 66101 66102 66103; do
   nai_guard generate --model $M --prompt "no humans, hoverboard, small flying board shaped like a navy blue cat paw seen from the side, pink paw pad on the top, two small cat ears at the front tip, cobalt blue stripe along the edge, small glowing cyan hover jet underneath, side view, facing right, game item, clean vector illustration, colored outline, flat color, cel shading, white background, simple background, centered, no shadow" --negative "$SNEG2, human, girl, text" --w 1024 --h 1024 --seed $seed --out "$OUT/hv_board_$seed.png"
 done
+# ---- hover board v2 + music note pickup (2026-11-04). Owner: "the hoverboard flickers and wobbles; redesign it with
+# N5 so it feels more impactful". A chunkier board that reads at game size: thick rounded deck, glowing underside
+# thruster ring, cat ears at the nose; and a collectible music note in her palette (Muse Dash's blue note pickups).
+for seed in 67001 67002 67003 67004; do
+  nai_guard generate --model $M --prompt "no humans, cute hoverboard vehicle, side view, facing right, thick rounded navy blue deck shaped like a cat, two pointed cat ears raised at the front nose, pink paw pad pattern on the top, cobalt blue stripe along the side, big round glowing cyan thruster ring underneath the middle, small fins at the back, chunky toy-like design, game item, clean vector illustration, colored outline, flat color, cel shading, white background, simple background, centered, no shadow" --negative "$SNEG2, human, girl, text, skateboard wheels, wheels" --w 1024 --h 1024 --seed $seed --out "$OUT/hv2_board_$seed.png"
+done
+for seed in 67101 67102 67103; do
+  nai_guard generate --model $M --prompt "no humans, collectible music note item, single eighth note, glossy sky blue and cobalt gradient note with a white highlight, tiny cat ears on the note head, small white sparkles, game item icon, clean vector illustration, colored outline, flat color, cel shading, white background, simple background, centered, no shadow" --negative "$SNEG2, human, text, multiple notes, staff lines" --w 1024 --h 1024 --seed $seed --out "$OUT/note2_$seed.png"
+done
+# ---- hold ribbons (2026-11-04). Owner: "use N5 with code to design more varied strips by referencing the game" (the
+# hold-note ribbon). One ribbon skin per stage family; code tiles it seamlessly, adds the glow, head / tail stars.
+RB="long horizontal ribbon band filling the whole width, flat design, seamless horizontal pattern, side view, clean vector illustration, colored outline, flat color, cel shading, white background, no humans"
+for seed in 68001 68002; do
+  nai_guard generate --model $M --prompt "$RB, pastel sky theme, band of fluffy white clouds with small sky blue stars and music notes on a glowing pale sky blue ribbon" --negative "$SNEG2, text, letters, human" --w 1536 --h 512 --seed $seed --out "$OUT/rb_k_$seed.png"
+  nai_guard generate --model $M --prompt "$RB, sunset sweets theme, glossy pink and caramel candy ribbon with tiny cookies, cherries and music notes" --negative "$SNEG2, text, letters, human" --w 1536 --h 512 --seed $seed --out "$OUT/rb_u_$seed.png"
+  nai_guard generate --model $M --prompt "$RB, candy pop theme, twisted pink and mint candy stripe ribbon with rainbow sprinkles and little hearts" --negative "$SNEG2, text, letters, human" --w 1536 --h 512 --seed $seed --out "$OUT/rb_p_$seed.png"
+  nai_guard generate --model $M --prompt "$RB, starry night theme, glowing violet music staff with five lines, white music notes and treble clefs, small yellow stars" --negative "$SNEG2, text, letters, human" --w 1536 --h 512 --seed $seed --out "$OUT/rb_n_$seed.png"
+  nai_guard generate --model $M --prompt "$RB, summer festival theme, thick red and white twisted festival rope with small round paper lanterns and gold bells" --negative "$SNEG2, text, letters, human" --w 1536 --h 512 --seed $seed --out "$OUT/rb_f_$seed.png"
+done
