@@ -611,6 +611,23 @@ def cam_box(t):
     for a, b in BIG_CAM:
         if a - 0.25 <= t < b + 0.25:
             k = max(k, ease((t - a + 0.25) / 0.25) if t < a else (1 - ease((t - b) / 0.25) if t >= b else 1.0))
+    if kb > 0 and k > 0:
+        # a reaction during a boss fight stays in the corner (owner 2026-11-04: the full-size jump mid-fight was
+        # jarring and hid the boss): the cam pops to about 1.5x with a small overshoot, the game is not dimmed
+        pop = (1606, 80, 1896, 370)
+        kk = k
+        for a, b in BIG_CAM:
+            if a - 0.25 <= t < a + 0.2:
+                u = min(1.0, (t - a + 0.25) / 0.45)
+                kk = 1 + 0.12 * math.sin(math.pi * u) if u > 0.55 else k       # settle with a little bounce
+        corner = tuple(s_ + (p_ - s_) * min(1.0, kk) for s_, p_ in zip(small, pop))
+        if kk > 1:
+            cx, cy = (corner[0] + corner[2]) / 2, corner[1]
+            w, h = (corner[2] - corner[0]) * kk, (corner[3] - corner[1]) * kk
+            corner = (min(1896, cx + w / 2) - w, cy, min(1896, cx + w / 2), cy + h)
+        full = tuple(c + (g - c) * k for c, g in zip(small, big))
+        box = tuple(int(f + (c - f) * kb) for f, c in zip(full, corner))
+        return box, k * (1 - kb)
     return tuple(int(s + (g - s) * k) for s, g in zip(small, big)), k
 
 
