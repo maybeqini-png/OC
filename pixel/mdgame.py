@@ -31,6 +31,7 @@ import scene as S
 HERE = Path(__file__).parent
 ROOT = HERE.parent
 OW, OH = 1920, 1080
+BEAT = 60 / 136
 K = 2                                  # pixel-layer units -> HD
 FLOOR = 900                            # feet line (pixel GROUND 450 x2)
 RUN_X = 600
@@ -207,8 +208,66 @@ def family_at(g):
 @lru_cache(None)
 def monster(fam, role):
     if fam == "chat":                         # the mini-boss's shots (pixel/mdboss.py)
-        return BOSS.bubble(role)
+        return BOSS.bubble("air" if role in ("air", "a2") else "ground")
+    if f"{fam}_{role}" not in MD.PICKS:       # a family without that variant: its base enemy
+        role = "air" if role in ("a2",) else "ground" if role in ("g2", "big", "gh_g") else \
+            ("air" if role == "gh" else role)
     return MD.sprite(f"{fam}_{role}")
+
+
+def role_for(tt, kind, lane, fam):
+    """Which enemy design of the stage's family: big (heavy hit), ghost, or - alternating every bar, so a stage never
+    shows one repeated design - the base enemy or its second design."""
+    st = ST()
+    if lane == "ground" and st.is_big(tt):
+        return "big"
+    if st.is_ghost(tt, kind):
+        return "gh"
+    alt = int(tt / (4 * BEAT)) % 2
+    if lane == "air":
+        return "a2" if alt else "air"
+    return "g2" if alt else "ground"
+
+
+def draw_mash(img, g, late, texts):
+    """Mash enemy (Muse Dash's big rapid-hit enemy): a big family enemy runs in, plants itself in front of her and
+    shudders while she hits it on every sixteenth, a HITS counter growing over it; on its last hit it is launched."""
+    st = ST()
+    for t0, t1 in st.MASH.items():
+        if not (t0 - 1.9 <= g < t1 + 0.6):
+            continue
+        fam = family_at(t0)
+        sp = monster(fam, "big")
+        hx = HIT_X + 110
+        if g < t0:                                         # running in
+            x = hx + (t0 - g) * V_E
+            put(img, sp, x, FLOOR + 6 - sp.height / 2 - abs(math.sin(g * 6)) * 6)
+            continue
+        n = sum(1 for tt, a in st.mash_hits() if a == t0 and tt <= g)
+        last = max(tt for tt, a in st.mash_hits() if a == t0)
+        if g < last + 2 / 30:                              # held: shudders on each hit, flashes
+            d = (g - t0) % (BEAT / 4)
+            k = max(0.0, 1 - d / 0.07)
+            sq = sp.resize((int(sp.width * (1 + 0.08 * k)), int(sp.height * (1 - 0.07 * k))), Image.Resampling.BICUBIC)
+            if d < 1 / 30:
+                a = np.asarray(sq).copy()
+                a[..., :3] = (a[..., :3] * 0.5 + 255 * 0.5).astype(np.uint8)
+                sq = Image.fromarray(a, "RGBA")
+            put(img, sq, hx + 8 * k, FLOOR + 6 - sq.height / 2)
+            pal = FX.STAGE_PAL.get(st.STAGES[st.stage_at(t0)][1], "pink")
+            late.append(lambda im, d=d, s_=int(g * 30), p_=pal: (
+                FX.impact(im, hx - 60 + (s_ % 3) * 30, FLOOR - 140 + (s_ % 4) * 22, d, s_, p_, 0.9),
+                FX.confetti(im, hx - 40, FLOOR - 120, d, s_, p_, 8)))
+            texts.append(lambda im, n=n, d=d: (
+                put(im, splat(), hx - 20, FLOOR - 420, scale=0.8 + 0.15 * max(0.0, 1 - d / 0.08)),
+                put(im, text_img(f"{n}", 66, LEMON, (90, 30, 60), 8), hx - 20, FLOOR - 432,
+                    scale=1 + 0.25 * max(0.0, 1 - d / 0.08)),
+                put(im, text_img("HITS", 26, WHITE, (90, 30, 60), 5), hx - 20, FLOOR - 384)))
+        else:                                              # launched
+            a2 = g - last - 2 / 30
+            if a2 < 0.4:
+                put(img, monster_tilt(fam, "big", int(-a2 * 900) % 360), hx + a2 * 1100, FLOOR - 140 - a2 * 1800 + a2 * a2 * 900,
+                    alpha=1 - max(0.0, a2 - 0.3) / 0.1)
 
 
 @lru_cache(None)
@@ -337,6 +396,8 @@ def draw_world(img, g, late=None, texts=None):
             lane = "air" if kind.startswith("a") else "ground"
             fam = family_at(tt)
             x = HIT_X + 40 + dt * V_E
+            role = role_for(tt, kind, lane, fam)
+            gh = st.is_ghost(tt, kind)
             bk = BOSS.thrown(tt)                                     # fired by a boss: only after it leaves the muzzle
             if bk == "mini":
                 fam = "chat"
@@ -356,22 +417,24 @@ def draw_world(img, g, late=None, texts=None):
                     miss_text(img, HIT_X, AIR_Y - 150, -dt)
                 if x > OW + 200:
                     continue
+                # ghost: fades out between 1.1 and 0.45 s before her, flickering back for a frame now and then
+                al_ = 1.0 if not gh else max(0.0, min(1.0, (dt - 0.45) / 0.65)) + (0.35 if int(g * 30) % 9 == 0 and dt < 0.45 else 0)
                 if lane == "air":
                     tilt = round(5 * math.sin(g * 5 + tt))
-                    sp = monster_tilt(fam, "air", tilt)
+                    sp = monster_tilt(fam, role, tilt)
                     y = AIR_Y + 10 * math.sin(g * 7 + tt * 3)
-                    put(img, sp, x, y)
+                    put(img, sp, x, y, alpha=min(1.0, al_))
                 else:
                     ph = g * 9 + tt * 3
-                    tilt = round(4 * math.sin(ph))
-                    sp = monster_tilt(fam, "ground", tilt)
-                    hop = abs(math.sin(ph)) * 10
-                    img.alpha_composite(sp, (int(x - sp.width / 2), int(FLOOR + 6 - sp.height - hop)))
+                    tilt = round(4 * math.sin(ph)) if role != "big" else round(2 * math.sin(ph * 0.5))
+                    sp = monster_tilt(fam, role, tilt)
+                    hop = abs(math.sin(ph)) * (10 if role != "big" else 4)
+                    put(img, sp, x, FLOOR + 6 - sp.height / 2 - hop, alpha=min(1.0, al_))
             else:                                                    # struck (see mdfx.py for the timeline)
                 age = -dt
                 pal = FX.STAGE_PAL.get(st.STAGES[st.stage_at(tt)][1], "pink")
                 seed = int(tt * 1000)
-                base = monster(fam, lane)
+                base = monster(fam, role)
                 y0 = AIR_Y if lane == "air" else FLOOR + 6 - base.height / 2
                 hx = HIT_X + 40
                 stop = 2 / 30                                        # hit-stop: 2 frames held, squashed
@@ -385,7 +448,7 @@ def draw_world(img, g, late=None, texts=None):
                 else:
                     a2 = age - stop
                     if a2 < 0.32:
-                        sp = monster_tilt(fam, lane, int(-a2 * 1100) % 360)
+                        sp = monster_tilt(fam, role, int(-a2 * 1100) % 360)
                         for k, al in ((2, 0.18), (1, 0.36), (0, 1.0)):       # smear ghosts along the flight
                             ak = max(0.0, a2 - k * 0.022)
                             kx, ky = hx + ak * 950, y0 - ak * 2300 + ak * ak * 700     # launched steeply up
@@ -689,22 +752,55 @@ def avatar(t):
     if st.HOLD[0] <= g < st.HOLD[1] + 0.2:
         return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
     ng = na = 0
-    for tt, kind in st.chart():
-        if kind == "g" and 0 <= g - tt < STRIKE_HOLD["g"][armed]:
-            if armed:                     # a different attack drawing on each hit, as in Muse Dash
-                return (*BR.armed(BR.ARMED_GROUND[ng % len(BR.ARMED_GROUND)]), RUN_X + 16, FLOOR)
-            return (*RN.strike_frame("punch"), RUN_X + 16, FLOOR)
-        if kind == "a" and 0 <= g - tt < STRIKE_HOLD["a"][armed]:
-            if armed:
-                return (*BR.armed(BR.ARMED_AIR[na % len(BR.ARMED_AIR)]), RUN_X + 12, FLOOR - h)
-            return (*RN.strike_frame("air"), RUN_X + 12, FLOOR - h)
+    pick = None
+    for tt, kind in st.chart():                      # the latest struck note (Hell chart: hits overlap)
+        if tt > g:
+            break
+        if kind in ("g", "a") and g - tt < STRIKE_HOLD[kind][armed]:
+            pick = (tt, kind, ng, na)
         ng += kind == "g"
         na += kind == "a"
+    mash = next((t0 for tt, t0 in st.mash_hits() if 0 <= g - tt < BEAT / 4), None)
+    if mash is not None:                             # mash: a different strike drawing on every sixteenth
+        i = int((g - mash) / (BEAT / 4))
+        if armed:
+            return (*BR.armed(BR.ARMED_GROUND[i % len(BR.ARMED_GROUND)]), RUN_X + 16, FLOOR)
+        return (*RN.strike_frame("punch" if i % 2 == 0 else "air"), RUN_X + 16, FLOOR - (30 if i % 2 else 0))
+    if pick:
+        tt, kind, ng_, na_ = pick
+        if st.is_gemini(tt):                         # Gemini: the air strike at mid height hits both lanes
+            if armed:
+                return (*BR.armed("airslam"), RUN_X + 12, FLOOR - h)
+            return (*RN.strike_frame("air"), RUN_X + 12, FLOOR - h)
+        if kind == "g":
+            if armed:                     # a different attack drawing on each hit, as in Muse Dash
+                return (*BR.armed(BR.ARMED_GROUND[ng_ % len(BR.ARMED_GROUND)]), RUN_X + 16, FLOOR)
+            return (*RN.strike_frame("punch"), RUN_X + 16, FLOOR)
+        if armed:
+            return (*BR.armed(BR.ARMED_AIR[na_ % len(BR.ARMED_AIR)]), RUN_X + 12, FLOOR - h)
+        return (*RN.strike_frame("air"), RUN_X + 12, FLOOR - h)
     if h > 1:
         rising = any(a <= g < ts[0] for a, b, ts in st.air_runs()) or any(
             k == "gear" and -0.24 < g - tt < 0 for tt, k in st.chart())
         return (*RN.jump_frame("up" if rising or h > 120 else "down", armed), RUN_X, FLOOR - h)
     return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
+
+
+@lru_cache(None)
+def hover_board(flick):
+    """The cat-paw hover board (art/generated/md_style/hv_board_66103) with a flickering cyan jet under it."""
+    bd = MD.sprite("hover")
+    W, H = bd.width + 40, bd.height + 70
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    jet = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(jet)
+    L = 40 + 10 * flick
+    for k, (col, w) in enumerate((((120, 230, 255, 140), 34), ((220, 250, 255, 230), 16))):
+        d.polygon([(W / 2 - w, bd.height - 8), (W / 2 + w, bd.height - 8), (W / 2, bd.height - 8 + L - k * 12)],
+                  fill=col)
+    out.alpha_composite(jet.filter(ImageFilter.GaussianBlur(3)))
+    out.alpha_composite(bd, (20, 0))
+    return out
 
 
 @lru_cache(None)
@@ -719,7 +815,7 @@ def shadow_img(w):
 # enemy with a lean and a stretch, smeared for 1-2 frames, then she is straight back to running; she snaps to the
 # air lane and back in 2-3 frames; landings squash and kick up dust puffs. Timings from game-feel guides: squash /
 # stretch 2-4 frames, smear 1-2 frames, hit lunge settles within about 5 frames.
-STRIKE_HOLD = {"g": (0.13, 0.16), "a": (0.15, 0.18)}     # (unarmed, armed) seconds
+STRIKE_HOLD = {"g": (0.11, 0.11), "a": (0.12, 0.12)}     # (unarmed, armed) seconds; Hell chart: 8ths 0.22 s
 
 
 def strike_at(t):
@@ -727,10 +823,16 @@ def strike_at(t):
     st = ST()
     g = st.game_time(t)
     armed = armed_at(t)
-    for tt, kind in st.chart():
-        if kind in STRIKE_HOLD and 0 <= g - tt < STRIKE_HOLD[kind][armed]:
-            return kind, g - tt
-    return None, 0.0
+    best = None
+    for tt, kind in st.chart():                      # the latest note whose pose is still showing
+        if tt > g:
+            break
+        if kind in STRIKE_HOLD and g - tt < STRIKE_HOLD[kind][armed]:
+            best = (kind, g - tt)
+    for tt, t0 in st.mash_hits():
+        if 0 <= g - tt < 0.06:
+            best = ("g", g - tt)
+    return best if best else (None, 0.0)
 
 
 def edge_age(g, up):
@@ -807,6 +909,14 @@ def draw_avatar(img, t, fever=False):
     if (sx, sy, rot) != (1.0, 1.0, 0.0):
         sp, (ax, feet) = _xform(sp, (ax, feet), sx, sy, rot)
     x0, y0 = int(round(cx + dx - ax)), int(round(fy - feet))
+    in_lane = any(a <= g < b for a, b, ts in st.air_runs())
+    hgt = st.avatar_height(g)
+    if in_lane and hgt > 20:                                 # her cat-paw hover board under her feet in the air lane
+        bd = hover_board(int(g * 30) % 4)
+        al_ = min(1.0, (hgt - 20) / 40)
+        tilt = 3 * math.sin(2 * math.pi * g / BEAT)
+        bd = bd.rotate(tilt, Image.Resampling.BICUBIC, expand=True)
+        put(img, bd, cx + 6, fy + 10, alpha=al_)
     kind, age = strike_at(t)
     if kind and age < 0.07:                                 # 1-2 frame smear behind the lunge
         for k, (off, col, al) in enumerate(((-30, (255, 255, 255), 0.42), (-62, (200, 236, 255), 0.24))):
@@ -963,6 +1073,7 @@ def game_layer(t, hud=True):
     put(world, ring(rs), HIT_X + 40, GROUND_LANE)
     late, texts = [], []
     draw_world(world, g, late, texts)
+    draw_mash(world, g, late, texts)
     BOSS.draw_boss(world, g)                                 # over the enemies it throws, under her
     if any(k == "gear" and abs(g - tt) < 0.24 for tt, k in st.chart()):          # jump smear over a saw
         ghosts = []

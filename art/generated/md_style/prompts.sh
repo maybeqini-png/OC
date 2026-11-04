@@ -335,3 +335,35 @@ for s in 0.45 0.55; do for seed in 64011 64012; do
 done; done
 # b5_mini (img2img 0.45-0.55) barely changed the take; the menace is done in code instead (pixel/mdboss.py: dusk
 # shading, glowing eyes, aura). Picks unchanged: b3_mini_62011, b2_main_62003.
+# ---- Hell chart pack (2026-11-04). Owner: "add a Muse Dash-style hover device, more enemies and notes, Hell
+# difficulty, avoid repetitive uniform designs". Trailer (28-31 s, 60-62 s, 91 s, frame by frame): small / medium /
+# big enemies of different shapes in one stage, a big mash enemy with a HITS counter, Gemini pairs (both lanes at once),
+# ghosts that fade before reaching her, hold ribbons, bullets from a boss. Per family: a second ground enemy (g2), a
+# second air enemy (a2), a big mash enemy (big) and a ghost (gh), so no stage repeats one design.
+for seed in 66001 66002; do
+  gsolo k_g2 $seed "pastel sky theme, walking hot air balloon cat monster, round striped sky blue and white balloon body with cat ears, small basket feet, sleepy smug eyes, tiny fang, medium blue outline, walking, from side, facing left"
+  gsolo k_a2 $seed "pastel sky theme, flying kite cat monster, diamond shaped pink and white kite body with a cat face, ribbon tail, mischievous squinting eyes, fanged grin, medium blue outline, flying, facing left"
+  gsolo k_big $seed "pastel sky theme, huge chubby thundercloud cat monster, big round grey blue storm cloud body, cat ears, small lightning bolt horns, angry glowing yellow eyes, wide fanged grin, puffed cheeks, sturdy, heavy, medium blue outline, facing left"
+  gsolo k_gh $seed "pastel sky theme, small ghost cat monster made of mist, translucent pale sky blue wispy body, cat ears, hollow sleepy eyes, tiny smile, wavy tail, floating, facing left"
+  gsolo u_g2 $seed "sunset theme, sweets theme, walking dango cat monster, three stacked round pink white and green rice dumplings on a stick with cat ears on top, grumpy eyes, fangs, violet outline, hopping, facing left"
+  gsolo u_a2 $seed "sunset theme, sweets theme, flying macaron cat monster, two lavender macaron shells with cream filling as a mouth full of fangs, cat ears, little wings, angry eyes, violet outline, flying, facing left"
+  gsolo u_big $seed "sunset theme, sweets theme, huge chubby layered cake cat monster, tall strawberry shortcake body with cream layers, cat ears, strawberry crown, angry eyes, wide fanged grin, sturdy, heavy, coral outline, facing left"
+  gsolo u_gh $seed "sunset theme, small ghost cat monster made of steam from a teacup, translucent warm peach wispy body, cat ears, hollow eyes, tiny smile, floating, facing left"
+  gsolo p_g2 $seed "candy pop theme, walking jelly bean cat monster, glossy wobbly lime green jelly body, cat ears, sprinkles, big round eyes, cheeky tongue out, teal outline, hopping, facing left"
+  gsolo p_a2 $seed "candy pop theme, flying donut cat monster, pink frosted donut ring body with rainbow sprinkles, cat ears, tiny bat wings, smug eyes, fanged grin, magenta outline, flying, facing left"
+  gsolo p_big $seed "candy pop theme, huge chubby cotton candy cat monster, big fluffy pink and blue cotton candy cloud body on a paper cone, cat ears, angry glowing eyes, wide fanged grin, sturdy, heavy, magenta outline, facing left"
+  gsolo p_gh $seed "candy pop theme, small ghost cat monster made of pink bubblegum bubble, translucent pink bubble body, cat ears, hollow eyes, tiny grin, floating, facing left"
+  gsolo n_g2 $seed "night city theme, walking cassette tape cat monster, purple cassette body with two reel eyes glowing cyan, cat ears, magnetic tape tail, smug fanged grin, dark purple outline, walking, facing left"
+  gsolo n_a2 $seed "night city theme, flying moth cat monster, deep purple fluffy body, big magenta moth wings with eye spots, cat ears, glowing orange eyes, sly grin, dark purple outline, flying, facing left"
+  gsolo n_big $seed "night city theme, huge chubby subwoofer speaker cat monster, big boxy purple speaker body with a giant speaker cone belly, cat ears, glowing cyan eyes, wide fanged grin, headphones, sturdy, heavy, dark purple outline, facing left"
+  gsolo n_gh $seed "night city theme, small ghost cat monster, translucent violet wispy body glowing faintly, cat ears, hollow glowing cyan eyes, tiny smile, floating, facing left"
+  gsolo f_g2 $seed "summer festival theme, walking taiko drum cat monster, round wooden taiko drum body with a cat face on the drum skin, cat ears, two drumsticks as arms, angry eyes, fangs, dark red outline, walking, facing left"
+  gsolo f_a2 $seed "summer festival theme, flying uchiwa fan cat monster, round paper hand fan body with a red and white cat face, cat ears, handle tail, smug eyes, fanged grin, dark red outline, flying, facing left"
+  gsolo f_big $seed "summer festival theme, huge chubby kitsune mask cat monster, big white fox cat mask face with red markings, fluffy orange body, cat ears, angry glowing eyes, wide fanged grin, sturdy, heavy, dark red outline, facing left"
+  gsolo f_gh $seed "summer festival theme, small ghost cat monster made of a firefly glow, translucent warm yellow glowing wispy body, cat ears, hollow eyes, tiny smile, floating, facing left"
+done
+# hover device (Muse Dash's characters ride small vehicles / hover gear in the air lane). Original design: a navy
+# cat-paw hoverboard with cat ears and a cobalt glow jet, matching her outfit.
+for seed in 66101 66102 66103; do
+  nai_guard generate --model $M --prompt "no humans, hoverboard, small flying board shaped like a navy blue cat paw seen from the side, pink paw pad on the top, two small cat ears at the front tip, cobalt blue stripe along the edge, small glowing cyan hover jet underneath, side view, facing right, game item, clean vector illustration, colored outline, flat color, cel shading, white background, simple background, centered, no shadow" --negative "$SNEG2, human, girl, text" --w 1024 --h 1024 --seed $seed --out "$OUT/hv_board_$seed.png"
+done

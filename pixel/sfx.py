@@ -231,7 +231,14 @@ def build(t0, t1, ST):
         st = song_t(tt)
         if kind in ("g", "a"):                                          # strike: tight percussive hit (mezzo)
             lvl = "forte" if st >= ST.FEVER_T else "mezzo"
-            tr.add(st, drum_hit(lvl, 1.0 if kind == "g" else 1.25, hit_n % 6), 0.9, jit())
+            if ST.is_gemini(tt) and kind == "a":                        # Gemini: one combined, brighter hit
+                tr.add(st, ting(1.5), 0.10)
+                continue
+            if ST.is_big(tt):                                           # big enemy: heavy low hit
+                tr.add(st, drum_hit("forte", 0.7, hit_n % 6), 1.0, jit())
+                hit_n += 1
+                continue
+            tr.add(st, drum_hit(lvl, 1.0 if kind == "g" else 1.25, hit_n % 6), 0.75, jit())
             if kind == "a":
                 tr.add(st - 0.1, whoosh(0.16, 1200, 7000, 7), 0.09)      # empty_jump-like swish up
             hit_n += 1
@@ -246,6 +253,8 @@ def build(t0, t1, ST):
         elif kind == "heart":                                           # sfx_hp
             tr.add(st, ting(0.8), 0.22)
             tr.add(st + 0.07, ting(1.0), 0.18)
+    for k, (tt, t0) in enumerate(ST.mash_hits()):                       # mash: a rising drum roll
+        tr.add(tt, drum_hit("mezzo", 1.0 + 0.02 * ((tt - t0) / (ST.BEAT / 4)), k % 6), 0.6)
     h0, h1 = song_t(ST.HOLD[0]), song_t(ST.HOLD[1])                 # hold note
     tr.add(h0, drum_hit("mezzo", 1.3, 1), 0.45)                       # sfx_press_top (hold start)
     tr.add(h0, shimmer(h1 - h0), 0.07)                                  # sfx_press (holding)

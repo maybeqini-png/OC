@@ -171,3 +171,18 @@ Distance (owner 2026-11-04: "is the distance too close?"; trailer 91.3 / 92.0 s 
 muzzle at 59-68 % with the player at 31 % (shots crossed 28-37 %). Now the boss centre sits at 85 % and the muzzle at
 70 % of the space right of the player (shots cross about 47 % of the screen, the player position being fixed by the
 layout); the stream cam shrinks into the top-right corner during each fight to make room.
+
+## Hell chart, enemy variety, hover board (2026-11-04)
+Owner: "add a Muse Dash-style hover device, design more enemies and notes, scale the difficulty up to roughly Hell,
+avoid repetitive, uniform designs". Official trailer frame by frame (28-31 s, 60-62 s, 91 s): within one stage the
+enemies come in several shapes and sizes (small, medium, big); a big mash enemy plants itself in front of the
+character and is hit rapidly under a growing "N HITS" counter, then flies off; Gemini pairs on both lanes are hit
+together from mid height; ghosts fade on their way in; hold ribbons; boss bullets. Characters hover in the air lane.
+PV (`pixel/stream.py` chart, `pixel/mdgame.py`): one bar = 16 sixteenths; verses run eighth-note lane-switching
+streams with sixteenth bursts on fills (the first verse eighths only), choruses add Gemini downbeats and big enemies;
+repeated sections mirror the lanes; 3 mash enemies (81.3, 95.0, 143.6 s, a drum roll on every sixteenth); ghosts on
+every other enemy in verses 2 and 4; rests kept for the story beats (the trip / pause, めっ at 137.4 s). About 2.5 notes
+per second over the whole game (4.5 / s inside verses and choruses), against about 1.2 before. Every family now has
+four extra designs (second ground enemy, second air enemy, big, ghost; `art/generated/md_style/*_g2/_a2/_big/_gh_66*`),
+alternating by bar so no stage repeats one design. In the air lane she rides a cat-paw hover board with a cyan jet
+(`hv_board_66103`).

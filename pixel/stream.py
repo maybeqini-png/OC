@@ -166,39 +166,113 @@ STEPS = (116.9, 124.2)           # 震えるつま先で ステップ踏んで: 
 HOLD = (146.70, 150.90)          # 最後まで 歌いきるよ: a sheet-music hold note
 MISS_GEAR, MISS_BIRD = 42.61, 61.01
 PATTERNS = [("g", "g", "a", "g"), ("g", "a", "a", "g"), ("a", "g", "g", "a"), ("g", "g", "g", "a")]
+# ---- Hell chart (owner 2026-11-04: "scale the difficulty up to roughly Hell"). One bar = 16 sixteenths:
+# g ground, a air, G Gemini (both lanes at once), B big enemy (ground, one heavy hit), r saw (jump), n music note,
+# . rest. Muse Dash Master-style density: eighth-note streams that switch lanes, sixteenth bursts on fills, Gemini on
+# strong downbeats; verses breathe more than choruses; repeated sections reuse and mirror patterns.
+VERSE_BARS = ["g.g.a.g.g.a.a.g.", "g.a.g.g.a.n.g.g.", "a.g.a.g.r...g.a.", "G...g.g.a.g.g.gg",
+              "g.g.a.a.g.n.a.g.", "a.a.g.g.a.g.r...", "g.g.g.a.a.a.g.g.", "G...a.g.a.g.aaaa"]
+CHORUS_BARS = ["G.g.a.g.g.a.g.gg", "B...a.a.g.g.a.aa", "G.a.g.a.g.g.a.gg", "B...g.a.g.a.g.gg",
+               "G.g.g.a.a.g.a.aa", "a.g.a.g.B...g.gg"]
+MASH = {81.32: 82.42, 94.98: 96.08, 143.6: 144.7}   # big mash enemy: stops in front of her, hit on every 16th
+REST = [(136.95, 137.85)]                            # めっ (137.36): a breath for the boop
+GHOST_VERSES = (1, 3)                                # verses 2 and 4: every other enemy fades out halfway (ghost)
 
 
 @lru_cache(None)
 def chart():
-    """(t, kind): g ground enemy, a air enemy, gear (jump over), note (pickup), heart, plus the two misses."""
+    """(t, kind): g ground enemy, a air enemy, gear (jump over), note (pickup), heart, mash (big enemy hit
+    repeatedly until MASH[t]), plus the two misses. Gemini = a g and an a at the same time; big = BIG_T."""
     out = []
     bar = 0
-    for a, b in VERSES:
+    q = BEAT / 4
+
+    def lay(k, pat, mirror=False):
+        for j, c in enumerate(pat):
+            if c == ".":
+                continue
+            t = beat_t(k) + j * q
+            if mirror and c in "ga":
+                c = "a" if c == "g" else "g"
+            if c in "gG":
+                out.append((t, "g"))
+            if c in "aG":
+                out.append((t, "a"))
+            if c == "B":
+                out.append((t, "g"))
+                BIG_T.add(round(t, 4))
+            if c == "r":
+                out.append((t, "gear"))
+            if c == "n":
+                out.append((t, "note"))
+    for vi, (a, b) in enumerate(VERSES):
         k0 = math.ceil(beat_of(a))
         k0 += (-k0) % 4
-        for k in range(k0, math.floor(beat_of(b)) - 3, 4):
-            pat = PATTERNS[bar % len(PATTERNS)]
-            for j, kind in enumerate(pat):
-                if bar % 4 == 3 and j == 2:
-                    kind = "gear"
-                out.append((beat_t(k + j), kind))
-            if bar % 2 == 0:
-                out.append((beat_t(k + 1.5), "note"))
+        for n, k in enumerate(range(k0, math.floor(beat_of(b)) - 3, 4)):
+            pat = VERSE_BARS[(n + 4 * (vi % 2)) % len(VERSE_BARS)]
+            if vi == 0:                                    # first verse: eighths only (no bursts)
+                pat = pat[:12] + pat[12:].replace("gg", "g.").replace("aa", "a.")
+            lay(k, pat, mirror=(vi >= 3 and n % 2 == 1))
             bar += 1
-    for a, b in CHORUSES:
+    for ci, (a, b) in enumerate(CHORUSES):
         k0 = math.ceil(beat_of(a))
         k0 += (-k0) % 4
-        for k in range(k0, math.floor(beat_of(b)) - 3, 4):
-            pat = PATTERNS[bar % len(PATTERNS)]
-            for j, kind in enumerate(pat):
-                out.append((beat_t(k + j), kind))
-            out.append((beat_t(k + 3.5), "g"))                     # an eighth-note pair at each bar's end
+        for n, k in enumerate(range(k0, math.floor(beat_of(b)) - 3, 4)):
+            lay(k, CHORUS_BARS[n % len(CHORUS_BARS)], mirror=(ci == 1 and n % 3 == 2))
+            if n % 2 == 1:
+                out.append((beat_t(k + 1.5), "note"))
             bar += 1
     for k in range(math.ceil(beat_of(STEPS[0])), math.floor(beat_of(STEPS[1])) + 1):
         out.append((beat_t(k), "gear"))
+    for t0, t1 in MASH.items():
+        out.append((t0, "mash"))
+    busy = [(t0 - 0.2, t1 + 0.12) for t0, t1 in MASH.items()] + REST
+    out = [(t, k) for t, k in out if k == "mash" or not any(a <= t <= b for a, b in busy)]
     out = [(t, k) for t, k in out if not (abs(t - MISS_BIRD) < 0.3 or 41.9 < t < 56.0)]
-    out += [(MISS_GEAR, "gear_miss"), (MISS_BIRD, "a_miss"), (57.3, "heart")]
-    return tuple(sorted(out))
+    out += [(MISS_GEAR, "gear_miss"), (MISS_BIRD, "a_miss"), (57.3, "heart"), (105.2, "heart"), (131.4, "heart")]
+    out = sorted(set(out))
+    # a gear and an enemy can not share a moment; a ground note right at a saw goes
+    gears = [t for t, k in out if k in ("gear", "gear_miss")]
+    out = [(t, k) for t, k in out if not (k == "g" and any(abs(t - x) < 0.2 for x in gears))]
+    return tuple(out)
+
+
+BIG_T = set()
+
+
+@lru_cache(None)
+def gemini_times():
+    ts = {}
+    for t, k in chart():
+        ts.setdefault(round(t, 4), set()).add(k)
+    return frozenset(t for t, ks in ts.items() if {"g", "a"} <= ks)
+
+
+def is_gemini(t):
+    return round(t, 4) in gemini_times()
+
+
+def is_big(t):
+    chart()
+    return round(t, 4) in BIG_T
+
+
+def is_ghost(t, kind):
+    """Ghost enemies (fade out on the way in): every other enemy in verses 2 and 4."""
+    for vi in GHOST_VERSES:
+        a, b = VERSES[vi]
+        if a <= t <= b and kind in ("g", "a") and not is_gemini(t):
+            return int(round((t - a) / (BEAT / 2))) % 2 == 1
+    return False
+
+
+def mash_hits():
+    """(t, mash_t0): the sixteenth-note hits on every mash enemy."""
+    out = []
+    for t0, t1 in MASH.items():
+        n = int((t1 - t0) / (BEAT / 4))
+        out += [(t0 + i * BEAT / 4, t0) for i in range(n + 1)]
+    return out
 
 
 def hits():
@@ -214,6 +288,7 @@ def score_events():
     ev += [(t, "heart") for t, k in chart() if k == "heart"]
     ev += [(46.66, "nocount"), (62.6, "nocount")]
     ev += [(HOLD[0] + i * 0.25, "hit") for i in range(int((HOLD[1] - HOLD[0]) / 0.25))]
+    ev += [(t, "hit") for t, t0 in mash_hits()]
     return tuple(sorted(ev))
 
 
@@ -258,16 +333,16 @@ def state(t):
 @lru_cache(None)
 def air_runs():
     """Consecutive air notes keep her up: (rise_start, fall_end, [times])."""
-    a = [t for t, k in chart() if k in ("a", "a_miss")]
+    a = [t for t, k in chart() if k in ("a", "a_miss") and not is_gemini(t)]
     runs, cur = [], []
     for t in a:
-        if cur and t - cur[-1] > 0.6:
+        if cur and (t - cur[-1] > 0.6 or any(cur[-1] < g_ < t for g_, k_ in chart() if k_ == "g")):
             runs.append(cur)
             cur = []
         cur.append(t)
     if cur:
         runs.append(cur)
-    grounds = [t for t, k in chart() if k in ("g", "gear", "gear_miss")]
+    grounds = [t for t, k in chart() if k in ("g", "gear", "gear_miss", "mash")]
     out = []
     for r in runs:
         end = r[-1] + AIR_HANG + AIR_DROP
@@ -296,6 +371,10 @@ def avatar_height(t):
                 u = min(1.0, (t - (b - AIR_DROP)) / AIR_DROP)
                 return (AIR_TOP + bob(b - AIR_DROP)) * (1 - u * u)        # drop, ease in
             return AIR_TOP + bob(t)                                      # hover bob
+    for tg in gemini_times():                       # Gemini: a short hop to mid height, both lanes struck
+        if -0.07 < t - tg < 0.12:
+            u = (t - tg + 0.07) / 0.19
+            return 62 * math.sin(math.pi * u)
     for tg, k in chart():
         if k == "gear" and abs(t - tg) < 0.24:
             u = (t - tg + 0.24) / 0.48

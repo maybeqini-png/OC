@@ -42,6 +42,13 @@ PICKS = {                       # sprite name -> (N5 take, height in px at 1080p
     "f_ground": ("f2_ground_48001", 155),     # festival: daruma cat
     "f_air": ("f2_air_48002", 135),           # festival: lantern cat
     "f_saw": ("f2_saw_48011", 150),           # festival: pinwheel saw
+    # Hell chart pack (2026-11-04): per family a second ground / air design, a big (mash / heavy) enemy, a ghost
+    "k_g2": ("k_g2_66001", 160), "k_a2": ("k_a2_66002", 130), "k_big": ("k_big_66002", 250), "k_gh": ("k_gh_66001", 135),
+    "u_g2": ("u_g2_66002", 160), "u_a2": ("u_a2_66001", 125), "u_big": ("u_big_66001", 260), "u_gh": ("u_gh_66002", 135),
+    "p_g2": ("p_g2_66001", 140), "p_a2": ("p_a2_66001", 130), "p_big": ("p_big_66001", 270), "p_gh": ("p_gh_66002", 130),
+    "n_g2": ("n_g2_66001", 150), "n_a2": ("n_a2_66001", 140), "n_big": ("n_big_66001", 260), "n_gh": ("n_gh_66002", 135),
+    "f_g2": ("f_g2_66001", 150), "f_a2": ("f_a2_66001", 135), "f_big": ("f_big_66002", 250), "f_gh": ("f_gh_66001", 135),
+    "hover": ("hv_board_66103", 70),          # her hover board (air lane)
 }
 
 
