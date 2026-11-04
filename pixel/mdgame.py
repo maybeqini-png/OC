@@ -270,7 +270,7 @@ def draw_mash(img, g, late, texts):
                     alpha=1 - max(0.0, a2 - 0.3) / 0.1)
 
 
-@lru_cache(None)
+@lru_cache(maxsize=256)                       # bounded: spinning launched enemies make one rotation per degree
 def monster_tilt(fam, role, deg):
     return monster(fam, role).rotate(deg, Image.Resampling.BICUBIC, expand=True)
 
