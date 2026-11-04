@@ -340,3 +340,11 @@ for the sprites; the sprite list is set after the pixel test.
   red aura, closer every bar; every saw of the step section arcs out of its mouth onto her path and lands with a
   thud; its eyes flare with a roar and shake before Fever, then the cut-in, WARNING and its drop (`pixel/mdboss.py`
   omen). During boss fights the stream cam shrinks into the corner; reactions there pop instead of going full size.
+- Her attitude in the game (`pixel/mdbrat.py`, `pixel/mdpet.py`; poses by V4.5 Precise Reference on her game drawing,
+  checked against the sheet: hair / irises snapped to it, its tie emblem and chest patch drawn on): peace sign on
+  準備もバッチリ (24.5 s), smug finger wag right before she trips (40.4 s), flustered stumble on each miss, akanbe on
+  笑ったでしょ / ぷいって and after the main-boss BREAK!!, finger wag after the mini-boss BREAK!!, the めっ boop toward the
+  viewer at 66.82 / 137.36 s (coral めっ), peace-sign wink at STAGE CLEAR; in armed sections the paw mic is slung on her
+  back during these. Armed hits now use poses at her run proportions. Her companion, a sleepy cat spirit (the chest
+  patch's cat), floats behind her shoulder: dozes (Zz), peeks one eye open at each ノーカン, wakes with a "!" for the
+  climb and both boss fights and cheers.

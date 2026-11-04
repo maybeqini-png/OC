@@ -139,6 +139,25 @@ def recolor(name):
     return Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGB")
 
 
+def iris_height(img):
+    """Height (px) of her largest iris in a V4.5 pose (cyan irises in the head) - the eye-scale key for these poses."""
+    a = np.asarray(img.convert("RGB")).astype(np.float32)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    fg = a.mean(-1) < 240
+    ys = np.nonzero(fg.any(1))[0]
+    top, bot = ys.min(), ys.max()
+    head = np.zeros(fg.shape, bool)
+    head[: int(top + 0.45 * (bot - top))] = True
+    iris = head & (b > 150) & (g > 90) & (r < 140) & (b > r + 50) & (g < 200)
+    lab, n = ndimage.label(ndimage.binary_closing(iris, iterations=2))
+    best = 0
+    for sl in ndimage.find_objects(lab):
+        h, w = sl[0].stop - sl[0].start, sl[1].stop - sl[1].start
+        if 0.6 < h / max(1, w) < 3.5 and 12 < h < 200:
+            best = max(best, h)
+    return best
+
+
 if __name__ == "__main__" and sys.argv[1] == "check":
     ref = Image.open(SHEET).convert("RGB")
     ims = [ref.resize((round(ref.width * 1216 / ref.height), 1216))]
@@ -250,4 +269,52 @@ def recolor_pose(name):
     _snap(a, streak, TONES["hair"][:2], shift=0)
     _snap(a, sweater, TONES["sweater"])
     _snap(a, accent | stripes, TONES["accent"])
+    return Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGB")
+
+
+def snap_v45(img):
+    """Colour lock for the V4.5 Precise Reference poses (art/generated/md_style/brat): V4.5 draws her hair a darker
+    navy and her irises cyan. Hair, ears, tail and ahoge (saturated blue regions) take the sheet's hair tones by
+    lightness; irises (bright cyan in the head = upper 40 % of the figure) take the canonical eye's ramp
+    (pixel/mdeyes.py). Sweater, collar, tie, boots and skin are left as drawn."""
+    import mdeyes as EY
+    a = np.asarray(img.convert("RGB")).astype(np.float32)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    lum, sat = a.mean(-1), a.max(-1) - a.min(-1)
+    fg = lum < 240
+    ys = np.nonzero(fg.any(1))[0]
+    top, bot = ys.min(), ys.max()
+    yy = np.arange(a.shape[0])[:, None] * np.ones((1, a.shape[1]))
+    head = yy < top + 0.40 * (bot - top)
+    iris = head & (b > 170) & (g > 110) & (r < 140) & (g > r + 30)
+    iris = ndimage.binary_opening(iris, iterations=1)
+    lab, n = ndimage.label(iris)
+    if n:
+        sizes = ndimage.sum(iris, lab, range(1, n + 1))
+        iris = np.isin(lab, [i + 1 for i, z in enumerate(sizes) if 30 < z < 6000])
+    iris = ndimage.binary_dilation(iris, iterations=1) & (b > r + 25) & (lum > 50)
+    # hair vs sweater by REGION (flat areas between the line art), not per pixel: the sheet's hair is a saturated
+    # royal blue (68,92,157), its sweater a grey navy (56,61,89); a region is hair when its median blue lead is >= 42
+    stick = (g > 140) & (b > 190)                          # the light cyan prop stick is not hair
+    cand = (b > r + 14) & ~iris & ~stick & (lum < 175) & (lum > 24)
+    lab, n = ndimage.label(ndimage.binary_erosion(cand, iterations=1))
+    hair = np.zeros(cand.shape, bool)
+    if n:
+        lead = ndimage.median(b - r, lab, np.arange(1, n + 1))
+        hair = np.isin(lab, [i + 1 for i, v in enumerate(lead) if v >= 42])
+        hair = ndimage.binary_dilation(hair, iterations=1) & cand
+    if hair.any():                       # smooth remap of lightness onto the sheet's hair ramp (no banding)
+        l_ = a[hair].mean(-1)
+        lo, hi = np.percentile(l_, 5), np.percentile(l_, 97)
+        u = np.clip((l_ - lo) / max(1.0, hi - lo), 0, 1)[:, None]
+        dark, mid, light = (np.array(c, np.float32) for c in ((40, 54, 104), TONES["hair"][1], (118, 140, 202)))
+        a[hair] = np.where(u < 0.55, dark + (mid - dark) * (u / 0.55), mid + (light - mid) * ((u - 0.55) / 0.45))
+    if iris.any():
+        l_ = a[iris].mean(-1)
+        ramp = np.array([EY.IRIS_LINE, EY.IRIS_TOP, EY.IRIS_MID, EY.IRIS_LOW], np.float32)
+        stops = np.array([40, 90, 150, 215], np.float32)
+        t = np.clip(np.interp(l_, stops, np.arange(4)), 0, 3)
+        i0 = np.floor(t).astype(int).clip(0, 2)
+        f = (t - i0)[:, None]
+        a[iris] = ramp[i0] * (1 - f) + ramp[i0 + 1] * f
     return Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGB")

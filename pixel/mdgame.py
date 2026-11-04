@@ -21,6 +21,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 import mdboss as BOSS
+import mdbrat as BR
+import mdpet as PET
 import mdfx as FX
 import mdrunner as RN
 import mdsprites as MD
@@ -596,28 +598,105 @@ def hurt_frame(flash):
     return im, float(np.nonzero(al.any(1))[0].max())
 
 
+# ---------------------------------------------------------------- her attitude (pixel/mdbrat.py)
+# Cheeky-brat flourishes between hits, as Muse Dash characters show short poses in the run: a peace sign on
+# 準備もバッチリ, a smug finger wag right before she trips (キメちゃうよ -> えっ) and after the mini-boss BREAK!!, akanbe on 笑ったでしょ, ぷいって and after the main-boss BREAK!!, the めっ boop
+# toward the viewer at 66.82 / 137.36, a flustered stumble on each miss and a peace-sign wink at STAGE CLEAR.
+# A taunt only plays where no note falls and she is on the ground; in armed sections the paw mic is slung on her back.
+TAUNT_LEN, BOOP_LEN = 0.55, 0.5
+
+
+@lru_cache(None)
+def acts():
+    st = ST()
+    notes = [tt for tt, k in st.chart() if k in ("g", "a", "a_miss", "gear", "gear_miss")]
+    busy = [(a, b) for a, b, *_ in st.WIPES] + [(st.HOLD[0] - 0.3, st.HOLD[1] + 0.3)]
+
+    def free(t0, t1):
+        if any(t0 - 0.06 <= n <= t1 + 0.06 for n in notes) or any(a < t1 and t0 < b for a, b in busy):
+            return False
+        return all(st.avatar_height(t0 + k * (t1 - t0) / 8) <= 0.5 for k in range(9))
+
+    def place(t, key):
+        for k in range(30):
+            t0 = t + k * 0.05
+            if free(t0, t0 + TAUNT_LEN):
+                return (t0, t0 + TAUNT_LEN, key)
+        return None
+    hm, hb = BOSS.timeline("mini")[2], BOSS.timeline("main")[2]
+    out = [place(24.45, "peace"), place(40.35, "wag"), place(64.35, "akanbe"), place(96.2, "akanbe"), place(hm + 0.6, "wag"),
+           place(hb + 1.05, "akanbe")]
+    out += [(66.82 - 0.12, 66.82 - 0.12 + BOOP_LEN, "boop"), (137.36 - 0.12, 137.36 - 0.12 + BOOP_LEN, "boop")]
+    out += [(st.CLEAR_T - 0.1, st.CLEAR_T + 2.0, "peace")]
+    return tuple(sorted(a for a in out if a))
+
+
+def act_at(g):
+    for t0, t1, key in acts():
+        if t0 <= g < t1:
+            return key, g - t0
+    return None, 0.0
+
+
+@lru_cache(None)
+def act_sprite(key, armed, flash=False):
+    """The pose; armed: the paw mic slung across her back (behind her); flash: the coral damage tint."""
+    import mdweapon as WP
+    sp, feet = BR.pose(key)
+    ax = RN.AX[id(sp)]
+    if armed:
+        mic, (px, py) = WP.mic_sprite(round(RN.mic_len()), 12)
+        pad = mic.height
+        cv = Image.new("RGBA", (mic.width + 2 * pad, mic.height + 2 * pad), (0, 0, 0, 0))
+        cv.alpha_composite(mic, (pad, pad))
+        cv = cv.rotate(38, Image.Resampling.BICUBIC, center=(px + pad, py + pad))   # head up behind her shoulder
+        bb = cv.getbbox()
+        cv = cv.crop(bb)
+        grip = (px + pad - bb[0], py + pad - bb[1])
+        top = np.nonzero(np.asarray(sp.getchannel("A")).any(1))[0].min()
+        hx, hy = ax + 18, top + 0.62 * (feet - top)        # pommel low behind her back
+        L, T = min(0, int(hx - grip[0])), min(0, int(hy - grip[1]))
+        W = max(sp.width, int(hx - grip[0]) + cv.width) - L
+        H = max(sp.height, int(hy - grip[1]) + cv.height) - T
+        out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        out.alpha_composite(cv, (int(hx - grip[0]) - L, int(hy - grip[1]) - T))
+        out.alpha_composite(sp, (-L, -T))
+        sp, feet, ax = out, feet - T, ax - L
+    if flash:
+        a = np.asarray(sp).copy()
+        m = a[..., 3] > 0
+        a[m, :3] = (a[m, :3] * 0.6 + np.array((255, 123, 138)) * 0.4).astype(np.uint8)
+        sp = Image.fromarray(a, "RGBA")
+    RN._register(sp, ax)
+    return sp, feet
+
+
 def avatar(t):
     """(sprite, feet row in sprite, centre x, feet y)."""
     st = ST()
     g = st.game_time(t)
-    for m in (st.MISS_GEAR, st.MISS_BIRD):
-        if 0 <= g - m < 0.4:
-            sp, feet = hurt_frame(int(g * 20) % 2)
-            return sp, feet, RUN_X - 28 * math.sin(min(1, (g - m) / 0.4) * math.pi), \
-                FLOOR - st.avatar_height(g) * K * 0.5
-    h = st.avatar_height(g) * K
     armed = armed_at(t)
+    for m in (st.MISS_GEAR, st.MISS_BIRD):
+        if 0 <= g - m < 0.45:                                # flustered stumble, coral damage blink
+            sp, feet = act_sprite("fluster", armed, int(g * 20) % 2 == 1)
+            return sp, feet, RUN_X - 28 * math.sin(min(1, (g - m) / 0.45) * math.pi), \
+                FLOOR - st.avatar_height(g) * K * 0.5
+    key, age = act_at(g)
+    if key in ("boop", "peace") or (key and st.avatar_height(g) <= 0.5):
+        sp, feet = act_sprite(key, armed)
+        return sp, feet, RUN_X + (10 if key == "boop" else 0), FLOOR
+    h = st.avatar_height(g) * K
     if st.HOLD[0] <= g < st.HOLD[1] + 0.2:
         return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
     ng = na = 0
     for tt, kind in st.chart():
         if kind == "g" and 0 <= g - tt < STRIKE_HOLD["g"][armed]:
             if armed:                     # a different attack drawing on each hit, as in Muse Dash
-                return (*RN.armed_strike(RN.ARMED_GROUND[ng % len(RN.ARMED_GROUND)]), RUN_X + 16, FLOOR)
+                return (*BR.armed(BR.ARMED_GROUND[ng % len(BR.ARMED_GROUND)]), RUN_X + 16, FLOOR)
             return (*RN.strike_frame("punch"), RUN_X + 16, FLOOR)
         if kind == "a" and 0 <= g - tt < STRIKE_HOLD["a"][armed]:
             if armed:
-                return (*RN.armed_strike(RN.ARMED_AIR[na % len(RN.ARMED_AIR)]), RUN_X + 12, FLOOR - h)
+                return (*BR.armed(BR.ARMED_AIR[na % len(BR.ARMED_AIR)]), RUN_X + 12, FLOOR - h)
             return (*RN.strike_frame("air"), RUN_X + 12, FLOOR - h)
         ng += kind == "g"
         na += kind == "a"
@@ -692,6 +771,13 @@ def _ghost(sp, col, alpha):
 def motion(t):
     """(sx, sy, rot_deg, dx) for her sprite at song time t."""
     g = ST().game_time(t)
+    key, age = act_at(g)
+    if key and age < 0.1:                                   # each flourish pops in (stretch, settle)
+        q = 0.08 * (1 - age / 0.1)
+        return 1 - 0.6 * q, 1 + q, 0.0, 0.0
+    if key == "boop" and 0.1 <= age < 0.22:                 # the boop: a quick lunge toward the viewer
+        k = math.sin(math.pi * (age - 0.1) / 0.12)
+        return 1 + 0.06 * k, 1 + 0.06 * k, -4 * k, 14 * k
     kind, age = strike_at(t)
     if kind:
         u = min(1.0, age / 0.12)
@@ -715,6 +801,7 @@ def draw_avatar(img, t, fever=False):
     sp, feet, cx, fy = avatar(t)
     air = FLOOR - fy
     put(img, shadow_img(max(60, int(150 - air * 0.3))), cx, FLOOR + 4)
+    PET.draw(img, g, cx, fy, ST().avatar_height)              # her sleepy cat spirit, behind her shoulder
     ax = _anchor(sp)
     sx, sy, rot, dx = motion(t)
     if (sx, sy, rot) != (1.0, 1.0, 0.0):
@@ -727,6 +814,16 @@ def draw_avatar(img, t, fever=False):
     if fever:
         FX.afterimages(img, sp, x0, y0, g)
     img.alpha_composite(sp, (x0, y0))
+    key, age = act_at(g)
+    if key == "boop" and 0.1 <= age < 0.5:                  # めっ: coral word + paw pop toward the viewer
+        u = (age - 0.1) / 0.4
+        sc = 1.3 - 0.3 * min(1.0, u / 0.25)
+        put(img, text_img("めっ", 84, (255, 123, 138), (90, 30, 60), 9), cx + 150, fy - 300 - 30 * u,
+            alpha=1 - max(0.0, (u - 0.7) / 0.3), scale=sc)
+        burst(img, int(cx + 120), int(fy - 190), age - 0.1, cols=((255, 123, 138), WHITE, PINK))
+    if key in ("wag", "akanbe") and age < 0.4:              # a cheeky sparkle by her face
+        put(img, star_icon(56, LEMON), cx + 70 + 20 * age, fy - 300 - 40 * age, alpha=1 - age / 0.4,
+            scale=0.7 + age)
     gear_near = any(k_ == "gear" and abs(g - tt) < 0.6 for tt, k_ in st.chart())
     if not gear_near:                                       # air lane: take-off and landing dust (saws have their own)
         land, take = edge_age(g, False), edge_age(g, True)

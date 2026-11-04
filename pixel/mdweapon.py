@@ -80,7 +80,8 @@ def find_stick(a):
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
     sat = a.max(-1) - a.min(-1)
     lum = a.mean(-1)
-    m = (b > r + 25) & (g > r + 10) & (lum > 150) & (lum < 245) & (sat < 110) & (r > 110)
+    m = ((b > r + 25) & (g > r + 10) & (lum > 150) & (lum < 245) & (sat < 110) & (r > 110)) | \
+        ((g > 140) & (b > 200) & (r < 170) & (lum > 120) & (lum < 245))      # saturated cyan sticks (V4.5 takes)
     m = ndimage.binary_opening(m, iterations=1)
     lab, n = ndimage.label(m)
     skin = ndimage.binary_dilation(skin_mask(a), iterations=30)
@@ -136,7 +137,10 @@ def armed(name, length=LENGTH, src=None):
     if src is None:
         import mdrecolor
         import mdface
-        if name in mdface.FACES:
+        if name.startswith("brat/"):                   # V4.5 run-proportion poses: sheet colours + sheet details
+            import mdbrat
+            src = mdbrat.colour(name)
+        elif name in mdface.FACES:
             src = mdface.fix(name)                     # sheet colours + canonical eye + N5-fitted face (mdface.py)
         else:
             src = mdrecolor.recolor_pose(name) if name in mdrecolor.POSE_SEEDS else Image.open(SRC / f"{name}.png")
@@ -201,8 +205,10 @@ def armed(name, length=LENGTH, src=None):
         th = t_all[hand]
         tg = float(np.clip(th.mean(), 0, L))
         span = (float(th.min()), float(th.max()))
-    else:
-        tg, span = 0.0, (0.0, 0.0)
+    else:                                   # hands hidden in her long sleeves: grip = stick end nearest her body
+        tc = float(np.clip((centre - e1) @ d, 0, L))
+        tg = 0.0 if tc < L / 2 else L
+        span = (tg, tg)
     head_dir = d if (L - tg) >= tg else -d
     if name in HEAD_DIR:
         v = np.array(HEAD_DIR[name], np.float32)
