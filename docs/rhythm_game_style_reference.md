@@ -166,3 +166,8 @@ daruma mouth) - it does not exist before it leaves the muzzle, then settles into
 anticipation (draws back, muzzle charges) and recoil; white star flash, ring and lingering smoke at the muzzle;
 the mini-boss shoots mocking ｗｗ speech bubbles, the daruma spits its mini-daruma minions; glowing eyes and a
 pulsing aura on the beat; stage dimmed 46 % with a breathing vignette; entrance shakes.
+Distance (owner 2026-11-04: "is the distance too close?"; trailer 91.3 / 92.0 s measured on the playfield): player at
+14 %, boss muzzle at 74 %, boss centre at 87 % of the width - shots cross about 60 % of the screen. The PV had the
+muzzle at 59-68 % with the player at 31 % (shots crossed 28-37 %). Now the boss centre sits at 85 % and the muzzle at
+70 % of the space right of the player (shots cross about 47 % of the screen, the player position being fixed by the
+layout); the stream cam shrinks into the top-right corner during each fight to make room.

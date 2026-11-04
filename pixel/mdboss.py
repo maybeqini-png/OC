@@ -41,15 +41,16 @@ def ease_in(u):
 
 
 # mini-boss timing: after the streamer's big-cam reaction (stream.BIG_CAM 98.9-103.2 s), which would cover the
-# WARNING card; it then enters on 吹き出しちゃうな (about 104 s). Both bosses stay left of / below the stream's cam
-# box (top right, x 1478-1896, y 68-480 on the game picture) so their heads are never hidden behind it.
+# WARNING card; it then enters on 吹き出しちゃうな (about 104 s). Distance after the trailer (91.3 / 92.0 s): the boss
+# centre at 85 % and its muzzle at 70 % of the space right of the player, so shots cross about half the screen; the
+# stream cam shrinks into the top-right corner during the fight to make room (stream.cam_box).
 BOSSES = {   # sprite-px anchors: muzzle (where every shot leaves), eyes (glow); x, y = screen position at rest
     "mini": dict(take="b3_mini_62011", name="ニヤニヤチャット", title="THE GRINNING CHAT", warn=103.45, enter=104.4,
-                 last=115.5, h=560, x=1290, y=580, ground=False, col=(255, 110, 190), dark=(60, 14, 70),
+                 last=115.5, h=560, x=1700, y=580, ground=False, col=(255, 110, 190), dark=(60, 14, 70),
                  aura=(255, 40, 150), eyes=((474, 233, 46), (287, 257, 46)), eye_col=(255, 60, 170),
                  muzzle=(5, 583)),
     "main": dict(take="b2_main_62003", name="ナナコロビ大王", title="NANAKOROBI THE DARUMA KING", warn=126.6,
-                 enter=127.15, last=146.3, h=580, x=1340, y=None, ground=True, col=(255, 180, 60), dark=(80, 6, 16),
+                 enter=127.15, last=146.3, h=580, x=1625, y=None, ground=True, col=(255, 180, 60), dark=(80, 6, 16),
                  aura=(255, 70, 20), eyes=((307, 410, 60), (525, 370, 64)), eye_col=(255, 230, 60),
                  muzzle=(330, 545)),
 }

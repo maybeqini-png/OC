@@ -596,6 +596,17 @@ def cam_box(t):
     """Small cam at the top right; it grows to centre stage for the big reactions."""
     small = (1478, 68, 1896, 480)
     big = (930, 96, 1840, 900)
+    # boss fights (pixel/mdboss.py): the cam steps aside - shrinks into the top-right corner under the top bar - so
+    # the boss can hold the far right edge at Muse Dash's distance (shots cross about half the screen)
+    import mdboss
+    kb = 0.0
+    for key, bb in mdboss.BOSSES.items():
+        a, b = bb["warn"] - 0.2, mdboss.timeline(key)[2] + 1.6
+        if a - 0.4 <= t < b + 0.4:
+            kb = max(kb, ease((t - a + 0.4) / 0.4) if t < a else (1 - ease((t - b) / 0.4) if t >= b else 1.0))
+    if kb > 0:
+        side = (1704, 80, 1896, 272)
+        small = tuple(int(s_ + (d - s_) * kb) for s_, d in zip(small, side))
     k = 0.0
     for a, b in BIG_CAM:
         if a - 0.25 <= t < b + 0.25:
