@@ -292,6 +292,12 @@ def build(t0, t1, ST):
         tr.add(dead + (0.95 if b["ground"] else 0.5), drum_hit("forte", 0.7, 2), 0.6)
         for k in range(3):
             tr.add(dead + (0.95 if b["ground"] else 0.5) + 0.08 * k, ting(1.0 + 0.25 * k), 0.16)
+    # climb: the looming Daruma King throws the saws (thud on landing) and roars before Fever
+    for t0, thr, land in mdboss.omen_throws():
+        tr.add(thr, whoosh(0.3, 2500, 400, 27), 0.08)
+        tr.add(land, drum_hit("forte", 0.45, 5), 0.32)
+    tr.add(mdboss.OMEN_FLARE, drum_hit("forte", 0.4, 4), 0.6)
+    tr.add(mdboss.OMEN_FLARE, drone(1.0, 28), 0.3)
     for t0, t1, i, j, kind in ST.WIPES:
         if kind == "cutin":
             tr.add(t0 + 0.12 * (t1 - t0), whoosh(0.35, 600, 7000, 25), 0.16)

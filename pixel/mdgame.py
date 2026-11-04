@@ -296,7 +296,19 @@ def draw_world(img, g, late=None, texts=None):
                 fam = family_at(tt)
                 sp = saw(fam, int((g * 30) % 24))
                 bob = 0
-                img.alpha_composite(sp, (int(x - sp.width / 2), FLOOR + 14 - sp.height + bob))
+                drop = BOSS.saw_drop(tt, g, x) if kind == "gear" else (x, 0)
+                if drop is None:                                     # still in the looming king's mouth
+                    continue
+                x, bob = drop
+                img.alpha_composite(sp, (int(x - sp.width / 2), int(FLOOR + 14 - sp.height + bob)))
+                if bob < 0:                                          # falling: smear above it
+                    for k_, al_ in ((1, 0.35), (2, 0.18)):
+                        put(img, sp, x, FLOOR + 14 - sp.height / 2 + bob - k_ * 40, alpha=al_)
+                    continue
+                for t0_, thr_, land_ in BOSS.omen_throws():          # landing: dust and ring
+                    if abs(t0_ - tt) < 1e-6 and 0 <= g - land_ < 0.34:
+                        FX.ring_flash(img, x, FLOOR, g - land_, (255, 120, 120))
+                        FX.puffs(img, x - 20, FLOOR - 10, g - land_, int(tt * 77), 4, 80)
                 FX.grind(img, x - sp.width * 0.1, FLOOR + 6, g, int(tt * 100))
                 if kind == "gear_miss" and dt < 0:
                     miss_text(img, HIT_X, FLOOR - 200, -dt)
@@ -824,7 +836,7 @@ def draw_combo(img, combo, g):
 def hit_shake(g):
     """Short vertical shake on each strike (4 frames, 7 px, alternating), inside the play area; the bosses' big
     moments (landing, throws, defeat) shake harder."""
-    b = BOSS.shake(g)
+    b = BOSS.shake(g) or BOSS.omen_shake(g)
     if b:
         return b
     st = ST()
@@ -847,6 +859,7 @@ def game_layer(t, hud=True):
         img.alpha_composite(sky.crop((0, 0, OW, FLOOR)), (0, 0))
     draw_floor(img, st.ground_style_at(g), st.cam_x(g))
     BOSS.draw_atmosphere(img, g)                             # boss: oppressive vignette breathing on the beat
+    BOSS.draw_omen(img, g)                                   # climb: the Daruma King looms and throws the saws
     world = Image.new("RGBA", (OW, OH), (0, 0, 0, 0))
     rs = int(g * 30) % 30
     put(world, ring(rs), HIT_X + 40, AIR_Y)

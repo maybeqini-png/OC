@@ -469,3 +469,148 @@ def draw_ui(img, g):
     if dead + (0.95 if b["ground"] else 0.5) <= g < dead + 1.6:    # BREAK!! over the burst
         FX.judgement(img, 1450, 470, g - dead - (0.95 if b["ground"] else 0.5), "gold" if b["ground"] else "pink",
                      "BREAK!!", 96)
+
+
+# ---------------------------------------------------------------- omen: the Daruma King looms over the climb
+# Owner 2026-11-04: the climb (piano staircase, 震えるつま先で ステップ踏んで, 116.6-125.8 s) leads into the main boss and
+# should threaten her. As boss foreshadowing in the reference games (the boss watching from the background before
+# the fight): the king's dark silhouette with glowing eyes rises behind the staircase, grows closer every bar, and
+# throws every saw of the step section down onto her path (they drop from its raised paw and land with a thud - none
+# appears from nowhere); its eyes blink on the beat; at the top of the climb (into Fever) its eyes flare and the
+# screen shakes, then the cut-in, the WARNING and its drop from above.
+OMEN = (116.55, 125.0)          # climb stage .. festival cut-in
+OMEN_FLARE = 123.9              # eyes flare, roar shake
+SAW_FALL = 0.32                 # a thrown saw falls this long before landing
+SAW_LAND_X = 1230               # where thrown saws land (game px)
+
+
+@lru_cache(None)
+def silhouette(level):
+    """The king as a near-black maroon silhouette with a thin red rim and glowing eyes (level 0..7 = pulse)."""
+    b = BOSSES["main"]
+    raw = _raw("main")
+    a = np.asarray(raw).astype(np.float32)
+    rgb = a[..., :3] * 0.10 + np.array((46, 6, 18), np.float32) * 0.90
+    al = a[..., 3]
+    edge = (al > 0) & ~np.asarray(Image.fromarray((al > 128).astype(np.uint8) * 255).filter(
+        ImageFilter.MinFilter(9))).astype(bool)
+    rgb[edge] = (225, 40, 60)                                    # red rim light
+    sil = Image.fromarray(np.dstack([rgb, al]).clip(0, 255).astype(np.uint8), "RGBA")
+    pad = 80
+    cv = Image.new("RGBA", (sil.width + 2 * pad, sil.height + 2 * pad), (0, 0, 0, 0))
+    halo = np.zeros((cv.height, cv.width), np.uint8)                # red aura so it reads on the dark climb
+    halo[pad:pad + sil.height, pad:pad + sil.width] = al.astype(np.uint8)
+    halo = np.asarray(Image.fromarray(halo).filter(ImageFilter.GaussianBlur(30))).astype(np.float32)
+    ha = np.zeros((cv.height, cv.width, 4), np.uint8)
+    ha[..., :3] = (255, 40, 60)
+    ha[..., 3] = np.clip(halo * (0.55 + 0.3 * level / 7), 0, 255).astype(np.uint8)
+    cv.alpha_composite(Image.fromarray(ha, "RGBA"))
+    cv.alpha_composite(sil, (pad, pad))
+    g = Image.new("RGBA", cv.size, (0, 0, 0, 0))
+    dg = ImageDraw.Draw(g)
+    for ex, ey, r in b["eyes"]:
+        rr = r * (1.25 + 0.35 * level / 7)
+        dg.ellipse((pad + ex - rr, pad + ey - rr * 0.75, pad + ex + rr, pad + ey + rr * 0.75), fill=(255, 220, 60, 255))
+    g = g.filter(ImageFilter.GaussianBlur(14 + 4 * level / 7))
+    ga = np.asarray(g).astype(np.float32)
+    base = np.asarray(cv).astype(np.float32)
+    base[..., :3] = np.minimum(255, base[..., :3] + ga[..., :3] * (ga[..., 3:] / 255) * (0.8 + 0.6 * level / 7))
+    base[..., 3] = np.maximum(base[..., 3], ga[..., 3] * 0.7)
+    core = Image.new("RGBA", cv.size, (0, 0, 0, 0))                # hot pupils
+    dc = ImageDraw.Draw(core)
+    for ex, ey, r in b["eyes"]:
+        dc.ellipse((pad + ex - r * 0.35, pad + ey - r * 0.3, pad + ex + r * 0.35, pad + ey + r * 0.3),
+                   fill=(255, 250, 210, 255))
+    out = Image.fromarray(base.astype(np.uint8), "RGBA")
+    out.alpha_composite(core)
+    return out, pad
+
+
+def omen_on(g):
+    return OMEN[0] <= g < OMEN[1]
+
+
+def _omen_geom(g):
+    """(centre x, top y, height px, alpha) of the looming silhouette: eyes held at about y 300, left of the cam."""
+    u = (g - OMEN[0]) / (OMEN[1] - OMEN[0])
+    h = 620 + 440 * u ** 1.3                                     # closer every bar
+    cx = 1180 - 40 * u
+    top = 300 - 0.38 * h + 14 * math.sin(2 * math.pi * (g - OMEN[0]) / (4 * BEAT))   # slow sway
+    a = min(1.0, (g - OMEN[0]) / 2.2) * (1 - min(1.0, max(0.0, (g - (OMEN[1] - 0.25)) / 0.25)))
+    return cx, top, h, a * 0.95
+
+
+def _omen_mouth(g):
+    cx, top, h, a = _omen_geom(g)
+    return cx - 0.5 * h + 0.44 * h, top + 0.53 * h
+
+
+def omen_throws():
+    """Saws of the step section: (chart time, throw time, landing time)."""
+    import mdgame as G
+    import stream as st
+    v = st.V_G * G.K
+    out = []
+    for tt, k in st.chart():
+        if k == "gear" and OMEN[0] + 1.6 <= tt < OMEN[1]:
+            land = tt - (SAW_LAND_X - (G.HIT_X - 60)) / v
+            out.append((tt, land - SAW_FALL, land))
+    return out
+
+
+def saw_drop(tt, g, x):
+    """For a saw thrown by the king: None = not yet thrown (do not draw); else (x, y_offset): it arcs out of the
+    king's mouth onto her path (y_offset < 0 above its resting height on the floor)."""
+    import mdgame as G
+    for t0, thr, land in omen_throws():
+        if abs(t0 - tt) < 1e-6:
+            if g < thr:
+                return None
+            if g < land:
+                u = (g - thr) / SAW_FALL
+                mx, my = _omen_mouth(thr)
+                rest_y = G.FLOOR - 70
+                xx = mx + (x - mx) * u
+                yy = my + (rest_y - my) * u * u - 140 * math.sin(math.pi * u) * (1 - u)
+                return xx, yy - rest_y
+            return x, 0
+    return x, 0
+
+
+def draw_omen(img, g):
+    """Behind the play objects, over the stage: the looming king (eyes pulse on the beat, lean on each throw)."""
+    if not omen_on(g):
+        return
+    cx, top, h, a = _omen_geom(g)
+    beat = 0.5 + 0.5 * math.cos(2 * math.pi * (g - OMEN[0]) / BEAT)
+    flare = max(0.0, 1 - abs(g - OMEN_FLARE - 0.3) / 0.6) if g > OMEN_FLARE - 0.3 else 0.0
+    level = min(7, int(round(beat * 5 + flare * 7)))
+    sil, pad = silhouette(level)
+    k = h / _raw("main").height
+    sp = sil.resize((round(sil.width * k), round(sil.height * k)), Image.Resampling.BICUBIC)
+    rot = 0.0
+    for t0, thr, land in omen_throws():                           # rocks toward her as it hurls each saw
+        d = g - thr
+        if -0.1 <= d < 0.25:
+            rot += 6 * math.sin(math.pi * (d + 0.1) / 0.35)
+    if rot:
+        sp = sp.rotate(rot, Image.Resampling.BICUBIC, center=(sp.width / 2, sp.height * 0.95))
+    if a < 1:
+        al = np.asarray(sp.getchannel("A")).astype(np.float32) * a
+        sp.putalpha(Image.fromarray(al.astype(np.uint8)))
+    img.alpha_composite(sp, (int(cx - sp.width / 2), int(top - pad * k)))
+    if flare > 0:                                                 # the roar: red flash over the stage
+        img.alpha_composite(Image.new("RGBA", img.size, (200, 20, 40, int(70 * flare))))
+
+
+def omen_shake(g):
+    if not omen_on(g):
+        return 0
+    if OMEN_FLARE <= g < OMEN_FLARE + 0.6:                        # roar
+        d = g - OMEN_FLARE
+        return int(round(16 * (1 - d / 0.6) * (1 if int(d * 30) % 2 == 0 else -1)))
+    for t0, thr, land in omen_throws():                           # thud as each saw lands
+        d = g - land
+        if 0 <= d < 4 / 30:
+            return int(round(7 * (1 - d * 30 / 4) * (1 if int(d * 30) % 2 == 0 else -1)))
+    return 0

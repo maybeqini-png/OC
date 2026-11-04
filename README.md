@@ -336,3 +336,7 @@ for the sprites; the sprite list is set after the pixel test.
   enemies thrown out of the boss, flinch on hits, name plate + HP bar, dimmed stage with a vignette breathing on the
   beat, stronger shake; the chat deflates in a spin, the daruma topples, bounces upright once (七転び八起き) and
   bursts. Boss sounds (riser, drone, thuds) sit under the song (`pixel/sfx.py`).
+- Climb (116.6-125 s): the Daruma King looms over the piano staircase as a dark silhouette with glowing eyes and a
+  red aura, closer every bar; every saw of the step section arcs out of its mouth onto her path and lands with a
+  thud; its eyes flare with a roar and shake before Fever, then the cut-in, WARNING and its drop (`pixel/mdboss.py`
+  omen). During boss fights the stream cam shrinks into the corner; reactions there pop instead of going full size.
