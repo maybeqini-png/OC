@@ -180,48 +180,83 @@ GHOST_VERSES = (1, 3)                                # verses 2 and 4: every oth
 
 
 @lru_cache(None)
+def songmap():
+    import json
+    return json.loads((ROOT / "data/songmap.json").read_text())
+
+
+# Chart density per section (notes per second, Hell-level but readable; owner 2026-11-04: "design everything around
+# my song; fix where the pacing is too fast"). Notes come only from sounds in the song (pixel/songmap.py): kick ->
+# ground lane, snare / clap / hats -> air lane, both at once on a strong accent -> Gemini; in verses the vocal onsets
+# fill in where the drums rest. Readability rules from charting guides: density only where the music is dense (a
+# sixteenth only between two strong onsets, at most three in a row), skip the weakest onsets, never switch lanes
+# faster than an eighth note.
+DENSITY = {"verse": 3.1, "verse1": 2.4, "chorus": 4.2}
+
+
+@lru_cache(None)
 def chart():
     """(t, kind): g ground enemy, a air enemy, gear (jump over), note (pickup), heart, mash (big enemy hit
     repeatedly until MASH[t]), plus the two misses. Gemini = a g and an a at the same time; big = BIG_T."""
+    sm = songmap()
+    q8 = BEAT / 2
     out = []
-    bar = 0
-    q = BEAT / 4
 
-    def lay(k, pat, mirror=False):
-        for j, c in enumerate(pat):
-            if c == ".":
-                continue
-            t = beat_t(k) + j * q
-            if mirror and c in "ga":
-                c = "a" if c == "g" else "g"
-            if c in "gG":
-                out.append((t, "g"))
-            if c in "aG":
-                out.append((t, "a"))
-            if c == "B":
-                out.append((t, "g"))
-                BIG_T.add(round(t, 4))
-            if c == "r":
-                out.append((t, "gear"))
-            if c == "n":
-                out.append((t, "note"))
+    def section(a, b, kind, vi):
+        pts = [p for p in sm if a <= p["t"] < b]
+        target = DENSITY["verse1" if (kind == "verse" and vi == 0) else kind] * (b - a)
+        def score(p):
+            s_ = max(p["lo"], p["hi"]) + (0.6 * p["vo"] if kind == "verse" else 0.25 * p["vo"])
+            return s_ * (1.15 if p["k"] % 2 == 0 else 0.8)          # eighths read easier than sixteenths
+        cand = sorted(pts, key=score, reverse=True)
+        chosen = []
+        for p in cand:
+            if len(chosen) >= target:
+                break
+            if score(p) < 0.55:
+                break
+            if p["k"] % 2 == 1:                                      # a sixteenth only inside a dense passage
+                nb = [x for x in pts if abs(x["k"] - p["k"]) == 1]
+                if kind != "chorus" or not any(max(x["lo"], x["hi"]) > 0.75 for x in nb) or max(p["lo"], p["hi"]) < 0.8:
+                    continue
+            chosen.append(p)
+        chosen.sort(key=lambda p: p["t"])
+        # at most three sixteenths in a row
+        run, keep = 0, []
+        for p in chosen:
+            run = run + 1 if keep and p["k"] - keep[-1]["k"] == 1 else 0
+            if run < 3:
+                keep.append(p)
+        last_lane, last_t = None, -9
+        for p in keep:
+            lane = "g" if p["lo"] >= p["hi"] * 0.9 else "a"
+            if p["lo"] < 0.45 and p["hi"] < 0.45:                     # a vocal onset: follow the melody's direction
+                lane = last_lane or "g"
+            if last_lane and lane != last_lane and p["t"] - last_t < q8 - 0.02:
+                lane = last_lane                                     # no lane switch faster than an eighth
+            gem = kind == "chorus" and p["lo"] > 0.75 and p["hi"] > 0.55 and p["k"] % 4 == 0
+            if gem:
+                out.append((p["t"], "g"))
+                out.append((p["t"], "a"))
+            else:
+                out.append((p["t"], lane))
+                if kind == "chorus" and lane == "g" and p["lo"] > 1.25 and p["k"] % 8 == 0:
+                    BIG_T.add(round(p["t"], 4))
+            last_lane, last_t = lane, p["t"]
+        # music-note pickups on vocal onsets that carry no enemy, and a saw where the kick plays alone on a rest
+        used = {round(p["t"], 3) for p in keep}
+        voc = [p for p in pts if round(p["t"], 3) not in used and p["vo"] > 0.6 and p["k"] % 2 == 0]
+        for p in voc[::5]:
+            out.append((p["t"], "note"))
+        if kind == "verse":
+            for p in pts:
+                if p["k"] % 16 == 12 and round(p["t"], 3) not in used and \
+                        not any(abs(p["t"] - x["t"]) < 0.3 for x in keep):
+                    out.append((p["t"], "gear"))
     for vi, (a, b) in enumerate(VERSES):
-        k0 = math.ceil(beat_of(a))
-        k0 += (-k0) % 4
-        for n, k in enumerate(range(k0, math.floor(beat_of(b)) - 3, 4)):
-            pat = VERSE_BARS[(n + 4 * (vi % 2)) % len(VERSE_BARS)]
-            if vi == 0:                                    # first verse: eighths only (no bursts)
-                pat = pat[:12] + pat[12:].replace("gg", "g.").replace("aa", "a.")
-            lay(k, pat, mirror=(vi >= 3 and n % 2 == 1))
-            bar += 1
+        section(a, b, "verse", vi)
     for ci, (a, b) in enumerate(CHORUSES):
-        k0 = math.ceil(beat_of(a))
-        k0 += (-k0) % 4
-        for n, k in enumerate(range(k0, math.floor(beat_of(b)) - 3, 4)):
-            lay(k, CHORUS_BARS[n % len(CHORUS_BARS)], mirror=(ci == 1 and n % 3 == 2))
-            if n % 2 == 1:
-                out.append((beat_t(k + 1.5), "note"))
-            bar += 1
+        section(a, b, "chorus", ci)
     for k in range(math.ceil(beat_of(STEPS[0])), math.floor(beat_of(STEPS[1])) + 1):
         out.append((beat_t(k), "gear"))
     for t0, t1 in MASH.items():
@@ -231,9 +266,8 @@ def chart():
     out = [(t, k) for t, k in out if not (abs(t - MISS_BIRD) < 0.3 or 41.9 < t < 56.0)]
     out += [(MISS_GEAR, "gear_miss"), (MISS_BIRD, "a_miss"), (57.3, "heart"), (105.2, "heart"), (131.4, "heart")]
     out = sorted(set(out))
-    # a gear and an enemy can not share a moment; a ground note right at a saw goes
     gears = [t for t, k in out if k in ("gear", "gear_miss")]
-    out = [(t, k) for t, k in out if not (k == "g" and any(abs(t - x) < 0.2 for x in gears))]
+    out = [(t, k) for t, k in out if not (k in ("g", "a", "note") and any(abs(t - x) < 0.24 for x in gears))]
     return tuple(out)
 
 
@@ -359,18 +393,55 @@ def air_runs():
 AIR_UP, AIR_HANG, AIR_DROP, AIR_TOP = 0.08, 0.16, 0.09, 120
 
 
+# Flying motion (owner 2026-11-04: "the character's flying motion needs proper redesign"; the piecewise snaps read as
+# stiff). Second-order dynamics (spring with damping and response, as in procedural-animation practice): her height
+# follows the air-lane target with momentum - she launches a little ahead of the target, overshoots it slightly and
+# settles into the hover, and falls with weight; retargeting mid-flight never snaps. f = natural frequency (Hz),
+# z = damping, r = initial response (> 1 overshoots). Simulated once at 600 Hz over the whole song.
+SPRING = dict(f=3.0, z=0.6, r=1.25)
+FLY_LEAD = 0.07
+
+
+@lru_cache(None)
+def _flight():
+    T = 1 / 600
+    ts = np.arange(0, DUR + 1, T)
+    x = np.zeros_like(ts)
+    for a, b, notes in air_runs():
+        x[(ts >= a - FLY_LEAD) & (ts < b - AIR_DROP * 0.6)] = AIR_TOP
+    f, z, r = SPRING["f"], SPRING["z"], SPRING["r"]
+    k1, k2, k3 = z / (math.pi * f), 1 / (2 * math.pi * f) ** 2, r * z / (2 * math.pi * f)
+    y = np.zeros_like(ts)
+    yd = 0.0
+    yv = np.zeros_like(ts)
+    xp = 0.0
+    for i in range(1, len(ts)):
+        xd = (x[i] - xp) / T
+        xp = x[i]
+        y[i] = y[i - 1] + T * yd
+        yd = yd + T * (x[i] + k3 * xd - y[i] - k1 * yd) / k2
+        if y[i] < 0:                      # the floor: no sinking, landing stops her
+            y[i], yd = 0.0, max(0.0, yd)
+        yv[i] = yd
+    return ts, y, yv
+
+
+def avatar_velocity(t):
+    ts, y, yv = _flight()
+    return float(np.interp(t, ts, yv))
+
+
 def avatar_height(t):
-    """Height above the ground: air-lane hops and gear jumps."""
-    for a, b, ts in air_runs():
-        if a <= t < b:
-            if t < a + AIR_UP:
-                u = (t - a) / AIR_UP
-                return AIR_TOP * (1 - (1 - u) ** 3)                       # snap up, ease out
-            bob = lambda x: 5 * math.sin(2 * math.pi * (x - a - AIR_UP) / BEAT)   # 0 when she arrives
-            if t > b - AIR_DROP:
-                u = min(1.0, (t - (b - AIR_DROP)) / AIR_DROP)
-                return (AIR_TOP + bob(b - AIR_DROP)) * (1 - u * u)        # drop, ease in
-            return AIR_TOP + bob(t)                                      # hover bob
+    """Height above the ground: air-lane flight (spring), Gemini hops and saw jumps on top."""
+    ts, y, yv = _flight()
+    h = float(np.interp(t, ts, y))
+    if h > 1:
+        h += 4 * math.sin(2 * math.pi * t / BEAT) * min(1.0, h / AIR_TOP)          # hover bob
+        return h
+    return _hops(t)
+
+
+def _hops(t):
     for tg in gemini_times():                       # Gemini: a short hop to mid height, both lanes struck
         if -0.07 < t - tg < 0.12:
             u = (t - tg + 0.07) / 0.19
@@ -378,7 +449,7 @@ def avatar_height(t):
     for tg, k in chart():
         if k == "gear" and abs(t - tg) < 0.24:
             u = (t - tg + 0.24) / 0.48
-            return 112 * (1 - abs(2 * u - 1) ** 2.6)  # quick rise, hang over the saw, quick drop
+            return 112 * (4 * u * (1 - u)) ** 0.75     # a ballistic arc with a little hang over the saw
     return 0.0
 
 

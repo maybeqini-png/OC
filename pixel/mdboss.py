@@ -272,8 +272,8 @@ def draw_atmosphere(img, g):
     img.alpha_composite(lay)
 
 
-def _state(key, g):
-    """(x, y_bottom_or_centre, scale_x, scale_y, rot, flash, alpha) of the boss at game time g, or None."""
+def _raw_state(key, g):
+    """Target pose (x, y_bottom_or_centre, scale_x, scale_y, rot, flash, alpha) at game time g, or None."""
     b = BOSSES[key]
     hits, throws, dead = timeline(key)
     a = g - b["enter"]
@@ -334,6 +334,60 @@ def _state(key, g):
     return x, y, sx, sy, rot, fl, alpha
 
 
+# Boss motion (owner 2026-11-04: "the stiff animations for the main boss and mini-boss need proper redesign"). The
+# keyed poses above (entrance, beat rock, wind-up / recoil, flinch, defeat) are targets; the drawn pose follows them
+# through second-order dynamics per channel (position, rotation, scale), so every move has momentum, overshoot and
+# settle instead of snapping; the body also shears with its own horizontal velocity (the top lags behind - jelly
+# follow-through) and breathes on the beat with volume kept (wider when shorter).
+BOSS_SPRING = {"x": (2.6, 0.45, 1.0), "y": (2.4, 0.4, 1.0), "rot": (2.2, 0.35, 1.2), "sx": (4.0, 0.3, 1.0),
+               "sy": (4.0, 0.3, 1.0)}
+SIM_HZ = 240
+
+
+@lru_cache(None)
+def _sim(key):
+    b = BOSSES[key]
+    hits, throws, dead = timeline(key)
+    t0, t1 = b["enter"], dead + 1.6
+    ts = np.arange(t0, t1, 1 / SIM_HZ)
+    raw = [_raw_state(key, t) for t in ts]
+    out = {}
+    T = 1 / SIM_HZ
+    for ch, idx in (("x", 0), ("y", 1), ("sx", 2), ("sy", 3), ("rot", 4)):
+        f, z, r = BOSS_SPRING[ch]
+        k1, k2, k3 = z / (math.pi * f), 1 / (2 * math.pi * f) ** 2, r * z / (2 * math.pi * f)
+        k2 = max(k2, T * T / 4 + T * k1 / 2)                # stability
+        xs = np.array([rs[idx] for rs in raw], np.float64)
+        y = np.empty_like(xs)
+        y[0], yd, xp = xs[0], 0.0, xs[0]
+        for i in range(1, len(xs)):
+            xd = (xs[i] - xp) / T
+            xp = xs[i]
+            y[i] = y[i - 1] + T * yd
+            yd = yd + T * (xs[i] + k3 * xd - y[i] - k1 * yd) / k2
+        out[ch] = y
+    out["vx"] = np.gradient(out["x"], T)
+    return ts, out
+
+
+def _state(key, g):
+    """Drawn pose: the target pose through the springs (flash and alpha stay keyed)."""
+    rs = _raw_state(key, g)
+    if rs is None:
+        return None
+    b = BOSSES[key]
+    if b["ground"] and g - b["enter"] < 0.32:                 # the drop itself stays a hard fall (weight)
+        return rs
+    ts, o = _sim(key)
+    v = lambda ch: float(np.interp(g, ts, o[ch]))
+    return v("x"), v("y"), v("sx"), v("sy"), v("rot"), rs[5], rs[6]
+
+
+def _shear(key, g):
+    ts, o = _sim(key)
+    return max(-0.18, min(0.18, -float(np.interp(g, ts, o["vx"])) / 2600))
+
+
 def draw_boss(img, g):
     """Over the enemies (they come out of it), under XIYIN and the hit effects."""
     key = active(g)
@@ -358,7 +412,17 @@ def draw_boss(img, g):
         else:
             src, gp = glowing(key, int(round(beat * 7)))
         h0 = sprite(key).height
+        br = 0.035 * math.sin(2 * math.pi * (g - b["enter"]) / BEAT)        # breathing, volume kept
+        sx, sy = sx / (1 + br), sy * (1 + br)
         sp = src.resize((max(1, int(src.width * sx)), max(1, int(src.height * sy))), Image.Resampling.BICUBIC)
+        sh = _shear(key, g) if g - b["enter"] >= 0.32 or not b["ground"] else 0.0
+        if abs(sh) > 0.004:                                     # top lags behind the body's motion
+            pad_ = int(abs(sh) * sp.height) + 2
+            wide = Image.new("RGBA", (sp.width + 2 * pad_, sp.height), (0, 0, 0, 0))
+            wide.alpha_composite(sp, (pad_, 0))
+            H_ = sp.height
+            sp = wide.transform(wide.size, Image.Transform.AFFINE, (1, sh, -sh * H_, 0, 1, 0),
+                                resample=Image.Resampling.BICUBIC)
         gpx, gpy = gp * sx, gp * sy
         if b["ground"]:                                         # pivot at its round base
             pad = sp.height

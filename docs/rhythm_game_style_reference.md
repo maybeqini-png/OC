@@ -186,3 +186,19 @@ per second over the whole game (4.5 / s inside verses and choruses), against abo
 four extra designs (second ground enemy, second air enemy, big, ghost; `art/generated/md_style/*_g2/_a2/_big/_gh_66*`),
 alternating by bar so no stage repeats one design. In the air lane she rides a cat-paw hover board with a cyan jet
 (`hv_board_66103`).
+
+## Built around the song, natural motion (2026-11-04)
+Owner: "design everything fully around my song; fix where the pacing is too fast or the movements look stiff;
+redesign the bosses' and her flying motion". Song analysis (`pixel/songmap.py` -> `data/songmap.json`): librosa
+harmonic / percussive split; onsets of the kick band (< 150 Hz), the snare / clap / hat band (> 1.5 kHz) and the vocal
+band (harmonic, 300 Hz - 3 kHz) on the song's own tracked beats (the fixed 136 BPM grid drifts up to 0.2 s against
+the master). Chart (`stream.chart`): notes only where the song has a sound - kick -> ground, snare / clap -> air,
+both on a strong downbeat in a chorus -> Gemini, vocal onsets fill the verses; charting-guide rules: density only
+where the music is dense (sixteenths only beside strong onsets, at most three in a row), the weakest onsets skipped,
+no lane switch faster than an eighth. About 2.4-3.1 notes / s in verses and 3.7-3.9 in choruses (the previous
+blanket pattern chart ran up to 4.5 / s regardless of the music).
+Motion: her flight follows the air-lane target through second-order dynamics (f 3.0 Hz, damping 0.6, response
+1.25: launches with momentum, overshoots about 10 % and settles into the hover, drops with weight), leans back rising
+and noses down falling, stretched along the motion; saw jumps are ballistic arcs. Bosses: every keyed pose (entrance,
+beat rock, wind-up / recoil, flinch, defeat) is a target followed through springs per channel, the body shears with
+its own velocity (top lags) and breathes on the beat with volume kept.

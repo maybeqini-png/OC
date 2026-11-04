@@ -894,6 +894,10 @@ def motion(t):
     if take is not None and take < 0.09:
         q = 0.12 * (1 - take / 0.09)
         return 1 - 0.55 * q, 1 + q, 0.0, 0.0
+    v = ST().avatar_velocity(g)                             # in flight: lean back rising, nose down falling,
+    if abs(v) > 30:                                         # stretch along the motion (secondary motion)
+        st_ = min(0.10, abs(v) / 9000)
+        return 1 - 0.5 * st_, 1 + st_, max(-8.0, min(8.0, v / 160)), 0.0
     return 1.0, 1.0, 0.0, 0.0
 
 
