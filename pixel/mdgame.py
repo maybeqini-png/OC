@@ -786,8 +786,137 @@ def avatar(t):
     return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
 
 
+# ---------------------------------------------------------------- her hover board, animated with the flight
+# Owner 2026-11-04: the board popped in and out as a flat sprite. Now it is an object with its own motion, driven by
+# the same air-lane timing as her flight (stream.air_runs / stream._flight):
+#   swoop-in  0.22 s before take-off it zips in from behind and below, banking, its jet igniting (flash, flame grows)
+#   catch     it meets her feet as she rises; she lands on it (a small dip of the board = her weight)
+#   ride      it stays under her feet, lagging a touch behind her bob, tilting with her vertical speed, jet flickering
+#             on the beat, sparkle trail behind
+#   kick-off  as she drops it is pushed back and up by her jump (recoil), spins a little
+#   park/exit if she takes off again within 0.6 s it hovers behind her and swoops back; otherwise it banks away
+#             backwards and up out of the picture, jet trailing
+# Position: target path -> second-order dynamics (f 4.2 Hz, damping 0.55), simulated once at 120 Hz; rotation from
+# its own velocity plus the dock tilt.
+BOARD_DT = 1 / 120
+
+
 @lru_cache(None)
-def hover_board(flick):
+def _board_track():
+    st = ST()
+    runs = st.air_runs()
+    ts = np.arange(st.GAME_IN, st.GAME_OUT, BOARD_DT)
+    tx, ty, mode = np.empty_like(ts), np.empty_like(ts), np.zeros(len(ts), np.int8)
+    off = (-420.0, FLOOR - 620.0)                                 # parked out of the picture, behind and above
+    for i, g in enumerate(ts):
+        tx[i], ty[i] = off
+        for j, (a, b, notes) in enumerate(runs):
+            nxt = runs[j + 1][0] if j + 1 < len(runs) else 1e9
+            prv = runs[j - 1][1] if j > 0 else -1e9
+            if a - 0.24 <= g < b - st.AIR_DROP * 0.7:              # swoop-in, catch, ride
+                h = st.avatar_height(max(g, a)) * K
+                tx[i], ty[i] = RUN_X + 6, FLOOR - h + 12
+                mode[i] = 1 if g >= a else 2
+                if g < a and a - prv < 0.6:                       # it was parked right behind her
+                    mode[i] = 2
+                break
+            if b - st.AIR_DROP * 0.7 <= g < b + 0.6 and nxt - b < 0.6 and g < nxt - 0.24:
+                tx[i], ty[i] = RUN_X - 150, FLOOR - 250            # parked behind her, waiting
+                mode[i] = 3
+                break
+            if b - st.AIR_DROP * 0.7 <= g < b + 0.25:              # kick-off: pushed back and up
+                u = (g - (b - st.AIR_DROP * 0.7)) / 0.3
+                tx[i], ty[i] = RUN_X - 260 * u, FLOOR - 300 - 180 * u
+                mode[i] = 4
+                break
+    # springs (the first sample starts parked)
+    f, z, r = 4.2, 0.55, 1.1
+    k1, k2, k3 = z / (math.pi * f), 1 / (2 * math.pi * f) ** 2, r * z / (2 * math.pi * f)
+    T = BOARD_DT
+    xs, ys = np.empty_like(ts), np.empty_like(ts)
+    xs[0], ys[0] = off
+    vx = vy = 0.0
+    px, py = tx[0], ty[0]
+    vxs, vys = np.zeros_like(ts), np.zeros_like(ts)
+    for i in range(1, len(ts)):
+        dx, dy = (tx[i] - px) / T, (ty[i] - py) / T
+        px, py = tx[i], ty[i]
+        if mode[i] == 1:                                          # riding: locked under her feet (a 3-frame lag)
+            j = max(0, i - 3)
+            xs[i], ys[i] = tx[i], 0.6 * ty[i] + 0.4 * ty[j]
+            vx, vy = (xs[i] - xs[i - 1]) / T, (ys[i] - ys[i - 1]) / T
+        else:
+            xs[i] = xs[i - 1] + T * vx
+            ys[i] = ys[i - 1] + T * vy
+            vx += T * (tx[i] + k3 * dx - xs[i] - k1 * vx) / k2
+            vy += T * (ty[i] + k3 * dy - ys[i] - k1 * vy) / k2
+        vxs[i], vys[i] = vx, vy
+    return ts, xs, ys, vxs, vys, mode
+
+
+def board_state(g):
+    st = ST()
+    if not st.GAME_IN <= g < st.GAME_OUT - 0.05:
+        return None
+    ts, xs, ys, vxs, vys, mode = _board_track()
+    i = int((g - ts[0]) / BOARD_DT)
+    if i < 0 or i >= len(ts):
+        return None
+    return xs[i], ys[i], vxs[i], vys[i], int(mode[i])
+
+
+@lru_cache(None)
+def hover_board(flick, power):
+    """The cat-paw hover board (art/generated/md_style/hv_board_66103); jet flame length by power (0..4) and a
+    flicker phase (0..3)."""
+    bd = MD.sprite("hover")
+    W, H = bd.width + 40, bd.height + 90
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    if power:
+        jet = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(jet)
+        L = (14 + 12 * power) * (1 + 0.18 * (flick % 2)) + 4 * flick
+        for k, (col, w) in enumerate((((120, 230, 255, 150), 30), ((230, 252, 255, 235), 13))):
+            for cxj in (W / 2 - bd.width * 0.22, W / 2 + bd.width * 0.18):     # two thrusters
+                d.polygon([(cxj - w / 2, bd.height - 10), (cxj + w / 2, bd.height - 10),
+                           (cxj, bd.height - 10 + L - k * 10)], fill=col)
+        out.alpha_composite(jet.filter(ImageFilter.GaussianBlur(3)))
+    out.alpha_composite(bd, (20, 0))
+    return out
+
+
+def draw_board(img, g):
+    sb = board_state(g)
+    if sb is None:
+        return
+    x, y, vx, vy, mode = sb
+    if x < -260 or y < -200:
+        return
+    flick = int(g * 30) % 4
+    power = {0: 1, 1: 3 + (1 if int(g * 30 / 2) % 2 else 0), 2: 4, 3: 2, 4: 2}[mode]
+    bd = hover_board(flick, power)
+    rot = max(-28.0, min(28.0, -vy / 60 + (-vx / 90 if mode != 1 else 0)))
+    if mode == 4:
+        rot += 25 * math.sin(min(1.0, abs(vx) / 1200) * math.pi)
+    bd = bd.rotate(rot, Image.Resampling.BICUBIC, expand=True)
+    sp = math.hypot(vx, vy)
+    if sp > 500 and mode != 1:                                    # sparkle / smear trail while it flies
+        for k, al in ((1, 0.32), (2, 0.16)):
+            put(img, bd, x - vx * k / 45, y - vy * k / 45, alpha=al)
+    put(img, bd, x, y)
+    ts, xs, ys, vxs, vys, modes = _board_track()
+    i = int((g - ts[0]) / BOARD_DT)
+    if mode in (1, 2) and i > 2 and modes[i - 1] not in (1, 2):   # ignition flash
+        FX.ring_flash(img, x, y + 20, 0.0, (150, 235, 255))
+    for k in range(3):                                            # tiny jet sparkles drifting back
+        u = ((g * 3 + k / 3) % 1)
+        if power >= 2:
+            put(img, star_icon(56, (190, 240, 255)), x - 40 - 90 * u, y + 34 + 10 * k, alpha=0.7 * (1 - u),
+                scale=0.25 * (1 - u) + 0.1)
+
+
+@lru_cache(None)
+def _hover_board_unused(flick):
     """The cat-paw hover board (art/generated/md_style/hv_board_66103) with a flickering cyan jet under it."""
     bd = MD.sprite("hover")
     W, H = bd.width + 40, bd.height + 70
@@ -913,14 +1042,7 @@ def draw_avatar(img, t, fever=False):
     if (sx, sy, rot) != (1.0, 1.0, 0.0):
         sp, (ax, feet) = _xform(sp, (ax, feet), sx, sy, rot)
     x0, y0 = int(round(cx + dx - ax)), int(round(fy - feet))
-    in_lane = any(a <= g < b for a, b, ts in st.air_runs())
-    hgt = st.avatar_height(g)
-    if in_lane and hgt > 20:                                 # her cat-paw hover board under her feet in the air lane
-        bd = hover_board(int(g * 30) % 4)
-        al_ = min(1.0, (hgt - 20) / 40)
-        tilt = 3 * math.sin(2 * math.pi * g / BEAT)
-        bd = bd.rotate(tilt, Image.Resampling.BICUBIC, expand=True)
-        put(img, bd, cx + 6, fy + 10, alpha=al_)
+    draw_board(img, g)
     kind, age = strike_at(t)
     if kind and age < 0.07:                                 # 1-2 frame smear behind the lunge
         for k, (off, col, al) in enumerate(((-30, (255, 255, 255), 0.42), (-62, (200, 236, 255), 0.24))):
