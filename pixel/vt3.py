@@ -237,13 +237,6 @@ def skin3(a):
     return ndimage.gaussian_filter(ndimage.binary_dilation(s, iterations=2).astype(np.float32), 1.5)
 
 
-def skin_core(a):
-    """Skin well clear of any line or strand (eroded, then softened): skin3's dilation reaches across a thin strand."""
-    s = (a[..., 0] > 225) & (a[..., 1] > 185) & (a[..., 2] > 165) & (a[..., 0] >= a[..., 2])
-    s = ndimage.binary_erosion(ndimage.binary_opening(s, iterations=1), iterations=3)
-    return ndimage.gaussian_filter(s.astype(np.float32), 1.5)
-
-
 def blend(B, R, m, sigmas=(1, 2, 4, 8)):
     """Multi-band blend (Burt-Adelson, as a Gaussian stack): each frequency band is mixed with the mask blurred at
     that band's scale, so line art switches within about a pixel while colour and shading blend over ~10 px. Coarser
@@ -308,10 +301,7 @@ def transplant3(base, raw, regions, cheeks=(), search=10, feather=6.0, seam=True
         m = np.maximum(m, seam_mask(B, Rs, e) if seam else ell_mask((H, W), [e], feather))
     out = blend(B, Rs, m) if seam else B * (1 - m[..., None]) + Rs * m[..., None]
     if cheeks:
-        # only where BOTH base and take are clear skin (owner 2026-11-05: weighting by the base's skin alone pasted
-        # the take's hair tips at partial weight wherever the two strands did not line up - half-transparent strands
-        # fading into the cheeks); the strands of whichever image is showing stay intact, only the blush changes
-        mc = (ell_mask((H, W), cheeks, feather) * np.minimum(skin_core(B), skin_core(Rs)))[..., None]
+        mc = (ell_mask((H, W), cheeks, feather) * skin3(B))[..., None]
         out = out * (1 - mc) + Rs * mc
     return Image.fromarray(out.clip(0, 255).astype(np.uint8)), shift, best
 
@@ -402,211 +392,35 @@ def compose(layers):
     im = Image.open(BASE_TAKE).convert("RGB")
     log = []
     for name, regions, cheeks, *opt in layers:
-        opt = dict(opt[0]) if opt else {}
-        closed = opt.pop("closed", None)
-        opt_skin = opt.pop("skin", None)
-        im, shift, err = transplant3(im, take(name), regions, cheeks, **opt)
-        if closed:
-            im = clean_closed(im, [EYES_ONLY[i] for i in closed], [i for i in (0, 1) if i not in closed])
-        skin = opt_skin
-        if skin:
-            im = clean_skin(im, [EYES_ONLY[i] for i in skin])
+        im, shift, err = transplant3(im, take(name), regions, cheeks, **(opt[0] if opt else {}))
         log.append((name, shift, round(err, 1)))
     return im, log
 
 
-def _skin_field(B, holes):
-    """The base's skin colour everywhere, spread smoothly in from its skin outside `holes` (normalised blur)."""
-    raw = (B[..., 0] > 225) & (B[..., 1] > 185) & (B[..., 2] > 165) & (B[..., 0] >= B[..., 2])
-    w = (ndimage.binary_erosion(raw, iterations=2) & ~holes).astype(np.float32)
-    out = np.zeros_like(B)
-    todo = np.ones(w.shape, bool)
-    for s in (6, 12, 24, 48, 96):
-        num = ndimage.gaussian_filter(B * w[..., None], (s, s, 0))
-        den = ndimage.gaussian_filter(w, s)
-        ok = todo & (den > (0.2 if s < 48 else 0.005))
-        out[ok] = num[ok] / den[ok][:, None]
-        todo &= ~ok
-    return out
-
-
-def clean_closed(im, eyes, keep_open=()):
-    """Closed eyes as lines on the base drawing (owner 2026-11-05: "smeared paint" around closed eyes).
-
-    V5 paints the skin where the open eye was with grey airbrush washes, and its bangs never line up with the base's,
-    so any cut through the eye band leaves steps and blurred patches in the hair. Anime cel faces are flat skin with
-    the eye drawn as lines, so here the face is the base drawing everywhere in the band (bangs, brows, skin) and only
-    the closed eye's own marks are taken from the composed frame: dark lines (lashes, > <) and tear highlights, inside
-    each closed eye's area, not on the base's hair (hair stays in front) and not on the take's strands. Where the base
-    has its open eye, the skin is the base's own skin spread in from around it. keep_open: indices of eyes left as
-    composed (wink)."""
-    B = np.asarray(Image.open(BASE_TAKE).convert("RGB")).astype(np.float32)
-    F = np.asarray(im.convert("RGB")).astype(np.float32)
-    H, W = B.shape[:2]
-    holes = ell_mask((H, W), [(cx, cy, rx * 1.2, ry * 1.25, a) for cx, cy, rx, ry, a in EYES_ONLY]) > 0.5
-    field = _skin_field(B, holes)
-
-    def hair(a):
-        return (a[..., 2] > a[..., 0] + 30) & (a.mean(-1) < 185)
-
-    # base hair with its outlines; inside its eye openings only hair that runs in from outside them (its irises are
-    # blue as well, but are enclosed by the lash and lid lines)
-    eye_b = ell_mask((H, W), [(cx, cy, rx * 1.1, ry * 1.15, a) for cx, cy, rx, ry, a in EYES_ONLY]) > 0.5
-    hb = hair(B)
-    b_hair = ndimage.binary_propagation(hb & ~eye_b, mask=hb) | (hb & hair(F))
-    b_hair = ndimage.binary_dilation(b_hair, iterations=2) & (~eye_b | b_hair)   # no dark caps on tips over the eye
-    lumB = B.mean(-1)
-    # the face without eyes: base pixels, but the base's own eyes (and the creases above them) become plain skin
-    face = B.copy()
-    z_open = ell_mask((H, W), [(cx, cy - ry * 0.1, rx * 1.35, ry * 1.6, a) for cx, cy, rx, ry, a in EYES_ONLY], 3)
-    skin_b = (B[..., 0] > 225) & (B[..., 1] > 185) & (B[..., 2] > 165) & (B[..., 0] >= B[..., 2])
-    # outside its eye only the base's eyelid creases change; its own skin shading and contour lines stay
-    keep = ~eye_b & (skin_b | (lumB < 100))
-    # specks of the base's iris that passed as hair
-    lab, n = ndimage.label(b_hair & eye_b)
-    small = np.isin(lab, [i + 1 for i, z in enumerate(ndimage.sum(b_hair & eye_b, lab, range(1, n + 1))) if z < 80])
-    b_hair &= ~small
-    wf = (z_open * ~b_hair * ~ndimage.binary_erosion(keep, iterations=1))[..., None]
-    # at the outer eye corners the base's lash wings run out over the hair along the face's edge; what they cover
-    # is unknown, so there the dark wing pixels touching the hair stay, in the face contour's colour (they continue
-    # the contour line) instead of becoming skin notches
-    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    outer = np.zeros((H, W), bool)
-    for (cx, cy, rx, ry, a), side in zip(EYES_ONLY, (-1, 1)):
-        t = math.radians(a)
-        u = (xx - cx) * math.cos(t) + (yy - cy) * math.sin(t)
-        outer |= (side * u > 0.7 * rx) & (side * u < 1.6 * rx) & (np.abs(yy - cy) < 1.2 * ry)
-    d_h = ndimage.distance_transform_edt(~b_hair)
-    wing = outer & (d_h <= 4) & (lumB < 140)
-    wing = ndimage.binary_opening(ndimage.binary_closing(wing, iterations=2), iterations=1) & outer & (d_h <= 5)
-    core = b_hair & (lumB > 70)                       # hair fill, not its outlines
-    hcol = np.zeros_like(B)
-    todo = np.ones((H, W), bool)
-    for s_ in (2, 4, 8):
-        num = ndimage.gaussian_filter(B * core[..., None], (s_, s_, 0))
-        den = ndimage.gaussian_filter(core.astype(np.float32), s_)
-        ok = todo & (den > 0.05)
-        hcol[ok] = num[ok] / den[ok][:, None]
-        todo &= ~ok
-    wing = ndimage.gaussian_filter(wing.astype(np.float32), 0.5)[..., None]
-    fill = field * (1 - wing) + hcol * wing
-    face = face * (1 - wf) + fill * wf
-    # the closed eye's marks from the composed frame
-    zone = ell_mask((H, W), [(cx, cy + ry * 0.2, rx * 1.3, ry * 1.25, a) for cx, cy, rx, ry, a in eyes], 2)
-    lum = F.mean(-1)
-    fh = hair(F) & (lum > 60)
-    lab, n = ndimage.label(fh)
-    big = np.isin(lab, [i + 1 for i, z in enumerate(ndimage.sum(fh, lab, range(1, n + 1))) if z > 400])
-    f_hair = ndimage.binary_dilation(big, iterations=3)                # strands, not the gleam in a slit eye
-    line = np.clip((185 - lum) / 70, 0, 1) * (F[..., 2] < F[..., 0] + 25)  # dark, not blue (lashes are brown/black)
-    tear = ((F[..., 2] > F[..., 0] + 8) & (lum > 175)).astype(np.float32)
-    tear = ndimage.binary_dilation(tear > 0, iterations=1) & (ndimage.gaussian_filter(line, 3) > 0.05)
-    inside = ndimage.binary_fill_holes(ndimage.binary_closing(line > 0.5, iterations=2)).astype(np.float32)
-    mark = np.maximum(np.maximum(line, tear), inside) * zone * ~b_hair * ~f_hair
-    mark = ndimage.gaussian_filter(mark, 0.6)[..., None]
-    out = face * (1 - mark) + F * mark
-    # the band region becomes this face; everything else (mouth, open eyes kept for a wink) stays as composed
-    cx, cy, rx, ry, a = BAND
-    region = ell_mask((H, W), [(cx, cy, rx * 1.18, ry * 1.18, a)], 4)        # past the band's seam
-    region *= 1 - ell_mask((H, W), [MOUTH3], 4)
-    for i in keep_open:
-        cx, cy, rx, ry, a = EYES_ONLY[i]
-        region *= 1 - ell_mask((H, W), [(cx, cy, rx * 1.5, ry * 1.6, a)], 4)
-    r = region[..., None]
-    return Image.fromarray((F * (1 - r) + out * r).clip(0, 255).astype(np.uint8))
-
-
-def clean_skin(im, eyes):
-    """Closed eyes: V5 paints the skin around closed eyes with lilac-grey airbrush washes (owner 2026-11-05: "smeared
-    paint"; anime cel skin is flat). Around each closed eye every skin-coloured pixel takes the base drawing's own
-    skin (its shading and blush spread in from outside the eyes); lashes, lines, tears and hair stay as drawn."""
-    B = np.asarray(Image.open(BASE_TAKE).convert("RGB")).astype(np.float32)
-    F = np.asarray(im.convert("RGB")).astype(np.float32)
-    H, W = B.shape[:2]
-    holes = ell_mask((H, W), [(cx, cy, rx * 1.2, ry * 1.25, a) for cx, cy, rx, ry, a in EYES_ONLY]) > 0.5
-    field = _skin_field(B, holes)
-    zone = ell_mask((H, W), [(cx, cy + ry * 0.5, rx * 1.5, ry * 1.6, a) for cx, cy, rx, ry, a in eyes], 6)
-    lum = F.mean(-1)
-    skinish = np.clip((lum - 165) / 35, 0, 1) * np.clip((F[..., 0] - F[..., 2] + 4) / 10, 0, 1)
-    dark = ndimage.gaussian_filter((lum < 150).astype(np.float32), 1.2)
-    w = (zone * skinish * np.clip(1 - 2.5 * dark, 0, 1))[..., None]
-    out = F * (1 - w) + field * w
-    # V5 leaves a white fringe along the hair edge by the eyes and the paste a pixel staircase there; Real-ESRGAN
-    # sharpens both into torn edges. Around the closed eyes: fringe pixels take their neighbours' median, and the
-    # hair / skin boundary gets a light anti-alias.
-    near = ell_mask((H, W), [(cx, cy, rx * 2.0, ry * 2.2, a) for cx, cy, rx, ry, a in eyes]) > 0.5
-    lum = out.mean(-1)
-    hairm = (out[..., 2] > out[..., 0] + 30) & (lum < 185)
-    skinm = (out[..., 0] > 215) & (out[..., 0] >= out[..., 2])
-    fringe = near & (lum > 244) & (np.ptp(out, -1) < 22) & ndimage.binary_dilation(hairm, iterations=2)
-    med = np.stack([ndimage.median_filter(out[..., c], 5) for c in range(3)], -1)
-    out[fringe] = med[fringe]
-    edge = near & ndimage.binary_dilation(hairm, iterations=1) & ndimage.binary_dilation(skinm, iterations=1)
-    soft = ndimage.gaussian_filter(out, (0.8, 0.8, 0))
-    e = ndimage.gaussian_filter(edge.astype(np.float32), 0.5)[..., None]
-    out = out * (1 - e) + soft * e
-    return Image.fromarray(out.clip(0, 255).astype(np.uint8))
-
-
-NEUTRAL = "f_op_neutral_0.30_37311"      # round 16: the base's bangs with x_neutral_0.45_36002's eyes and mouth
+NEUTRAL = "x_neutral_0.45_36002"
 _N = [(NEUTRAL, [BAND, MOUTH3], ())]
-# open-eye frames (round 15): low-strength takes of the base with only the round-8 eyes and mouth (op_<frame>.png),
-# so every frame has the base's bangs (owner 2026-11-05: strands went missing between expressions).
-# closed-eye frames (round 14 in prompts.sh): low-strength takes of the frames clean_closed built (the base drawing
-# with only closed-eye lines on it), so their bangs match the base; clean_skin then flattens V5's under-eye washes.
-# cheeks: none transplanted (owner 2026-11-05: every pasted blush read as smeared over her cheeks); each face keeps
-# the base drawing's cheeks, the takes' own blush still comes in with the eye band
 FRAMES = {                                   # chosen takes (see art/generated/vtuber3/prompts.sh for each round)
     "neutral": _N,
-    "blink": [("f_cl_blink_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
+    "blink": _N + [("f_blink_0.55_37002", list(EYES_ONLY), (), {"relight": True})],   # eyes only: brows stay
     "talk_a": _N + [("f_talka_0.52_37001", [MOUTH3], ())],
     "talk_o": _N + [("f_talko_0.52_37002", [MOUTH3], ())],
-    "smug": [("f_op_smug_0.30_37301", [BAND, MOUTH3], ())],
-    "wink": [("f_cl_wink_0.30_37202", [BAND, MOUTH3], (), {"skin": (1,)})],
-    "happy": [("f_op_happy_0.30_37301", [BAND, MOUTH3], ())],
-    "sing": [("f_cl_sing_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
-    "shocked": [("f_op_shocked_0.30_37302", [BAND, MOUTH3], ())],
-    "angry": [("f_op_angry_0.30_37302", [BAND, MOUTH3], ())],
-    "pout": [("f_cl_pout_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
-    "flustered": [("f_op_flustered_0.30_37302", [BAND, MOUTH3], ())],
-    "pain": [("f_cl_pain_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
+    "smug": [("f_smug_37001", [BAND, MOUTH3], CHEEKS3)],
+    "wink": [("f_wink_0.50_37012", [BAND, MOUTH3], CHEEKS3)],
+    "happy": [("f_happy_37001", [BAND, MOUTH3], CHEEKS3)],
+    "sing": [("f_sing_0.62_37001", [BAND, MOUTH3], CHEEKS3)],
+    "shocked": [("f_shock_37001", [BAND, MOUTH3], ())],
+    "angry": [("f_angry_37001", [BAND, MOUTH3], CHEEKS3)],
+    "pout": [("f_pout_0.62_37001", [BAND, MOUTH3], CHEEKS3)],
+    "flustered": [("f_flustered_37001", [BAND, MOUTH3], CHEEKS3)],
+    "pain": [("f_pain_0.62_37004", [BAND, MOUTH3], CHEEKS3)],
 }
 FRAMES1024 = V3 / "frames1024"
 
 
-def match_bangs(im, ref):
-    """Strands of ref (the neutral frame) that a frame lost come back on top of its skin (owner 2026-11-05: strand
-    tips vanished whenever the cam switched expression). Only pixels that are skin in the frame change, so its eyes,
-    lashes and mouth stay as drawn."""
-    F = np.asarray(im.convert("RGB")).astype(np.float32)
-    R = np.asarray(ref.convert("RGB")).astype(np.float32)
-
-    def hair(a):
-        return (a[..., 2] > a[..., 0] + 30) & (a.mean(-1) < 185)
-
-    H, W = F.shape[:2]
-    upper = np.zeros((H, W), bool)
-    upper[:580] = True                                            # bangs and eyes, not the mouth or the collar
-    # strands only: hair of ref that runs in from outside its eye openings (its irises and lashes are blue too)
-    eyes = ell_mask((H, W), [(cx, cy, rx * 1.1, ry * 1.15, a) for cx, cy, rx, ry, a in EYES_ONLY]) > 0.5
-    strands = ndimage.binary_propagation(hair(R) & ~eyes, mask=hair(R) & ~ndimage.binary_erosion(eyes, iterations=6))
-    lost = ndimage.binary_opening(strands & ~hair(F) & upper)
-    lost = ndimage.binary_dilation(lost, iterations=2) & ~ndimage.binary_erosion(eyes, iterations=6)
-    lum = F.mean(-1)
-    face_f = (lum > 120) & ~hair(F)          # skin, bang shadow and faded half-drawn strand tips; not lines or hair
-    m = lost & face_f
-    m = ndimage.gaussian_filter(m.astype(np.float32), 0.6)[..., None]
-    return Image.fromarray((F * (1 - m) + R * m).clip(0, 255).astype(np.uint8))
-
-
 def build1024(names=None):
     FRAMES1024.mkdir(exist_ok=True)
-    ref = None
     for name in names or FRAMES:
         im, log = compose(FRAMES[name])
-        if FRAMES[name][0][0] != NEUTRAL:                         # one set of bangs in every frame
-            ref = ref or compose(FRAMES["neutral"])[0]
-            im = match_bangs(im, ref)
         im.save(FRAMES1024 / f"{name}.png")
         print(name, log)
 
