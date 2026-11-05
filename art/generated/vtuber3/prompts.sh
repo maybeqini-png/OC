@@ -141,3 +141,15 @@ done; done
 for seed in 37101 37102 37103 37104; do
   gs pout_0.62_$seed base_closed.png 0.62 $seed "2::pout::, puffed cheeks, 2::closed eyes::, hmph, v-shaped eyebrows, soft pink blush, smooth clean skin, solid hair" "$NEGC, grey skin, shadows under eyes, smudge, transparent hair"
 done
+# round 14 (2026-11-05): owner: the closed-eye frames still look smeared. The takes above are img2img at 0.50-0.62 from
+# a painted-over base, so V5 redraws the bangs and the skin around the eyes (grey airbrush washes, strands that
+# never line up with the base). Sources now = the composed frames (pixel/vt3.py clean_closed: the base drawing with
+# only the closed eyes' lines on it) -> cl_<frame>.png; low strengths only clean up line and edge rendering, so the
+# bangs stay the base's and the takes can be pasted back with seams where both agree.
+for seed in 37201 37202; do for s in 0.30 0.38; do
+  gs cl_blink_${s}_$seed cl_blink.png $s $seed "2::closed eyes::, light smile, closed mouth, calm, smooth clean skin, solid hair" "$NEGC, wink, grey skin, shadows under eyes, smudge"
+  gs cl_wink_${s}_$seed cl_wink.png $s $seed "2::one eye closed::, 2::wink::, ;), smile, closed mouth, fang, blue eyes, smooth clean skin, solid hair" "$NEG2, heterochromia, red eyes, pink eyes, grey skin, smudge"
+  gs cl_sing_${s}_$seed cl_sing.png $s $seed "2::singing::, 2::closed eyes::, ^_^, open mouth, smile, smooth clean skin, solid hair" "$NEG2, open eyes, grey skin, shadows under eyes, smudge"
+  gs cl_pout_${s}_$seed cl_pout.png $s $seed "2::pout::, puffed cheeks, 2::closed eyes::, hmph, soft pink blush, smooth clean skin, solid hair" "$NEGC, grey skin, shadows under eyes, smudge, transparent hair"
+  gs cl_pain_${s}_$seed cl_pain.png $s $seed "2::>_<::, 2::both eyes closed::, eyes shut tight, wince, teary, open mouth, smooth clean skin, solid hair" "$NEGC, one eye closed, wink, grey skin, smudge"
+done; done

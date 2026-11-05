@@ -404,9 +404,13 @@ def compose(layers):
     for name, regions, cheeks, *opt in layers:
         opt = dict(opt[0]) if opt else {}
         closed = opt.pop("closed", None)
+        opt_skin = opt.pop("skin", None)
         im, shift, err = transplant3(im, take(name), regions, cheeks, **opt)
         if closed:
             im = clean_closed(im, [EYES_ONLY[i] for i in closed], [i for i in (0, 1) if i not in closed])
+        skin = opt_skin
+        if skin:
+            im = clean_skin(im, [EYES_ONLY[i] for i in skin])
         log.append((name, shift, round(err, 1)))
     return im, log
 
@@ -512,24 +516,43 @@ def clean_closed(im, eyes, keep_open=()):
     return Image.fromarray((F * (1 - r) + out * r).clip(0, 255).astype(np.uint8))
 
 
+def clean_skin(im, eyes):
+    """Closed eyes: V5 paints the skin around closed eyes with lilac-grey airbrush washes (owner 2026-11-05: "smeared
+    paint"; anime cel skin is flat). Around each closed eye every skin-coloured pixel takes the base drawing's own
+    skin (its shading and blush spread in from outside the eyes); lashes, lines, tears and hair stay as drawn."""
+    B = np.asarray(Image.open(BASE_TAKE).convert("RGB")).astype(np.float32)
+    F = np.asarray(im.convert("RGB")).astype(np.float32)
+    H, W = B.shape[:2]
+    holes = ell_mask((H, W), [(cx, cy, rx * 1.2, ry * 1.25, a) for cx, cy, rx, ry, a in EYES_ONLY]) > 0.5
+    field = _skin_field(B, holes)
+    zone = ell_mask((H, W), [(cx, cy + ry * 0.5, rx * 1.5, ry * 1.6, a) for cx, cy, rx, ry, a in eyes], 6)
+    lum = F.mean(-1)
+    skinish = np.clip((lum - 165) / 35, 0, 1) * np.clip((F[..., 0] - F[..., 2] + 4) / 10, 0, 1)
+    dark = ndimage.gaussian_filter((lum < 150).astype(np.float32), 1.2)
+    w = (zone * skinish * np.clip(1 - 2.5 * dark, 0, 1))[..., None]
+    return Image.fromarray((F * (1 - w) + field * w).clip(0, 255).astype(np.uint8))
+
+
 NEUTRAL = "x_neutral_0.45_36002"
 _N = [(NEUTRAL, [BAND, MOUTH3], ())]
+# closed-eye frames (round 14 in prompts.sh): low-strength takes of the frames clean_closed built (the base drawing
+# with only closed-eye lines on it), so their bangs match the base; clean_skin then flattens V5's under-eye washes.
 # cheeks: none transplanted (owner 2026-11-05: every pasted blush read as smeared over her cheeks); each face keeps
 # the base drawing's cheeks, the takes' own blush still comes in with the eye band
 FRAMES = {                                   # chosen takes (see art/generated/vtuber3/prompts.sh for each round)
     "neutral": _N,
-    "blink": _N + [("f_blink_0.55_37002", list(EYES_ONLY), (), {"relight": True, "closed": (0, 1)})],   # eyes only: brows stay
+    "blink": [("f_cl_blink_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
     "talk_a": _N + [("f_talka_0.52_37001", [MOUTH3], ())],
     "talk_o": _N + [("f_talko_0.52_37002", [MOUTH3], ())],
     "smug": [("f_smug_37001", [BAND, MOUTH3], ())],
-    "wink": [("f_wink_0.50_37012", [BAND, MOUTH3], (), {"closed": (1,)})],
+    "wink": [("f_cl_wink_0.30_37202", [BAND, MOUTH3], (), {"skin": (1,)})],
     "happy": [("f_happy_37001", [BAND, MOUTH3], ())],
-    "sing": [("f_sing_0.62_37001", [BAND, MOUTH3], (), {"closed": (0, 1)})],
+    "sing": [("f_cl_sing_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
     "shocked": [("f_shock_37001", [BAND, MOUTH3], ())],
     "angry": [("f_angry_37001", [BAND, MOUTH3], ())],
-    "pout": [("f_pout_0.62_37001", [BAND, MOUTH3], (), {"closed": (0, 1)})],
+    "pout": [("f_cl_pout_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
     "flustered": [("f_flustered_37001", [BAND, MOUTH3], ())],
-    "pain": [("f_pain_0.62_37004", [BAND, MOUTH3], (), {"closed": (0, 1)})],
+    "pain": [("f_cl_pain_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
 }
 FRAMES1024 = V3 / "frames1024"
 
