@@ -463,7 +463,29 @@ def clean_closed(im, eyes, keep_open=()):
     small = np.isin(lab, [i + 1 for i, z in enumerate(ndimage.sum(b_hair & eye_b, lab, range(1, n + 1))) if z < 80])
     b_hair &= ~small
     wf = (z_open * ~b_hair * ~ndimage.binary_erosion(keep, iterations=1))[..., None]
-    fill = field
+    # at the outer eye corners the base's lash wings run out over the hair along the face's edge; what they cover
+    # is unknown, so there the dark wing pixels touching the hair stay, in the face contour's colour (they continue
+    # the contour line) instead of becoming skin notches
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    outer = np.zeros((H, W), bool)
+    for (cx, cy, rx, ry, a), side in zip(EYES_ONLY, (-1, 1)):
+        t = math.radians(a)
+        u = (xx - cx) * math.cos(t) + (yy - cy) * math.sin(t)
+        outer |= (side * u > 0.7 * rx) & (side * u < 1.6 * rx) & (np.abs(yy - cy) < 1.2 * ry)
+    d_h = ndimage.distance_transform_edt(~b_hair)
+    wing = outer & (d_h <= 4) & (lumB < 140)
+    wing = ndimage.binary_opening(ndimage.binary_closing(wing, iterations=2), iterations=1) & outer & (d_h <= 5)
+    core = b_hair & (lumB > 70)                       # hair fill, not its outlines
+    hcol = np.zeros_like(B)
+    todo = np.ones((H, W), bool)
+    for s_ in (2, 4, 8):
+        num = ndimage.gaussian_filter(B * core[..., None], (s_, s_, 0))
+        den = ndimage.gaussian_filter(core.astype(np.float32), s_)
+        ok = todo & (den > 0.05)
+        hcol[ok] = num[ok] / den[ok][:, None]
+        todo &= ~ok
+    wing = ndimage.gaussian_filter(wing.astype(np.float32), 0.5)[..., None]
+    fill = field * (1 - wing) + hcol * wing
     face = face * (1 - wf) + fill * wf
     # the closed eye's marks from the composed frame
     zone = ell_mask((H, W), [(cx, cy + ry * 0.2, rx * 1.3, ry * 1.25, a) for cx, cy, rx, ry, a in eyes], 2)
