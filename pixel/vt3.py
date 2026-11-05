@@ -550,6 +550,8 @@ def clean_skin(im, eyes):
 
 NEUTRAL = "x_neutral_0.45_36002"
 _N = [(NEUTRAL, [BAND, MOUTH3], ())]
+# open-eye frames (round 15): low-strength takes of the base with only the round-8 eyes and mouth (op_<frame>.png),
+# so every frame has the base's bangs (owner 2026-11-05: strands went missing between expressions).
 # closed-eye frames (round 14 in prompts.sh): low-strength takes of the frames clean_closed built (the base drawing
 # with only closed-eye lines on it), so their bangs match the base; clean_skin then flattens V5's under-eye washes.
 # cheeks: none transplanted (owner 2026-11-05: every pasted blush read as smeared over her cheeks); each face keeps
@@ -559,14 +561,14 @@ FRAMES = {                                   # chosen takes (see art/generated/v
     "blink": [("f_cl_blink_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
     "talk_a": _N + [("f_talka_0.52_37001", [MOUTH3], ())],
     "talk_o": _N + [("f_talko_0.52_37002", [MOUTH3], ())],
-    "smug": [("f_smug_37001", [BAND, MOUTH3], ())],
+    "smug": [("f_op_smug_0.30_37301", [BAND, MOUTH3], ())],
     "wink": [("f_cl_wink_0.30_37202", [BAND, MOUTH3], (), {"skin": (1,)})],
-    "happy": [("f_happy_37001", [BAND, MOUTH3], ())],
+    "happy": [("f_op_happy_0.30_37301", [BAND, MOUTH3], ())],
     "sing": [("f_cl_sing_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
-    "shocked": [("f_shock_37001", [BAND, MOUTH3], ())],
-    "angry": [("f_angry_37001", [BAND, MOUTH3], ())],
+    "shocked": [("f_op_shocked_0.30_37302", [BAND, MOUTH3], ())],
+    "angry": [("f_op_angry_0.30_37302", [BAND, MOUTH3], ())],
     "pout": [("f_cl_pout_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
-    "flustered": [("f_flustered_37001", [BAND, MOUTH3], ())],
+    "flustered": [("f_op_flustered_0.30_37302", [BAND, MOUTH3], ())],
     "pain": [("f_cl_pain_0.30_37202", [BAND, MOUTH3], (), {"skin": (0, 1)})],
 }
 FRAMES1024 = V3 / "frames1024"

@@ -153,3 +153,13 @@ for seed in 37201 37202; do for s in 0.30 0.38; do
   gs cl_pout_${s}_$seed cl_pout.png $s $seed "2::pout::, puffed cheeks, 2::closed eyes::, hmph, soft pink blush, smooth clean skin, solid hair" "$NEGC, grey skin, shadows under eyes, smudge, transparent hair"
   gs cl_pain_${s}_$seed cl_pain.png $s $seed "2::>_<::, 2::both eyes closed::, eyes shut tight, wince, teary, open mouth, smooth clean skin, solid hair" "$NEGC, one eye closed, wink, grey skin, smudge"
 done; done
+# round 15 (2026-11-05): owner: strands of the bangs go missing frame to frame. The open-eye expressions took their
+# whole brow band (bangs included) from round-8 takes whose bangs differ from the base. Sources now = the base with
+# only the take's eyes and mouth (pixel/vt3.py, op_<frame>.png); low strength so the bangs stay the base's.
+for seed in 37301 37302; do
+  gs op_smug_0.30_$seed op_smug.png 0.30 $seed "2::smug::, v-shaped eyebrows, half-closed eyes, smirk, fang, :3, closed mouth, solid hair"
+  gs op_happy_0.30_$seed op_happy.png 0.30 $seed "2::happy::, :d, open mouth, big smile, raised eyebrows, sparkling eyes, blush, solid hair"
+  gs op_shocked_0.30_$seed op_shocked.png 0.30 $seed "2::surprised::, raised eyebrows, wide-eyed, small pupils, open mouth, :o, solid hair"
+  gs op_angry_0.30_$seed op_angry.png 0.30 $seed "2::angry::, 2::v-shaped eyebrows::, furrowed brow, glaring, pout, puffed cheeks, closed mouth, solid hair"
+  gs op_flustered_0.30_$seed op_flustered.png 0.30 $seed "2::flustered::, worried eyebrows, blush, wavy mouth, teary eyes, solid hair"
+done
