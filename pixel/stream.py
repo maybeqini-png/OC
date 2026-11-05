@@ -1406,8 +1406,9 @@ def render(t0, t1, out, jobs):
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(video), "-ss", f"{t0:.3f}", "-t", f"{dur:.3f}",
                     "-i", str(AUDIO), "-i", str(blips), "-filter_complex",
                     f"[1:a]afade=t=in:d=0.05,afade=t=out:st={max(0, dur - 1.2):.3f}:d=1.2[s];"
-                    "[s][2:a]amix=inputs=2:normalize=0,alimiter=limit=0.8:level=false[a]",
-                    "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-ar", "48000",
+                    "[2:a]pan=stereo|c0=c0|c1=c0[b];"                  # the effects track is mono: keep the song stereo
+                    "[s][b]amix=inputs=2:normalize=0,alimiter=limit=0.8:level=false[a]",
+                    "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-ac", "2",
                     "-movflags", "+faststart", str(out)], check=True)
     for s in segs:
         s[2].unlink()
