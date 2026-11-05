@@ -402,9 +402,46 @@ def compose(layers):
     im = Image.open(BASE_TAKE).convert("RGB")
     log = []
     for name, regions, cheeks, *opt in layers:
-        im, shift, err = transplant3(im, take(name), regions, cheeks, **(opt[0] if opt else {}))
+        opt = dict(opt[0]) if opt else {}
+        closed = opt.pop("closed", None)
+        im, shift, err = transplant3(im, take(name), regions, cheeks, **opt)
+        if closed:
+            im = clean_closed(im, [EYES_ONLY[i] for i in closed])
         log.append((name, shift, round(err, 1)))
     return im, log
+
+
+def _skin_field(B, holes):
+    """The base's skin colour everywhere, spread smoothly in from its skin outside `holes` (normalised blur)."""
+    raw = (B[..., 0] > 225) & (B[..., 1] > 185) & (B[..., 2] > 165) & (B[..., 0] >= B[..., 2])
+    w = (ndimage.binary_erosion(raw, iterations=2) & ~holes).astype(np.float32)
+    out = np.zeros_like(B)
+    todo = np.ones(w.shape, bool)
+    for s in (6, 12, 24, 48, 96):
+        num = ndimage.gaussian_filter(B * w[..., None], (s, s, 0))
+        den = ndimage.gaussian_filter(w, s)
+        ok = todo & (den > (0.2 if s < 48 else 0.005))
+        out[ok] = num[ok] / den[ok][:, None]
+        todo &= ~ok
+    return out
+
+
+def clean_closed(im, eyes):
+    """Closed eyes: V5 paints the skin where the open eye was with soft grey airbrush washes (owner 2026-11-05:
+    "smeared paint"). Anime cel skin is flat with only lightly softened edges, so around each closed eye every
+    skin-coloured pixel takes the base drawing's own skin (its shading and blush, spread in from outside the eyes);
+    lashes, lines, tears and hair (anything dark or blue) and their anti-aliased rims stay as drawn."""
+    B = np.asarray(Image.open(BASE_TAKE).convert("RGB")).astype(np.float32)
+    F = np.asarray(im.convert("RGB")).astype(np.float32)
+    H, W = B.shape[:2]
+    holes = ell_mask((H, W), [(cx, cy, rx * 1.2, ry * 1.25, a) for cx, cy, rx, ry, a in EYES_ONLY]) > 0.5
+    field = _skin_field(B, holes)
+    zone = ell_mask((H, W), [(cx, cy + ry * 0.5, rx * 1.5, ry * 1.6, a) for cx, cy, rx, ry, a in eyes], 6)
+    lum = F.mean(-1)
+    skinish = np.clip((lum - 165) / 35, 0, 1) * np.clip((F[..., 0] - F[..., 2] + 4) / 10, 0, 1)
+    dark = ndimage.gaussian_filter((lum < 150).astype(np.float32), 1.2)
+    w = (zone * skinish * np.clip(1 - 2.5 * dark, 0, 1))[..., None]
+    return Image.fromarray((F * (1 - w) + field * w).clip(0, 255).astype(np.uint8))
 
 
 NEUTRAL = "x_neutral_0.45_36002"
@@ -413,18 +450,18 @@ _N = [(NEUTRAL, [BAND, MOUTH3], ())]
 # the base drawing's cheeks, the takes' own blush still comes in with the eye band
 FRAMES = {                                   # chosen takes (see art/generated/vtuber3/prompts.sh for each round)
     "neutral": _N,
-    "blink": _N + [("f_blink_0.55_37002", list(EYES_ONLY), (), {"relight": True})],   # eyes only: brows stay
+    "blink": _N + [("f_blink_0.55_37002", list(EYES_ONLY), (), {"relight": True, "closed": (0, 1)})],   # eyes only: brows stay
     "talk_a": _N + [("f_talka_0.52_37001", [MOUTH3], ())],
     "talk_o": _N + [("f_talko_0.52_37002", [MOUTH3], ())],
     "smug": [("f_smug_37001", [BAND, MOUTH3], ())],
-    "wink": [("f_wink_0.50_37012", [BAND, MOUTH3], ())],
+    "wink": [("f_wink_0.50_37012", [BAND, MOUTH3], (), {"closed": (1,)})],
     "happy": [("f_happy_37001", [BAND, MOUTH3], ())],
-    "sing": [("f_sing_0.62_37001", [BAND, MOUTH3], ())],
+    "sing": [("f_sing_0.62_37001", [BAND, MOUTH3], (), {"closed": (0, 1)})],
     "shocked": [("f_shock_37001", [BAND, MOUTH3], ())],
     "angry": [("f_angry_37001", [BAND, MOUTH3], ())],
-    "pout": [("f_pout_0.62_37001", [BAND, MOUTH3], ())],
+    "pout": [("f_pout_0.62_37001", [BAND, MOUTH3], (), {"closed": (0, 1)})],
     "flustered": [("f_flustered_37001", [BAND, MOUTH3], ())],
-    "pain": [("f_pain_0.62_37004", [BAND, MOUTH3], ())],
+    "pain": [("f_pain_0.62_37004", [BAND, MOUTH3], (), {"closed": (0, 1)})],
 }
 FRAMES1024 = V3 / "frames1024"
 
