@@ -934,6 +934,10 @@ def _mount_time(g):
     return None
 
 
+DECK_ROW = 42          # board sprite row her soles stand on (top surface, just above the cyan rim)
+DECK_DX = 30           # board centre ahead of her centre: her boots land on the paw deck
+
+
 def draw_board(img, g, cx=None, fy=None, dx=0.0):
     sb = board_state(g)
     if sb is None:
@@ -945,7 +949,11 @@ def draw_board(img, g, cx=None, fy=None, dx=0.0):
         tm = _mount_time(g) or g
         a_ = max(0.0, g - tm)
         dip = 18 * math.exp(-a_ / 0.13) * math.cos(2 * math.pi * a_ / 0.26)   # lands on it: dips, springs back
-        x, y = cx + dx + 4, fy + 16 + dip
+        # owner 2026-11-05: feet planted on the deck as in Muse Dash. The deck's top surface (paw print) is rows ~25-48
+        # of the 108 px board, which sits at the top of the hover_board canvas (centred by put); her soles (fy) rest
+        # on row DECK_ROW, and her boots (to the front of her centre) stand over the paw deck, not the cat head
+        x = cx + dx + DECK_DX
+        y = fy + hover_board(0).height / 2 - DECK_ROW + dip
         rot = max(-6.0, min(6.0, st.avatar_velocity(g) / 220))
         power = int(round(4 + 3 * beat))
     else:
