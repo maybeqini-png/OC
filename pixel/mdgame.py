@@ -846,6 +846,8 @@ def _board_track():
     ts = np.arange(st.GAME_IN, st.GAME_OUT, BOARD_DT)
     tx, ty, mode = np.empty_like(ts), np.empty_like(ts), np.zeros(len(ts), np.int8)
     off = (-420.0, FLOOR - 620.0)                                 # parked out of the picture, behind and above
+    # only real flights get the board (Muse Dash: a single air note is a plain jump); short hops stay hops
+    runs = tuple(r for r in runs if r[1] - r[0] >= 0.8)
     for i, g in enumerate(ts):
         tx[i], ty[i] = off
         for j, (a, b, notes) in enumerate(runs):

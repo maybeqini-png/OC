@@ -351,27 +351,28 @@ def jump_frame(kind="up", armed=False):
 @lru_cache(None)
 def ride_frame(i, armed=False):
     """Riding the hover board (owner 2026-11-05: running in the air on the board looked awkward). As Muse Dash
-    characters hold a balanced riding pose in the air instead of running: a surf stance - front foot forward, back
-    foot back, both soles on the board line, knees bent - that flexes on the beat (i = 0..15 over two beats: knees
+    characters hold a balanced riding pose in the air instead of running: a compact crouch - feet together, both
+    soles on the deck, knees bent forward (a wide stance read as a running stride from the side) - that flexes on the
+    beat (i = 0..15 over two beats: knees
     sink and rise), with the hair streaming back (continuous warp phase). Her lean comes from mdgame.motion."""
     phase = i / N_PHASE
     flex = 0.5 - 0.5 * math.cos(2 * math.pi * phase * 2)          # 0 standing .. 1 deepest bend, twice per cycle
     W, H = 832, 1300
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    tg = {True: (-112, -34 - 22 * flex), False: (104, -22 - 22 * flex)}  # wide surf stance: back foot, front foot
+    tg = {True: (-30, -62 - 18 * flex), False: (34, -56 - 18 * flex)}   # compact crouch: feet together, knees bent
     for far, hip in ((True, HIP_F), (False, HIP_N)):
         dx, dy = tg[far]
         ank = (hip[0] + dx, GROUND - 166 + dy)
         kx, ky, ank = legs.ik(hip, ank, L1, L2)
         draw_leg(canvas, hip, (kx, ky), ank, far)
-        place_boot(canvas, ank, math.pi / 2 + (0.18 if far else -0.12), far)      # soles flat on the deck
+        place_boot(canvas, ank, math.pi / 2 + (0.10 if far else -0.06), far)      # soles flat on the deck
     body = warp_hair(body_layer(), (phase * 3) % 1)
     if armed:
         plain = canvas.copy()
         plain.alpha_composite(body)
         canvas = _with_mic(canvas, 0)
     canvas.alpha_composite(body)
-    sp, feet = _finish(canvas, GROUND - 22 * flex - 30)
+    sp, feet = _finish(canvas, GROUND - 18 * flex - 60)
     if armed:
         _register(sp, _body_anchor(plain) * _scale())
     return sp, feet
