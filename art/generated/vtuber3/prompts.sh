@@ -163,3 +163,8 @@ for seed in 37301 37302; do
   gs op_angry_0.30_$seed op_angry.png 0.30 $seed "2::angry::, 2::v-shaped eyebrows::, furrowed brow, glaring, pout, puffed cheeks, closed mouth, solid hair"
   gs op_flustered_0.30_$seed op_flustered.png 0.30 $seed "2::flustered::, worried eyebrows, blush, wavy mouth, teary eyes, solid hair"
 done
+# round 16: the neutral frame (and talk_a / talk_o on it) likewise: the base with only the neutral take's eyes and
+# mouth (op_neutral.png), so all 13 frames share the base's bangs.
+for seed in 37311 37312; do
+  gs op_neutral_0.30_$seed op_neutral.png 0.30 $seed "2::light smile::, closed mouth, calm, confident, 1.3::eyebrows visible through hair::, thin eyebrows, solid hair"
+done

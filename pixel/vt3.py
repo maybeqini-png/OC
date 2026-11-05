@@ -548,7 +548,7 @@ def clean_skin(im, eyes):
     return Image.fromarray(out.clip(0, 255).astype(np.uint8))
 
 
-NEUTRAL = "x_neutral_0.45_36002"
+NEUTRAL = "f_op_neutral_0.30_37311"      # round 16: the base's bangs with x_neutral_0.45_36002's eyes and mouth
 _N = [(NEUTRAL, [BAND, MOUTH3], ())]
 # open-eye frames (round 15): low-strength takes of the base with only the round-8 eyes and mouth (op_<frame>.png),
 # so every frame has the base's bangs (owner 2026-11-05: strands went missing between expressions).
@@ -574,10 +574,39 @@ FRAMES = {                                   # chosen takes (see art/generated/v
 FRAMES1024 = V3 / "frames1024"
 
 
+def match_bangs(im, ref):
+    """Strands of ref (the neutral frame) that a frame lost come back on top of its skin (owner 2026-11-05: strand
+    tips vanished whenever the cam switched expression). Only pixels that are skin in the frame change, so its eyes,
+    lashes and mouth stay as drawn."""
+    F = np.asarray(im.convert("RGB")).astype(np.float32)
+    R = np.asarray(ref.convert("RGB")).astype(np.float32)
+
+    def hair(a):
+        return (a[..., 2] > a[..., 0] + 30) & (a.mean(-1) < 185)
+
+    H, W = F.shape[:2]
+    upper = np.zeros((H, W), bool)
+    upper[:580] = True                                            # bangs and eyes, not the mouth or the collar
+    # strands only: hair of ref that runs in from outside its eye openings (its irises and lashes are blue too)
+    eyes = ell_mask((H, W), [(cx, cy, rx * 1.1, ry * 1.15, a) for cx, cy, rx, ry, a in EYES_ONLY]) > 0.5
+    strands = ndimage.binary_propagation(hair(R) & ~eyes, mask=hair(R) & ~ndimage.binary_erosion(eyes, iterations=6))
+    lost = ndimage.binary_opening(strands & ~hair(F) & upper)
+    lost = ndimage.binary_dilation(lost, iterations=2) & ~ndimage.binary_erosion(eyes, iterations=6)
+    lum = F.mean(-1)
+    face_f = (lum > 120) & ~hair(F)          # skin, bang shadow and faded half-drawn strand tips; not lines or hair
+    m = lost & face_f
+    m = ndimage.gaussian_filter(m.astype(np.float32), 0.6)[..., None]
+    return Image.fromarray((F * (1 - m) + R * m).clip(0, 255).astype(np.uint8))
+
+
 def build1024(names=None):
     FRAMES1024.mkdir(exist_ok=True)
+    ref = None
     for name in names or FRAMES:
         im, log = compose(FRAMES[name])
+        if FRAMES[name][0][0] != NEUTRAL:                         # one set of bangs in every frame
+            ref = ref or compose(FRAMES["neutral"])[0]
+            im = match_bangs(im, ref)
         im.save(FRAMES1024 / f"{name}.png")
         print(name, log)
 
