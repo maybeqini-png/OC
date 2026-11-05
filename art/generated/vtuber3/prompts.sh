@@ -135,3 +135,9 @@ done
 for seed in 37021 37022 37023; do for s in 0.42 0.50; do
   [ -f "$OUT/g_blink_${s}_$seed.png" ] || $NAI img2img --model $M --image $OUT/neutral_closed.png --strength $s --seed $seed --w 1024 --h 1024 --prompt "$CHAR2, 2::closed eyes::, light smile, closed mouth, calm, $EXPOSE, $OUTFIT, $STYLE" --negative "$NEGC, wink" --out "$OUT/g_blink_${s}_$seed.png"
 done; done
+# round 12 (2026-11-05): owner: the pout frame's cheeks look painted on and the hair tip over the right cheek is
+# half-transparent; patch fixes (vtuber3/fix) did not hold up. New pout takes through the original pipeline (closed-
+# lid source, face transplant in pixel/vt3.py, Real-ESRGAN upscale), with clean-skin / solid-hair tags.
+for seed in 37101 37102 37103 37104; do
+  gs pout_0.62_$seed base_closed.png 0.62 $seed "2::pout::, puffed cheeks, 2::closed eyes::, hmph, v-shaped eyebrows, soft pink blush, smooth clean skin, solid hair" "$NEGC, grey skin, shadows under eyes, smudge, transparent hair"
+done
