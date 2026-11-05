@@ -49,7 +49,7 @@ PICKS = {                       # sprite name -> (N5 take, height in px at 1080p
     "n_g2": ("n_g2_66001", 150), "n_a2": ("n_a2_66001", 140), "n_big": ("n_big_66001", 260), "n_gh": ("n_gh_66002", 135),
     "f_g2": ("f_g2_66001", 150), "f_a2": ("f_a2_66001", 135), "f_big": ("f_big_66002", 250), "f_gh": ("f_gh_66001", 135),
     "hover": ("hv_board_66103", 70),          # her hover board v1 (unused)
-    "hover2": ("hv2_board_67002", 96),        # her hover board v2 (air lane): chunky cat deck, thruster ring
+    "hover2": ("hv2_board_67002", 108),       # her hover board v2 (air lane): chunky cat deck, thruster ring
     "note2": ("note2_67103", 76),             # music note pickup
 }
 

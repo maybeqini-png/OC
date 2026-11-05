@@ -783,6 +783,8 @@ def avatar(t):
     h = st.avatar_height(g) * K
     for h0_, h1_, ln_ in st.HOLDS:                 # holding a ribbon: running (ground) or riding the board (air)
         if h0_ <= g < h1_ + 0.12:
+            if h > 20:                                         # air ribbon: riding the board, not running
+                return (*RN.ride_at(g, armed), RUN_X, FLOOR - h)
             return (*RN.run_at(g, armed=armed), RUN_X, FLOOR - h)
     ng = na = 0
     pick = None
@@ -815,6 +817,9 @@ def avatar(t):
     if h > 1:
         rising = any(a <= g < ts[0] for a, b, ts in st.air_runs()) or any(
             k == "gear" and -0.24 < g - tt < 0 for tt, k in st.chart())
+        sb = board_state(g)
+        if sb is not None and sb[4] == 1 and h > 40:            # on the board: the riding stance
+            return (*RN.ride_at(g, armed), RUN_X, FLOOR - h)
         return (*RN.jump_frame("up" if rising or h > 120 else "down", armed), RUN_X, FLOOR - h)
     return (*RN.run_at(g, armed=armed), RUN_X, FLOOR)
 
@@ -1084,6 +1089,11 @@ def motion(t):
     if ST().avatar_height(g) <= 0.5 and not key:              # running: lean into the stride, bounce on contacts
         ph = 2 * math.pi * (g - ST().PH0) / BEAT
         return 1 - 0.018 * abs(math.cos(ph)), 1 + 0.025 * abs(math.cos(ph)), -2.0 - 1.5 * math.sin(ph), 0.0
+    sb = board_state(g)
+    if sb is not None and sb[4] == 1 and ST().avatar_height(g) > 40 and not key:   # riding: leaning into the wind
+        v = ST().avatar_velocity(g)
+        sway = 1.5 * math.sin(2 * math.pi * (g - ST().PH0) / (2 * BEAT))
+        return 1.0, 1.0, -6.0 + sway + max(-5.0, min(5.0, v / 200)), 0.0
     v = ST().avatar_velocity(g)                             # in flight: lean back rising, nose down falling,
     if abs(v) > 30:                                         # stretch along the motion (secondary motion)
         st_ = min(0.10, abs(v) / 9000)
