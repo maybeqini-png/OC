@@ -409,20 +409,22 @@ def compose(layers):
 
 NEUTRAL = "x_neutral_0.45_36002"
 _N = [(NEUTRAL, [BAND, MOUTH3], ())]
+# cheeks: none transplanted (owner 2026-11-05: every pasted blush read as smeared over her cheeks); each face keeps
+# the base drawing's cheeks, the takes' own blush still comes in with the eye band
 FRAMES = {                                   # chosen takes (see art/generated/vtuber3/prompts.sh for each round)
     "neutral": _N,
     "blink": _N + [("f_blink_0.55_37002", list(EYES_ONLY), (), {"relight": True})],   # eyes only: brows stay
     "talk_a": _N + [("f_talka_0.52_37001", [MOUTH3], ())],
     "talk_o": _N + [("f_talko_0.52_37002", [MOUTH3], ())],
-    "smug": [("f_smug_37001", [BAND, MOUTH3], CHEEKS3)],
-    "wink": [("f_wink_0.50_37012", [BAND, MOUTH3], CHEEKS3)],
-    "happy": [("f_happy_37001", [BAND, MOUTH3], CHEEKS3)],
-    "sing": [("f_sing_0.62_37001", [BAND, MOUTH3], CHEEKS3)],
+    "smug": [("f_smug_37001", [BAND, MOUTH3], ())],
+    "wink": [("f_wink_0.50_37012", [BAND, MOUTH3], ())],
+    "happy": [("f_happy_37001", [BAND, MOUTH3], ())],
+    "sing": [("f_sing_0.62_37001", [BAND, MOUTH3], ())],
     "shocked": [("f_shock_37001", [BAND, MOUTH3], ())],
-    "angry": [("f_angry_37001", [BAND, MOUTH3], CHEEKS3)],
-    "pout": [("f_pout_0.62_37001", [BAND, MOUTH3], CHEEKS3)],
-    "flustered": [("f_flustered_37001", [BAND, MOUTH3], CHEEKS3)],
-    "pain": [("f_pain_0.62_37004", [BAND, MOUTH3], CHEEKS3)],
+    "angry": [("f_angry_37001", [BAND, MOUTH3], ())],
+    "pout": [("f_pout_0.62_37001", [BAND, MOUTH3], ())],
+    "flustered": [("f_flustered_37001", [BAND, MOUTH3], ())],
+    "pain": [("f_pain_0.62_37004", [BAND, MOUTH3], ())],
 }
 FRAMES1024 = V3 / "frames1024"
 
