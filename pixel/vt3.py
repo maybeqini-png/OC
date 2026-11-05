@@ -530,7 +530,22 @@ def clean_skin(im, eyes):
     skinish = np.clip((lum - 165) / 35, 0, 1) * np.clip((F[..., 0] - F[..., 2] + 4) / 10, 0, 1)
     dark = ndimage.gaussian_filter((lum < 150).astype(np.float32), 1.2)
     w = (zone * skinish * np.clip(1 - 2.5 * dark, 0, 1))[..., None]
-    return Image.fromarray((F * (1 - w) + field * w).clip(0, 255).astype(np.uint8))
+    out = F * (1 - w) + field * w
+    # V5 leaves a white fringe along the hair edge by the eyes and the paste a pixel staircase there; Real-ESRGAN
+    # sharpens both into torn edges. Around the closed eyes: fringe pixels take their neighbours' median, and the
+    # hair / skin boundary gets a light anti-alias.
+    near = ell_mask((H, W), [(cx, cy, rx * 2.0, ry * 2.2, a) for cx, cy, rx, ry, a in eyes]) > 0.5
+    lum = out.mean(-1)
+    hairm = (out[..., 2] > out[..., 0] + 30) & (lum < 185)
+    skinm = (out[..., 0] > 215) & (out[..., 0] >= out[..., 2])
+    fringe = near & (lum > 244) & (np.ptp(out, -1) < 22) & ndimage.binary_dilation(hairm, iterations=2)
+    med = np.stack([ndimage.median_filter(out[..., c], 5) for c in range(3)], -1)
+    out[fringe] = med[fringe]
+    edge = near & ndimage.binary_dilation(hairm, iterations=1) & ndimage.binary_dilation(skinm, iterations=1)
+    soft = ndimage.gaussian_filter(out, (0.8, 0.8, 0))
+    e = ndimage.gaussian_filter(edge.astype(np.float32), 0.5)[..., None]
+    out = out * (1 - e) + soft * e
+    return Image.fromarray(out.clip(0, 255).astype(np.uint8))
 
 
 NEUTRAL = "x_neutral_0.45_36002"
