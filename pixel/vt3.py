@@ -237,6 +237,13 @@ def skin3(a):
     return ndimage.gaussian_filter(ndimage.binary_dilation(s, iterations=2).astype(np.float32), 1.5)
 
 
+def skin_core(a):
+    """Skin well clear of any line or strand (eroded, then softened): skin3's dilation reaches across a thin strand."""
+    s = (a[..., 0] > 225) & (a[..., 1] > 185) & (a[..., 2] > 165) & (a[..., 0] >= a[..., 2])
+    s = ndimage.binary_erosion(ndimage.binary_opening(s, iterations=1), iterations=3)
+    return ndimage.gaussian_filter(s.astype(np.float32), 1.5)
+
+
 def blend(B, R, m, sigmas=(1, 2, 4, 8)):
     """Multi-band blend (Burt-Adelson, as a Gaussian stack): each frequency band is mixed with the mask blurred at
     that band's scale, so line art switches within about a pixel while colour and shading blend over ~10 px. Coarser
@@ -301,7 +308,10 @@ def transplant3(base, raw, regions, cheeks=(), search=10, feather=6.0, seam=True
         m = np.maximum(m, seam_mask(B, Rs, e) if seam else ell_mask((H, W), [e], feather))
     out = blend(B, Rs, m) if seam else B * (1 - m[..., None]) + Rs * m[..., None]
     if cheeks:
-        mc = (ell_mask((H, W), cheeks, feather) * skin3(B))[..., None]
+        # only where BOTH base and take are clear skin (owner 2026-11-05: weighting by the base's skin alone pasted
+        # the take's hair tips at partial weight wherever the two strands did not line up - half-transparent strands
+        # fading into the cheeks); the strands of whichever image is showing stay intact, only the blush changes
+        mc = (ell_mask((H, W), cheeks, feather) * np.minimum(skin_core(B), skin_core(Rs)))[..., None]
         out = out * (1 - mc) + Rs * mc
     return Image.fromarray(out.clip(0, 255).astype(np.uint8)), shift, best
 
